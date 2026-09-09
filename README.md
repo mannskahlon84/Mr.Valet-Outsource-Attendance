@@ -81,3 +81,27 @@ npm run dev
 ### 3. Access Portals
 Open your browser at `http://localhost:3000/login`.
 Default development test password: `devpass123`
+
+---
+
+## 🌐 Production Deployment Guide
+
+### Deploying Frontend to Vercel
+1. Go to [Vercel Dashboard](https://vercel.com/new) and import the repository: `mannskahlon84/Mr.Valet-Outsource-Attendance`.
+2. Under **Project Settings**:
+   - **Root Directory**: Click *Edit* and select `web`.
+   - **Framework Preset**: Next.js (automatically detected).
+3. Under **Environment Variables**:
+   - Add `NEXT_PUBLIC_API_URL` pointing to your deployed backend API URL (e.g. `https://your-api.railway.app/api/v1` or `https://api.yourdomain.com/api/v1`).
+4. Click **Deploy**.
+
+### Deploying Backend
+The FastAPI backend can be deployed via Docker, Render, Railway, Fly.io, or any Ubuntu VPS:
+- **Dockerfile** or start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Database**: PostgreSQL (`DATABASE_URL=postgresql://user:pass@host:5432/dbname`)
+- **Run Seeding**:
+  ```bash
+  python seed_roles.py
+  python sync_all_locations.py
+  ```
+
