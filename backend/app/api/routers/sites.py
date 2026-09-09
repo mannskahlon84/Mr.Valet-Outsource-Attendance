@@ -56,7 +56,7 @@ def get_sites(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role in [RoleEnum.OUTSOURCE_WORKER, RoleEnum.SUPPLIER_HEAD]:
+    if current_user.role == RoleEnum.OUTSOURCE_WORKER:
         raise HTTPException(status_code=403, detail="Forbidden")
     query = db.query(Site)
     if current_user.role == RoleEnum.OPS_MANAGER:

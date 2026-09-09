@@ -1,4 +1,4 @@
-﻿import re
+import re
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -16,14 +16,25 @@ from datetime import datetime, timezone, timedelta
 router = APIRouter()
 
 def generate_internal_worker_id(db: Session) -> str:
-    last_worker = db.query(Worker.internal_worker_id).filter(Worker.internal_worker_id.like("Out%")).order_by(Worker.internal_worker_id.desc()).first()
-    if not last_worker: return "Out0001"
-    last_id = last_worker[0]
-    try:
-        num = int(last_id[3:])
-        return f"Out{num+1:04d}"
-    except ValueError:
-        return "Out0001"
+    workers = db.query(Worker.internal_worker_id).all()
+    max_num = 0
+    for (w_id,) in workers:
+        if not w_id:
+            continue
+        digits = re.sub(r"\D", "", w_id)
+        if digits:
+            try:
+                num = int(digits)
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                pass
+    next_num = max(max_num + 1, 1)
+    return f"WRK-{next_num:03d}"
+
+@router.get("/next-id")
+def get_next_worker_id(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return {"next_id": generate_internal_worker_id(db)}
 
 
 @router.post("/register-request")
@@ -103,9 +114,25 @@ def verify_registration_otp(verify_in: OtpVerify, db: Session = Depends(get_db),
 
 
 @router.post("/", response_model=WorkerResponse)
-def create_worker(worker_in: WorkerCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN]))):
+def create_worker(
+    worker_in: WorkerCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.SUPPLIER_HEAD]))
+):
+    if current_user.role == RoleEnum.SUPPLIER_HEAD:
+        worker_in.supplier_id = current_user.supplier_id
+        # Always system-generate in series for suppliers (supplier cannot change or edit it)
+        worker_in.internal_worker_id = generate_internal_worker_id(db)
+    elif not worker_in.internal_worker_id:
+        worker_in.internal_worker_id = generate_internal_worker_id(db)
+
+    if not worker_in.phone:
+        worker_in.phone = worker_in.whatsapp_number
+
     if db.query(Worker).filter(Worker.internal_worker_id == worker_in.internal_worker_id).first():
-        raise HTTPException(status_code=400, detail="Internal Worker ID already exists")
+        # In case of collision, generate fresh next series ID
+        worker_in.internal_worker_id = generate_internal_worker_id(db)
+
     if db.query(Worker).filter(Worker.qid == worker_in.qid).first():
         raise HTTPException(status_code=400, detail="QID already exists")
     if db.query(Worker).filter(Worker.whatsapp_number == worker_in.whatsapp_number).first():
@@ -123,7 +150,7 @@ def create_worker(worker_in: WorkerCreate, db: Session = Depends(get_db), curren
     # Create corresponding User
     from app.core.security import get_password_hash
     user = User(
-        email=f"worker_{worker.internal_worker_id}@mrvalet.system.local",
+        email=f"worker_{worker.internal_worker_id.lower()}@mrvalet.system.local",
         password_hash=get_password_hash(password),
         role=RoleEnum.OUTSOURCE_WORKER,
         worker_id=worker.id

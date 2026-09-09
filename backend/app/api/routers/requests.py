@@ -165,9 +165,69 @@ class ChatMessageCreate(BaseModel):
 
 from app.models.all_models import RequestMessage, Supplier
 
-@router.get("/supplier", )
+@router.get("/supplier")
 def get_supplier_requests(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
-    return db.query(ManpowerRequest).join(SupplierResponse).filter(SupplierResponse.supplier_id == current_user.supplier_id).all()
+    items = db.query(ManpowerRequest).join(SupplierResponse).filter(SupplierResponse.supplier_id == current_user.supplier_id).order_by(ManpowerRequest.id.desc()).all()
+    site_ids = {r.site_id for r in items if r.site_id}
+    sites_map = {}
+    if site_ids:
+        sites_list = db.query(Site).filter(Site.id.in_(site_ids)).all()
+        sites_map = {s.id: s for s in sites_list}
+
+    result = []
+    for r in items:
+        s = sites_map.get(r.site_id)
+        result.append({
+            "id": r.id,
+            "ops_manager_id": r.ops_manager_id,
+            "site_id": r.site_id,
+            "site_name": s.name if s else f"Location #{r.site_id}",
+            "site_address": s.address if s and s.address else "",
+            "required_date": r.required_date.isoformat() if r.required_date else None,
+            "start_time": r.start_time,
+            "end_time": r.end_time,
+            "total_required_workers": r.total_required_workers,
+            "skill_category": r.skill_category,
+            "notes": r.notes,
+            "status": r.status,
+            "created_at": r.created_at.isoformat() if hasattr(r, "created_at") and r.created_at else None
+        })
+    return result
+
+@router.get("/{request_id}")
+def get_request_by_id(request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == request_id).first()
+    if not mr:
+        raise HTTPException(404, "Request not found")
+
+    if current_user.role == RoleEnum.OPS_MANAGER:
+        site = db.query(Site).filter(Site.id == mr.site_id).first()
+        if site and site.manager_id != current_user.id:
+            raise HTTPException(403, "Not authorized to view this request")
+    elif current_user.role == RoleEnum.SUPPLIER_HEAD:
+        valid = db.query(SupplierResponse).filter(
+            SupplierResponse.manpower_request_id == request_id,
+            SupplierResponse.supplier_id == current_user.supplier_id
+        ).first()
+        if not valid:
+            raise HTTPException(403, "Not authorized to view this request")
+
+    site = db.query(Site).filter(Site.id == mr.site_id).first()
+    return {
+        "id": mr.id,
+        "ops_manager_id": mr.ops_manager_id,
+        "site_id": mr.site_id,
+        "site_name": site.name if site else f"Location #{mr.site_id}",
+        "site_address": site.address if site and site.address else "",
+        "required_date": mr.required_date.isoformat() if mr.required_date else None,
+        "start_time": mr.start_time,
+        "end_time": mr.end_time,
+        "total_required_workers": mr.total_required_workers,
+        "skill_category": mr.skill_category,
+        "notes": mr.notes,
+        "status": mr.status,
+        "created_at": mr.created_at.isoformat() if hasattr(mr, "created_at") and mr.created_at else None
+    }
 
 @router.get("/{request_id}/messages")
 def get_request_messages(request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

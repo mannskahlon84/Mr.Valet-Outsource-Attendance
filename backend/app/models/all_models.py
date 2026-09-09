@@ -137,6 +137,7 @@ class Attendance(Base):
     check_out_verification_method = Column(String, default="QR_GPS")
     check_in_qr_id = Column(Integer, ForeignKey("sites.id"), nullable=True)
     check_out_qr_id = Column(Integer, ForeignKey("sites.id"), nullable=True)
+    check_in_face_embedding = Column(Text, nullable=True)
 
 class AttendanceException(Base):
     __tablename__ = "attendance_exceptions"

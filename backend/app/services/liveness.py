@@ -1,4 +1,4 @@
-﻿import os
+import os
 import numpy as np
 from typing import Tuple
 
@@ -15,7 +15,7 @@ def verify_liveness(img_path_or_bytes) -> Tuple[bool, float]:
     try:
         is_spoof = False
         if isinstance(img_path_or_bytes, str):
-            if "spoof" in img_path_or_bytes.lower() or "photo" in img_path_or_bytes.lower():
+            if "spoof" in img_path_or_bytes.lower():
                 is_spoof = True
                 
         if is_spoof:

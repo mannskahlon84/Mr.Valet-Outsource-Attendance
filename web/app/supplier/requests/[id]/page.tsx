@@ -37,17 +37,20 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                 fetchApi(`/requests/${requestId}/messages`).catch(() => [])
             ]);
 
-            const current = (allReqs || []).find((r: any) => r.id.toString() === requestId);
+            let current = (allReqs || []).find((r: any) => r.id.toString() === requestId);
+            if (!current) {
+                current = await fetchApi(`/requests/${requestId}`).catch(() => null);
+            }
             setRequest(current);
             setSites(allSites || []);
             setWorkers(myWorkers || []);
             setMessages(msgs || []);
 
-            const resp = (myResponses || []).find((r: any) => r.manpower_request_id.toString() === requestId);
+            const resp = (myResponses || []).find((r: any) => r.manpower_request_id?.toString() === requestId || r.request_id?.toString() === requestId);
             setMyResponse(resp);
 
             if (resp) {
-                setConfirmedQty(resp.confirmed_quantity ? resp.confirmed_quantity.toString() : resp.requested_quantity.toString());
+                setConfirmedQty(resp.confirmed_quantity ? resp.confirmed_quantity.toString() : (resp.requested_quantity || current?.total_required_workers || '1').toString());
                 setProposedStart(resp.proposed_start_time || current?.start_time || '08:00');
                 setProposedEnd(resp.proposed_end_time || current?.end_time || '17:00');
                 setAgencyNotes(resp.supplier_message || '');
@@ -148,7 +151,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     if (loading) return <div className="p-8 text-center text-gray-500">Loading request details...</div>;
     if (!request) return <div className="p-8 text-center text-red-500">Shift request #{requestId} not found.</div>;
 
-    const site = sites.find(s => s.id === request.site_id);
+    const site = sites.find(s => s.id === request.site_id) || { name: request.site_name, address: request.site_address };
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">

@@ -5,7 +5,7 @@ from datetime import datetime
 class WorkerBase(BaseModel):
     internal_worker_id: Optional[str] = None
     external_employee_id: Optional[str] = None
-    supplier_id: int
+    supplier_id: Optional[int] = None
     first_name: str
     last_name: str
     phone: Optional[str] = None

@@ -18,14 +18,23 @@ export async function fetchApi(endpoint: string, options: any = {}, rawResponse 
         headers
     });
     
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
             document.cookie = 'token=; Max-Age=0; path=/';
             document.cookie = 'role=; Max-Age=0; path=/';
             localStorage.clear();
             window.location.href = '/login';
         }
-        throw new Error('Unauthorized');
+        throw new Error('Session expired. Please sign in again.');
+    }
+
+    if (res.status === 403) {
+        let msg = 'You do not have permission to access this resource.';
+        try {
+            const data = await res.json();
+            if (data.detail) msg = data.detail;
+        } catch(e) {}
+        throw new Error(msg);
     }
     
     if (!res.ok) {

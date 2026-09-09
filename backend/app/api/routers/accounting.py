@@ -220,6 +220,8 @@ class CustomInvoiceRequest(BaseModel):
     start_date: date
     end_date: date
     site_id: Optional[int] = None
+    custom_rate: Optional[float] = None
+    rate_unit: Optional[str] = "PER_HOUR"
 
 @router.post("/invoices/custom/download")
 def download_custom_invoice(
@@ -227,6 +229,7 @@ def download_custom_invoice(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.ACCOUNTING]))
 ):
+    from app.models.all_models import Site
     sup = db.query(Supplier).filter(Supplier.id == req.supplier_id).first()
     if not sup: raise HTTPException(status_code=404, detail="Supplier not found")
     
@@ -245,6 +248,23 @@ def download_custom_invoice(
     total_workers = db.query(func.sum(SupplierResponse.confirmed_quantity)).join(ManpowerRequest).filter(*filters).scalar() or 0
     if total_workers == 0: raise HTTPException(status_code=400, detail="No workers found for this criteria.")
     
+    effective_rate = req.custom_rate if req.custom_rate is not None else sup.billing_rate
+    
+    unit_map = {
+        "PER_HOUR": "Per Hour",
+        "PER_DAY": "Per Day",
+        "PER_EMPLOYEE": "Per Employee"
+    }
+    unit_label = unit_map.get(req.rate_unit, "Per Hour")
+
+    if req.rate_unit == "PER_HOUR":
+        total_hours = total_workers * 8
+        total_amount = total_hours * effective_rate
+        breakdown_text = f"Confirmed Shifts: {total_workers} | Total Billable Hours (8h/shift): {total_hours} hrs"
+    else:
+        total_amount = total_workers * effective_rate
+        breakdown_text = f"Confirmed Workers Supplied: {total_workers} ({unit_label})"
+
     invoice_num = f"CUST-INV-{req.supplier_id}-{int(datetime.utcnow().timestamp())}"
     
     pdf_dir = "invoices"
@@ -260,10 +280,10 @@ def download_custom_invoice(
     c.drawString(50, 670, f"Location: {site_name}")
     c.drawString(50, 650, f"Generated On: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}")
     c.line(50, 630, 550, 630)
-    c.drawString(50, 600, f"Confirmed Workers Supplied: {total_workers}")
-    c.drawString(50, 580, f"Agreed Rate Per Worker: QAR {sup.billing_rate:,.2f}")
+    c.drawString(50, 600, breakdown_text)
+    c.drawString(50, 580, f"Agreed Billing Rate: QAR {effective_rate:,.2f} ({unit_label})")
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, 540, f"Total Amount Payable: QAR {total_workers * sup.billing_rate:,.2f}")
+    c.drawString(50, 540, f"Total Amount Payable: QAR {total_amount:,.2f}")
     c.save()
     
     with open(file_path, "rb") as f: pdf_bytes = f.read()

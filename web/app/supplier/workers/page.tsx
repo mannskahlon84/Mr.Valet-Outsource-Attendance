@@ -26,15 +26,24 @@ export default function SupplierWorkers() {
 
     useEffect(() => { loadData(); }, []);
 
-    const openAdd = () => {
+    const openAdd = async () => {
         setFirstName('');
         setLastName('');
-        setInternalId(`WRK-${Date.now().toString().slice(-4)}`);
+        setInternalId('Loading series ID...');
         setQid('');
         setPhone('');
         setPassword('devpass123');
         setError('');
         setShowModal(true);
+
+        try {
+            const data = await fetchApi('/workers/next-id');
+            if (data?.next_id) {
+                setInternalId(data.next_id);
+            }
+        } catch (err) {
+            console.error('Failed to fetch next worker ID', err);
+        }
     };
 
     const handleCreateWorker = async (e: React.FormEvent) => {
@@ -176,14 +185,22 @@ export default function SupplierWorkers() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Internal Worker ID *</label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs font-bold text-gray-600">Worker ID</label>
+                                        <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                                            🔒 Auto Series
+                                        </span>
+                                    </div>
                                     <input 
                                         type="text" 
                                         value={internalId} 
-                                        onChange={e => setInternalId(e.target.value)} 
-                                        required 
-                                        className="w-full border p-2 rounded font-mono"
+                                        readOnly
+                                        disabled
+                                        aria-readonly="true"
+                                        className="w-full border border-gray-300 bg-gray-100 text-gray-800 font-mono font-bold p-2 rounded cursor-not-allowed select-none"
+                                        title="Worker ID is automatically generated in sequential series and cannot be modified."
                                     />
+                                    <p className="text-[10px] text-gray-400 mt-0.5">Auto-generated in series. Cannot be edited.</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-600 mb-1">Qatar ID (QID) *</label>

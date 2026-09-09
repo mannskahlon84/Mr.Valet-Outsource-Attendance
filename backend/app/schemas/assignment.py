@@ -18,9 +18,13 @@ class AssignmentResponse(BaseModel):
     end_time: str
     status: str
     site_name: str
-    site_lat: float
-    site_lng: float
-    site_radius: float
+    site_lat: Optional[float] = None
+    site_lng: Optional[float] = None
+    site_radius: Optional[float] = 100.0
+    qr_token: Optional[str] = None
+    attendance_status: Optional[str] = "NOT_STARTED"
+    check_in_time: Optional[datetime] = None
+    check_out_time: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -5,9 +5,9 @@ from datetime import datetime
 class SiteBase(BaseModel):
     name: str
     address: Optional[str] = None
-    latitude: float = Field(..., ge=-90.0, le=90.0)
-    longitude: float = Field(..., ge=-180.0, le=180.0)
-    geofence_radius_meters: float = Field(..., gt=0)
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    geofence_radius_meters: Optional[float] = Field(100.0, gt=0)
     manager_id: Optional[int] = None
 
 class SiteCreate(SiteBase):

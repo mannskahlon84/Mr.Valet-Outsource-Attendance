@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.all_models import WorkerAssignment, SupplierResponse, ManpowerRequest, Worker, Site, User, RoleEnum
+from app.models.all_models import WorkerAssignment, SupplierResponse, ManpowerRequest, Worker, Site, User, RoleEnum, Attendance
 from app.schemas.assignment import AssignmentDevCreate, AssignmentResponse
 from app.api.deps import get_current_user, require_role
 from datetime import datetime
@@ -74,6 +74,18 @@ def get_today_assignment(db: Session = Depends(get_db), current_user: User = Dep
     sr = db.query(SupplierResponse).filter(SupplierResponse.id == wa.supplier_response_id).first()
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
     site = db.query(Site).filter(Site.id == mr.site_id).first()
+
+    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()
+    att_status = "NOT_STARTED"
+    check_in_time = None
+    check_out_time = None
+    if att:
+        if att.check_out_time:
+            att_status = "CHECKED_OUT"
+        elif att.check_in_time:
+            att_status = "CHECKED_IN"
+        check_in_time = att.check_in_time
+        check_out_time = att.check_out_time
     
     return {
         "id": wa.id,
@@ -86,5 +98,9 @@ def get_today_assignment(db: Session = Depends(get_db), current_user: User = Dep
         "site_name": site.name,
         "site_lat": site.latitude,
         "site_lng": site.longitude,
-        "site_radius": site.geofence_radius_meters
+        "site_radius": site.geofence_radius_meters or 100.0,
+        "qr_token": site.qr_token,
+        "attendance_status": att_status,
+        "check_in_time": check_in_time,
+        "check_out_time": check_out_time
     }
