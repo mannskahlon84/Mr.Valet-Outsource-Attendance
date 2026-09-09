@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { fetchApi } from '../../lib/api';
+import { fetchApi, API_URL } from '../../lib/api';
 
 function normalizeRole(role?: string): string {
     if (!role) return '';
@@ -32,7 +32,7 @@ export default function Login() {
             params.append('username', username);
             params.append('password', password);
             
-            const res = await fetch(typeof window !== 'undefined' ? `http://${window.location.hostname}:8000/api/v1/auth/login` : 'http://127.0.0.1:8000/api/v1/auth/login', {
+            const res = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params
