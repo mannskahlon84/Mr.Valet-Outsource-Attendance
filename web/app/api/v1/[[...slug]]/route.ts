@@ -383,16 +383,12 @@ export async function GET(
             worker_id: 1,
             worker_name: "Ali Hassan",
             internal_worker_id: "WRK-001",
-            site_id: 27,
-            site_name: "Fairmont Hotel",
-            site_address: "Lusail Marina, Doha, Qatar",
-            latitude: 25.3854,
-            longitude: 51.5310,
-            geofence_radius_meters: 100,
-            qr_token: "MC:LOC:27:fa72eb8901",
-            start_time: "08:00",
-            end_time: "17:00",
-            status: "ASSIGNED",
+            attendance_status: "NOT_CHECKED_IN",
+            site_id: null,
+            site_name: null,
+            site_address: null,
+            start_time: null,
+            end_time: null,
             check_in_time: null,
             check_out_time: null
         });
@@ -590,19 +586,46 @@ export async function POST(
 
     // Attendance Check-In
     if (path === 'attendance/check-in') {
+        let body: any = {};
+        try { body = await req.json(); } catch (e) {}
+        
+        let matchedSite = SITES_LIST.find(s => s.name === "Fairmont Hotel") || SITES_LIST[0];
+        if (body.qr_data) {
+            const qr = String(body.qr_data).trim();
+            const found = SITES_LIST.find(s => s.qr_token === qr || qr.includes(`:LOC:${s.id}`) || qr.toLowerCase().includes(s.name.toLowerCase()));
+            if (found) matchedSite = found;
+        }
+        if (body.site_id) {
+            const found = SITES_LIST.find(s => s.id === Number(body.site_id));
+            if (found) matchedSite = found;
+        }
+
+        const now = new Date();
         return NextResponse.json({
             success: true,
-            message: "Checked in successfully at Fairmont Hotel",
-            check_in_time: new Date().toISOString()
+            message: `Checked in successfully at ${matchedSite.name}`,
+            site_id: matchedSite.id,
+            site_name: matchedSite.name,
+            site_address: matchedSite.address,
+            latitude: matchedSite.latitude,
+            longitude: matchedSite.longitude,
+            geofence_radius: matchedSite.geofence_radius_meters,
+            check_in_time: now.toISOString(),
+            status: "CHECKED_IN"
         });
     }
 
     // Attendance Check-Out
     if (path === 'attendance/check-out') {
+        let body: any = {};
+        try { body = await req.json(); } catch (e) {}
+        const now = new Date();
         return NextResponse.json({
             success: true,
-            message: "Checked out successfully",
-            total_hours: 9.0
+            message: "Shift clocked out successfully! Duty hours logged into the system.",
+            check_out_time: now.toISOString(),
+            total_hours: 9.0,
+            status: "CHECKED_OUT"
         });
     }
 
