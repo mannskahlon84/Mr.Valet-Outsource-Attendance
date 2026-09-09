@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_URL } from '../../lib/api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -15,11 +16,20 @@ export default function ForgotPassword() {
     setError('');
     
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+      let res: Response;
+      try {
+        res = await fetch(`${API_URL}/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+      } catch (e) {
+        res = await fetch('/api/v1/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+      }
       
       const data = await res.json();
       if (!res.ok) {

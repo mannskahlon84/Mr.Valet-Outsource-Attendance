@@ -32,11 +32,28 @@ export default function Login() {
             params.append('username', username);
             params.append('password', password);
             
-            const res = await fetch(`${API_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            });
+            let res: Response;
+            try {
+                res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+            } catch (networkErr) {
+                if (API_URL.startsWith('http')) {
+                    try {
+                        res = await fetch('/api/v1/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: params
+                        });
+                    } catch (fallbackErr) {
+                        throw networkErr;
+                    }
+                } else {
+                    throw networkErr;
+                }
+            }
             
             if (!res.ok) {
                 const errText = await res.text();

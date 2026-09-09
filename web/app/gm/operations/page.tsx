@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, API_URL } from '@/lib/api';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function GMOperations() {
@@ -31,7 +31,7 @@ export default function GMOperations() {
                     <p className="text-sm text-gray-500">Company-wide valet dispatch requests and active location coverage</p>
                 </div>
                 <button 
-                    onClick={() => window.open('http://127.0.0.1:8000/api/v1/reports/attendance/export/excel?token=' + localStorage.getItem('token'), '_blank')}
+                    onClick={() => window.open(`${API_URL}/reports/attendance/export/excel?token=` + localStorage.getItem('token'), '_blank')}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
                 >
                     Export Attendance Excel

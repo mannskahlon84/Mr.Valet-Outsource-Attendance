@@ -1,7 +1,12 @@
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL
     ? (process.env.NEXT_PUBLIC_API_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_URL.slice(0, -1) : process.env.NEXT_PUBLIC_API_URL)
-    : (typeof window !== 'undefined' ? `http://${window.location.hostname}:8000/api/v1` : 'http://127.0.0.1:8000/api/v1');
+    : (typeof window !== 'undefined'
+        ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `http://${window.location.hostname}:8000/api/v1`
+            : '/api/v1')
+        : (process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:8000/api/v1'));
+
 
 export async function fetchApi(endpoint: string, options: any = {}, rawResponse = false) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -13,10 +18,31 @@ export async function fetchApi(endpoint: string, options: any = {}, rawResponse 
         headers['Authorization'] = `Bearer ${token}`;
     }
     
-    const res = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers
-    });
+    let cleanEndpoint = endpoint.trim();
+    if (!cleanEndpoint.startsWith('/')) cleanEndpoint = '/' + cleanEndpoint;
+    if (cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1) {
+        cleanEndpoint = cleanEndpoint.slice(0, -1);
+    }
+    let res: Response;
+    try {
+        res = await fetch(`${API_URL}${cleanEndpoint}`, {
+            ...options,
+            headers
+        });
+    } catch (networkErr) {
+        if (API_URL.startsWith('http')) {
+            try {
+                res = await fetch(`/api/v1${cleanEndpoint}`, {
+                    ...options,
+                    headers
+                });
+            } catch (fallbackErr) {
+                throw networkErr;
+            }
+        } else {
+            throw networkErr;
+        }
+    }
     
     if (res.status === 401) {
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {

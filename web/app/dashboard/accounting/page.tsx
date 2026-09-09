@@ -1,7 +1,7 @@
 
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi } from '../../../lib/api';
+import { fetchApi, API_URL } from '../../../lib/api';
 
 export default function Accounting() {
     const [summary, setSummary] = useState<any[]>([]);
@@ -107,7 +107,7 @@ export default function Accounting() {
 
     const handleDownload = (invoiceId: number) => {
         const token = localStorage.getItem('token');
-        window.open(`http://localhost:8000/api/v1/accounting/invoices/${invoiceId}/download?token=${token}`, '_blank');
+        window.open(`${API_URL}/accounting/invoices/${invoiceId}/download?token=${token}`, '_blank');
     };
 
     return (

@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { API_URL } from '../../lib/api';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -33,11 +34,20 @@ function ResetPasswordForm() {
     setError('');
     
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, new_password: password }),
-      });
+      let res: Response;
+      try {
+        res = await fetch(`${API_URL}/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, new_password: password }),
+        });
+      } catch (e) {
+        res = await fetch('/api/v1/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, new_password: password }),
+        });
+      }
       
       const data = await res.json();
       if (!res.ok) {
