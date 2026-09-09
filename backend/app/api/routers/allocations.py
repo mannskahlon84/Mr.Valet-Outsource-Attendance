@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.all_models import ManpowerRequest, SupplierResponse, WorkerAssignment, Worker, User, RoleEnum
+from app.models.all_models import ManpowerRequest, SupplierResponse, WorkerAssignment, Worker, User, RoleEnum, Site, Notification
 from app.schemas.request import WorkerAllocation
 from app.api.deps import require_role
 from app.services.audit import log_audit_event
@@ -58,8 +58,33 @@ def allocate_workers(response_id: int, req: WorkerAllocation, db: Session = Depe
                 status="ASSIGNED"
             )
             db.add(wa)
+            db.flush()
+
+            # In-App Push Notification to Worker
+            site = db.query(Site).filter(Site.id == mr.site_id).first()
+            site_name = site.name if site else f"Location #{mr.site_id}"
+            req_date_str = mr.required_date.strftime('%Y-%m-%d') if hasattr(mr.required_date, 'strftime') else str(mr.required_date)
+            w_notif = Notification(
+                worker_id=wid,
+                title="🚘 Shift Assignment",
+                message=f"You have been assigned to valet shift at {site_name} on {req_date_str} ({mr.start_time} - {mr.end_time}).",
+                entity_type="SHIFT_ASSIGNMENT",
+                entity_id=wa.id
+            )
+            db.add(w_notif)
             allocated_count += 1
             
+        # In-App Push Notification to Operations Manager
+        if mr.ops_manager_id:
+            om_notif = Notification(
+                user_id=mr.ops_manager_id,
+                title="👥 Drivers Assigned",
+                message=f"Agency assigned {allocated_count} driver(s) for Request #{mr.id} at {site_name if 'site_name' in locals() else 'Site'}.",
+                entity_type="OPS_ALERT",
+                entity_id=mr.id
+            )
+            db.add(om_notif)
+
         db.commit()
         log_audit_event(db, current_user.id, current_user.role.value, "workers_allocated", "worker_assignments", sr.id, None, {"allocated": allocated_count})
         return {"status": "success", "allocated": allocated_count}

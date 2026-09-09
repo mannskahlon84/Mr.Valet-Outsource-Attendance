@@ -206,12 +206,16 @@ class Invoice(Base):
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
-    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
+    title = Column(String, nullable=True)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
     entity_type = Column(String, nullable=True)
     entity_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
 
 
 class AttendanceAudit(Base):

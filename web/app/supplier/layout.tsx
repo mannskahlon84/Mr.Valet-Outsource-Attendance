@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import TopNavigation from '@/components/layout/TopNavigation';
 
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
+
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
@@ -14,11 +16,11 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     }, []);
 
     const navItems = [
-        { label: 'Overview', href: '/supplier' },
-        { label: 'Shift Requests', href: '/supplier/requests' },
-        { label: 'Worker Roster', href: '/supplier/workers' },
-        { label: 'Invoices & Billing', href: '/supplier/invoices' },
-        { label: 'Notifications', href: '/supplier/notifications' }
+        { label: 'Overview', href: '/supplier', icon: '📊' },
+        { label: 'Requests', href: '/supplier/requests', icon: '📋' },
+        { label: 'Workers', href: '/supplier/workers', icon: '👥' },
+        { label: 'Invoices', href: '/supplier/invoices', icon: '🧾' },
+        { label: 'Alerts', href: '/supplier/notifications', icon: '🔔' }
     ];
 
     return (
@@ -31,9 +33,10 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                     title="Supplier Agency Portal" 
                     onToggleMobile={() => setMobileOpen(prev => !prev)} 
                 />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-3 sm:p-6 pb-24 md:pb-6">
                     {children}
                 </main>
+                <MobileBottomNav items={navItems} />
             </div>
         </div>
     );

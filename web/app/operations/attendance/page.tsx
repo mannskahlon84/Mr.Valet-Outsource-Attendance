@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, API_URL } from '@/lib/api';
 
 export default function OperationsAttendance() {
     const [report, setReport] = useState<any>(null);
@@ -43,16 +43,16 @@ export default function OperationsAttendance() {
                     <h1 className="text-2xl font-black text-gray-900">Site Attendance & Exceptions</h1>
                     <p className="text-sm text-gray-500">Live valet worker attendance tracking and exception approvals</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <button 
-                        onClick={() => window.open('http://127.0.0.1:8000/api/v1/reports/attendance/export/excel?token=' + localStorage.getItem('token'), '_blank')}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
+                        onClick={() => window.open(`${API_URL}/reports/attendance/export/excel?token=` + localStorage.getItem('token'), '_blank')}
+                        className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors text-center"
                     >
                         Export Excel
                     </button>
                     <button 
-                        onClick={() => window.open('http://127.0.0.1:8000/api/v1/reports/attendance/export/pdf?token=' + localStorage.getItem('token'), '_blank')}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
+                        onClick={() => window.open(`${API_URL}/reports/attendance/export/pdf?token=` + localStorage.getItem('token'), '_blank')}
+                        className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors text-center"
                     >
                         Export PDF
                     </button>
@@ -60,32 +60,32 @@ export default function OperationsAttendance() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div className="text-xs font-bold uppercase text-gray-400">Total Duty Hours Logged</div>
-                    <div className="text-3xl font-black text-gray-900 mt-2">{report?.summary?.total_duty_hours || 0} hrs</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div className="text-[10px] sm:text-xs font-bold uppercase text-gray-400">Duty Hours Logged</div>
+                    <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">{report?.summary?.total_duty_hours || 0} hrs</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div className="text-xs font-bold uppercase text-gray-400">Workers Present</div>
-                    <div className="text-3xl font-black text-gray-900 mt-2">{report?.summary?.total_present_days || 0}</div>
+                <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div className="text-[10px] sm:text-xs font-bold uppercase text-gray-400">Workers Present</div>
+                    <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">{report?.summary?.total_present_days || 0}</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-amber-200 bg-amber-50/30">
-                    <div className="text-xs font-bold uppercase text-amber-700">Pending Exceptions</div>
-                    <div className="text-3xl font-black text-amber-600 mt-2">
+                <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-amber-200 bg-amber-50/30">
+                    <div className="text-[10px] sm:text-xs font-bold uppercase text-amber-700">Pending Exceptions</div>
+                    <div className="text-2xl sm:text-3xl font-black text-amber-600 mt-1">
                         {exceptions.filter(e => e.status === 'PENDING_APPROVAL').length}
                     </div>
                 </div>
             </div>
 
             {/* Tab Controls */}
-            <div className="flex border-b border-gray-200 space-x-6">
+            <div className="flex gap-4 border-b border-gray-200">
                 <button 
                     onClick={() => setActiveTab('attendance')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
                         activeTab === 'attendance' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    Live Attendance Logs
+                    Today's Attendance ({report?.records?.length || 0})
                 </button>
                 <button 
                     onClick={() => setActiveTab('exceptions')}
@@ -93,14 +93,49 @@ export default function OperationsAttendance() {
                         activeTab === 'exceptions' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    Attendance Exceptions ({exceptions.filter(e => e.status === 'PENDING_APPROVAL').length})
+                    Exceptions ({exceptions.filter(e => e.status === 'PENDING_APPROVAL').length})
                 </button>
             </div>
 
-            {/* ATTENDANCE TABLE */}
+            {/* ATTENDANCE TABLE & MOBILE CARDS */}
             {activeTab === 'attendance' && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
+                    {/* Mobile Attendance Cards */}
+                    <div className="md:hidden divide-y divide-gray-100 p-3 space-y-2.5">
+                        {(report?.records || []).map((r: any, idx: number) => (
+                            <div key={idx} className="bg-gray-50/70 p-3.5 rounded-xl border border-gray-200/80 space-y-2">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className="font-black text-gray-900 text-sm">{r.worker_name}</div>
+                                        <div className="text-xs text-gray-500">📍 {r.site_name}</div>
+                                    </div>
+                                    <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full ${
+                                        r.status === 'CHECKED_OUT' 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : r.status === 'ABSENT' 
+                                                ? 'bg-red-100 text-red-800' 
+                                                : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                        {r.status}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-gray-100 font-mono">
+                                    <span className="text-gray-600">
+                                        ⏱️ In: {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'} | Out: {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
+                                    </span>
+                                    <span className="font-black text-gray-900">{r.duty_hours} hrs</span>
+                                </div>
+                            </div>
+                        ))}
+                        {(report?.records || []).length === 0 && (
+                            <div className="p-8 text-center text-gray-400 text-xs">
+                                No attendance records for today yet.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Desktop Attendance Table */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 text-sm">
                             <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                                 <tr>

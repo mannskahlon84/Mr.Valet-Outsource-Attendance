@@ -399,7 +399,7 @@ export default function NewShiftRequest() {
                                     </div>
 
                                     {/* Quick Shift Presets */}
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-2 sm:mt-0">
                                         <span className="text-[11px] text-gray-400 font-semibold mr-1 hidden sm:inline">Presets:</span>
                                         {PRESET_SHIFTS.map((preset) => (
                                             <button
@@ -417,7 +417,7 @@ export default function NewShiftRequest() {
                                             <button
                                                 type="button"
                                                 onClick={() => removeShift(sIdx)}
-                                                className="text-red-500 hover:text-red-700 font-bold text-xs ml-2 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                                className="text-red-500 hover:text-red-700 font-bold text-xs ml-auto sm:ml-2 px-2 py-1 rounded hover:bg-red-50 transition-colors"
                                                 title="Remove this shift"
                                             >
                                                 ✕ Delete Shift
@@ -427,7 +427,7 @@ export default function NewShiftRequest() {
                                 </div>
 
                                 {/* Shift Form Body */}
-                                <div className="p-6 space-y-5">
+                                <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                                     {/* Clean Timings & Headcount Row (without inside button) */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>

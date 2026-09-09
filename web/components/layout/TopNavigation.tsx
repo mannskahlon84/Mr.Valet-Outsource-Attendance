@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from 'next/navigation';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function TopNavigation({ 
     name, 
@@ -25,8 +26,8 @@ export default function TopNavigation({
     };
 
     return (
-        <header className="bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-4 md:px-6 py-3">
-            <div className="flex items-center space-x-3">
+        <header className="bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-3 md:px-6 py-2.5 md:py-3 sticky top-0 z-30">
+            <div className="flex items-center space-x-2 md:space-x-3">
                 {onToggleMobile && (
                     <button 
                         onClick={onToggleMobile} 
@@ -36,16 +37,26 @@ export default function TopNavigation({
                         <span className="text-xl font-bold leading-none">☰</span>
                     </button>
                 )}
-                <div className="text-lg md:text-xl font-bold text-gray-800">{title}</div>
-            </div>
-            <div className="flex items-center space-x-3 md:space-x-4">
-                <div className="text-right">
-                    <div className="text-xs md:text-sm font-bold text-gray-900">{name}</div>
-                    <div className="text-[10px] md:text-xs text-gray-500 font-medium">{role}</div>
+                <div className="text-base md:text-xl font-black text-gray-900 tracking-tight truncate max-w-[160px] sm:max-w-none">
+                    {title}
                 </div>
+            </div>
+            <div className="flex items-center space-x-2 md:space-x-4">
+                {/* In-App Push Notification Bell */}
+                <NotificationBell />
+
+                <div className="text-right hidden sm:block">
+                    <div className="text-xs md:text-sm font-bold text-gray-900 truncate max-w-[120px] md:max-w-[180px]">
+                        {name}
+                    </div>
+                    <div className="text-[10px] md:text-xs text-gray-500 font-medium truncate">
+                        {role}
+                    </div>
+                </div>
+
                 <button 
                     onClick={logout} 
-                    className="text-xs md:text-sm text-red-600 font-bold border border-red-200 px-2.5 py-1 rounded hover:bg-red-50 transition-colors"
+                    className="text-xs md:text-sm text-red-600 font-bold border border-red-200 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors"
                 >
                     Logout
                 </button>

@@ -74,13 +74,48 @@ export default function SupplierDashboard() {
 
             {/* Incoming Requests */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-5 border-b border-gray-200 flex justify-between items-center">
+                <div className="p-4 sm:p-5 border-b border-gray-200 flex justify-between items-center">
                     <h2 className="text-base font-bold text-gray-900">Routed Shift Requests</h2>
                     <Link href="/supplier/requests" className="text-xs font-bold text-[#dbb457] hover:underline">
                         View All ({requests.length}) →
                     </Link>
                 </div>
-                <div className="overflow-x-auto">
+
+                {/* Mobile Cards View (< md screens) */}
+                <div className="md:hidden divide-y divide-gray-100 p-2 sm:p-3 space-y-2">
+                    {requests.slice(0, 5).map((r) => (
+                        <div key={r.id} className="bg-gray-50/70 p-3.5 rounded-xl border border-gray-200/80 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
+                                    Req #{r.id}
+                                </span>
+                                <StatusBadge status={r.status} />
+                            </div>
+                            <div>
+                                <div className="text-xs font-semibold text-gray-800">
+                                    📅 {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                </div>
+                                <div className="text-xs text-gray-500 font-mono mt-0.5">
+                                    ⏱️ {r.start_time} - {r.end_time} • <strong className="text-gray-700">{r.total_required_workers} Drivers</strong>
+                                </div>
+                            </div>
+                            <Link 
+                                href={`/supplier/requests/${r.id}`}
+                                className="block text-center w-full text-xs font-bold bg-[#dbb457] text-white py-2 rounded-lg hover:bg-[#c29d45] transition-colors shadow-sm"
+                            >
+                                Respond & Assign Drivers →
+                            </Link>
+                        </div>
+                    ))}
+                    {requests.length === 0 && (
+                        <div className="p-6 text-center text-xs text-gray-400">
+                            No shift requests dispatched to your agency yet.
+                        </div>
+                    )}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                             <tr>

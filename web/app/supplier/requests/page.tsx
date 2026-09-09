@@ -25,7 +25,57 @@ export default function SupplierRequests() {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* Mobile Cards View (< md screens) */}
+                <div className="md:hidden divide-y divide-gray-100 p-3 space-y-3">
+                    {requests.map((r) => (
+                        <div key={r.id} className="bg-gray-50/70 p-4 rounded-xl border border-gray-200/80 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-gray-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                    Req #{r.id}
+                                </span>
+                                <StatusBadge status={r.status} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-gray-100 font-medium">
+                                <div>
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Shift Date</span>
+                                    <span className="text-gray-800 font-semibold">
+                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Window</span>
+                                    <span className="text-gray-800 font-mono">
+                                        {r.start_time} - {r.end_time}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Quota</span>
+                                    <span className="text-[#dbb457] font-black">{r.total_required_workers} Drivers</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Category</span>
+                                    <span className="text-gray-600">{r.skill_category || 'Valet Driver'}</span>
+                                </div>
+                            </div>
+
+                            <Link 
+                                href={`/supplier/requests/${r.id}`}
+                                className="block text-center w-full text-xs font-bold bg-[#dbb457] text-white py-2.5 rounded-lg hover:bg-[#c29d45] transition-colors shadow-sm"
+                            >
+                                Respond & Assign Drivers →
+                            </Link>
+                        </div>
+                    ))}
+                    {requests.length === 0 && (
+                        <div className="p-8 text-center text-xs text-gray-400">
+                            No incoming shift requests found.
+                        </div>
+                    )}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                             <tr>

@@ -302,6 +302,17 @@ def respond_to_request(request_id: int, update: SupplierResponseUpdate, db: Sess
     if hasattr(update, 'response_type'): sr.response_type = update.response_type
     sr.responded_at = datetime.utcnow()
     
+    # In-App Push Notification to Operations Manager
+    if mr.ops_manager_id:
+        om_notif = Notification(
+            user_id=mr.ops_manager_id,
+            title="📋 Supplier Proposal Received",
+            message=f"Agency has responded to Request #{mr.id} with status '{update.status}' ({update.confirmed_quantity} drivers).",
+            entity_type="SUPPLIER_RESPONSE",
+            entity_id=mr.id
+        )
+        db.add(om_notif)
+
     db.commit()
     log_audit_event(db, current_user.id, current_user.role.value, "supplier_response_updated", "supplier_responses", sr.id, old_state, {"status": sr.status, "confirmed": sr.confirmed_quantity})
     return sr
@@ -376,15 +387,15 @@ def finalize_supplier_response(
         old_state, {"status": sr.status, "confirmed": sr.confirmed_quantity}
     )
     
-    # Notify Supplier Head
-    supplier_users = db.query(User).filter(User.supplier_id == sr.supplier_id).all()
-    for u in supplier_users:
-        devices = db.query(UserDevice).filter(UserDevice.user_id == u.id, UserDevice.is_active == True).all()
-        for d in devices:
-            try:
-                from app.core.push import send_push_notification
-                send_push_notification(d.push_token, f"Request confirmed for {payload.accepted_quantity} workers", {"url": f"valetsupplier://request/{mr.id}"})
-            except Exception as e: 
-                print("Push Error", e)
+    # Notify Supplier Head (Database In-App Notification)
+    sup_notif = Notification(
+        supplier_id=sr.supplier_id,
+        title="✅ Shift Allocation Finalized",
+        message=f"Operations Manager accepted your proposal for {payload.accepted_quantity} workers on Request #{mr.id}.",
+        entity_type="MANPOWER_REQUEST",
+        entity_id=mr.id
+    )
+    db.add(sup_notif)
+    db.commit()
 
     return {"message": "Response finalized", "request_status": mr.status}

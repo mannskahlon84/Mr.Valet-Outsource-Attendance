@@ -411,6 +411,35 @@ export default function WorkerPortal() {
 
     return (
         <div className="space-y-4">
+            {/* Native In-App Push Notification Enablement Banner */}
+            {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                <div className="bg-gradient-to-r from-amber-50 to-amber-100/60 border border-amber-300 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-950 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">🔔</span>
+                        <div>
+                            <div className="font-black text-amber-900">Enable Shift Push Alerts</div>
+                            <div className="text-[11px] text-amber-700 font-medium">Get instant sound & screen alerts for new shifts</div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            try {
+                                const res = await Notification.requestPermission();
+                                if (res === 'granted') {
+                                    new Notification("Mr. Valet Dispatch", {
+                                        body: "Shift notifications are now enabled on this device!",
+                                        icon: "/logo.jpg"
+                                    });
+                                }
+                            } catch (e) {}
+                        }}
+                        className="bg-[#dbb457] hover:bg-[#c29d45] text-white font-black px-3.5 py-1.5 rounded-xl text-xs transition-colors shadow flex-shrink-0 ml-2"
+                    >
+                        Enable
+                    </button>
+                </div>
+            )}
+
             {/* Status Feedback Banners */}
             {successMsg && (
                 <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
