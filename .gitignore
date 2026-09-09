@@ -1,0 +1,62 @@
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite
+*.sqlite3
+*.db
+!backend/seed*.py
+backend/test.db
+backend/app.db
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Mobile / Expo
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Environments & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Temporary Scratch Scripts
+scratch/
+locs.txt
+patch*.py
+fix*.py
+check*.py
+find*.py
+gen_*.py
+generate_*.py
+get_locations*.py
+nope.py
+test.py
+strip_bom.py
+update_*.py
+create_acct_page.py
+extracted_locs.py
+init_*.py
+migrate_db.py

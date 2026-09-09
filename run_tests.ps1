@@ -1,0 +1,1 @@
+cd backend; .\venv\Scripts\alembic.exe revision --autogenerate -m "Initial Schema"; .\venv\Scripts\alembic.exe upgrade head; .\venv\Scripts\python.exe scripts/seed.py; .\venv\Scripts\pytest.exe tests/
