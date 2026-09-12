@@ -111,6 +111,20 @@ const USERS_MAP: Record<string, any> = {
     "admin@example.com": { id: 1, email: "admin@example.com", name: "Super Admin", role: "SUPER_ADMIN", status: "active" },
     "manpreet@alsharqiholding.com": { id: 2, email: "manpreet@alsharqiholding.com", name: "Manpreet", role: "SUPER_ADMIN", status: "active" },
     "supplier@example.com": { id: 3, email: "supplier@example.com", name: "Demo Agency Head", role: "SUPPLIER_HEAD", supplier_id: 1, status: "active" },
+    "deepu@supplier.mrvalet.local": { id: 18, email: "deepu@supplier.mrvalet.local", name: "Deepu", role: "SUPPLIER_HEAD", supplier_id: 5, status: "active" },
+    "kanan@supplier.mrvalet.local": { id: 19, email: "kanan@supplier.mrvalet.local", name: "Kanan", role: "SUPPLIER_HEAD", supplier_id: 6, status: "active" },
+    "hanees@supplier.mrvalet.local": { id: 20, email: "hanees@supplier.mrvalet.local", name: "Hanees", role: "SUPPLIER_HEAD", supplier_id: 7, status: "active" },
+    "nizar@supplier.mrvalet.local": { id: 21, email: "nizar@supplier.mrvalet.local", name: "Nizar", role: "SUPPLIER_HEAD", supplier_id: 8, status: "active" },
+    "dennis@supplier.mrvalet.local": { id: 22, email: "dennis@supplier.mrvalet.local", name: "Dennis", role: "SUPPLIER_HEAD", supplier_id: 9, status: "active" },
+    "naboth@supplier.mrvalet.local": { id: 23, email: "naboth@supplier.mrvalet.local", name: "Naboth", role: "SUPPLIER_HEAD", supplier_id: 10, status: "active" },
+    "henry@supplier.mrvalet.local": { id: 24, email: "henry@supplier.mrvalet.local", name: "Henry", role: "SUPPLIER_HEAD", supplier_id: 11, status: "active" },
+    "deepu": { id: 18, email: "deepu@supplier.mrvalet.local", name: "Deepu", role: "SUPPLIER_HEAD", supplier_id: 5, status: "active" },
+    "kanan": { id: 19, email: "kanan@supplier.mrvalet.local", name: "Kanan", role: "SUPPLIER_HEAD", supplier_id: 6, status: "active" },
+    "hanees": { id: 20, email: "hanees@supplier.mrvalet.local", name: "Hanees", role: "SUPPLIER_HEAD", supplier_id: 7, status: "active" },
+    "nizar": { id: 21, email: "nizar@supplier.mrvalet.local", name: "Nizar", role: "SUPPLIER_HEAD", supplier_id: 8, status: "active" },
+    "dennis": { id: 22, email: "dennis@supplier.mrvalet.local", name: "Dennis", role: "SUPPLIER_HEAD", supplier_id: 9, status: "active" },
+    "naboth": { id: 23, email: "naboth@supplier.mrvalet.local", name: "Naboth", role: "SUPPLIER_HEAD", supplier_id: 10, status: "active" },
+    "henry": { id: 24, email: "henry@supplier.mrvalet.local", name: "Henry", role: "SUPPLIER_HEAD", supplier_id: 11, status: "active" },
     "accounting@example.com": { id: 4, email: "accounting@example.com", name: "Accounting Officer", role: "ACCOUNTING", status: "active" },
     "gm@example.com": { id: 5, email: "gm@example.com", name: "General Manager", role: "GENERAL_MANAGER", status: "active" },
     "worker@example.com": { id: 6, email: "worker@example.com", name: "Ali Hassan", role: "OUTSOURCE_WORKER", worker_id: 1, status: "active" }
@@ -371,8 +385,14 @@ export async function GET(
     // Suppliers
     if (path === 'suppliers' || path === 'suppliers/') {
         return NextResponse.json([
-            { id: 1, name: "Demo Agency", contact_person: "John Doe", contact_email: "agency@example.com", contact_phone: "+974 5512 3456", billing_rate: 45.0, status: "active" },
-            { id: 2, name: "Qatar Star Manpower", contact_person: "Ahmed Al-Kuwari", contact_email: "contact@qatarstar.qa", contact_phone: "+974 4433 2211", billing_rate: 45.0, status: "active" }
+            { id: 5, name: "Deepu", contact_person: "Deepu", contact_email: "deepu@supplier.mrvalet.local", contact_phone: "+974 5501 0001", billing_rate: 45.0, status: "active" },
+            { id: 6, name: "Kanan", contact_person: "Kanan", contact_email: "kanan@supplier.mrvalet.local", contact_phone: "+974 5501 0002", billing_rate: 45.0, status: "active" },
+            { id: 7, name: "Hanees", contact_person: "Hanees", contact_email: "hanees@supplier.mrvalet.local", contact_phone: "+974 5501 0003", billing_rate: 45.0, status: "active" },
+            { id: 8, name: "Nizar", contact_person: "Nizar", contact_email: "nizar@supplier.mrvalet.local", contact_phone: "+974 5501 0004", billing_rate: 45.0, status: "active" },
+            { id: 9, name: "Dennis", contact_person: "Dennis", contact_email: "dennis@supplier.mrvalet.local", contact_phone: "+974 5501 0005", billing_rate: 45.0, status: "active" },
+            { id: 10, name: "Naboth", contact_person: "Naboth", contact_email: "naboth@supplier.mrvalet.local", contact_phone: "+974 5501 0006", billing_rate: 45.0, status: "active" },
+            { id: 11, name: "Henry", contact_person: "Henry", contact_email: "henry@supplier.mrvalet.local", contact_phone: "+974 5501 0007", billing_rate: 45.0, status: "active" },
+            { id: 1, name: "Demo Agency", contact_person: "John Doe", contact_email: "agency@example.com", contact_phone: "+974 5512 3456", billing_rate: 45.0, status: "active" }
         ]);
     }
 

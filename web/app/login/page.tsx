@@ -160,6 +160,37 @@ export default function Login() {
                         </div>
                     </div>
 
+                    {/* Outsource Agency Heads Direct Testing */}
+                    <div className="bg-blue-50/50 p-2.5 rounded-lg border border-blue-200/60">
+                        <div className="text-[11px] font-bold text-blue-800 uppercase mb-1.5 flex items-center justify-between">
+                            <span>Outsource Agency Heads (Suppliers)</span>
+                            <span className="text-[10px] bg-blue-100 text-blue-900 px-1.5 py-0.5 rounded">Dispatch Portals</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1.5 text-xs">
+                            <button type="button" onClick={()=>fillDemo('hanees@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
+                                🏢 Hanees
+                            </button>
+                            <button type="button" onClick={()=>fillDemo('deepu@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
+                                🏢 Deepu
+                            </button>
+                            <button type="button" onClick={()=>fillDemo('kanan@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
+                                🏢 Kanan
+                            </button>
+                            <button type="button" onClick={()=>fillDemo('nizar@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
+                                🏢 Nizar
+                            </button>
+                            <button type="button" onClick={()=>fillDemo('dennis@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
+                                🏢 Dennis
+                            </button>
+                            <button type="button" onClick={()=>fillDemo('naboth@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
+                                🏢 Naboth
+                            </button>
+                            <button type="button" onClick={()=>fillDemo('henry@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors col-span-2">
+                                🏢 Henry
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2 text-xs">
                         <button type="button" onClick={()=>fillDemo('admin@example.com')} className="p-1.5 bg-gray-50 hover:bg-amber-50 border rounded text-left font-medium text-gray-700 hover:text-amber-800 transition-colors">
                             👑 Super Admin (All Sites)
