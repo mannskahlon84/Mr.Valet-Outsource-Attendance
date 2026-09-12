@@ -16,21 +16,41 @@ function normalizeRole(role?: string): string {
     return clean.toUpperCase();
 }
 
+const SUPPLIERS = [
+    { name: "Hanees", agencyId: 7, email: "hanees@supplier.mrvalet.local", shortUser: "hanees", phone: "+974 5501 0003" },
+    { name: "Deepu", agencyId: 5, email: "deepu@supplier.mrvalet.local", shortUser: "deepu", phone: "+974 5501 0001" },
+    { name: "Kanan", agencyId: 6, email: "kanan@supplier.mrvalet.local", shortUser: "kanan", phone: "+974 5501 0002" },
+    { name: "Nizar", agencyId: 8, email: "nizar@supplier.mrvalet.local", shortUser: "nizar", phone: "+974 5501 0004" },
+    { name: "Dennis", agencyId: 9, email: "dennis@supplier.mrvalet.local", shortUser: "dennis", phone: "+974 5501 0005" },
+    { name: "Naboth", agencyId: 10, email: "naboth@supplier.mrvalet.local", shortUser: "naboth", phone: "+974 5501 0006" },
+    { name: "Henry", agencyId: 11, email: "henry@supplier.mrvalet.local", shortUser: "henry", phone: "+974 5501 0007" }
+];
+
+const OPS_MANAGERS = [
+    { name: "Maen Klaib", email: "maen.klaib@mrvalet.com", sitesCount: 29, highlight: "Fairmont, City Center, Lusail" },
+    { name: "Wissem Chagtmi", email: "wissem.chagtmi@mrvalet.com", sitesCount: 25, highlight: "Banana Island, Old Doha Port, Msheireb" },
+    { name: "Hani Abdelsallam", email: "hani.abdelsallam@mrvalet.com", sitesCount: 18, highlight: "The Pearl, Katara, West Bay" },
+    { name: "Brahim Hayouni", email: "brahim.hayouni@mrvalet.com", sitesCount: 5, highlight: "Centro Mall, Al Maha, Tower 18" },
+    { name: "Ghazi Alshammari", email: "ghazi.alshammari@mrvalet.com", sitesCount: 3, highlight: "M Gallery, Msheireb, Park Hyatt" }
+];
+
 export default function Login() {
+    const [viewMode, setViewMode] = useState<'quick' | 'manual'>('quick');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [activeLoginUser, setActiveLoginUser] = useState<string | null>(null);
     const router = useRouter();
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const executeLogin = async (userToAuth: string, passToAuth: string) => {
         setError('');
         setLoading(true);
+        setActiveLoginUser(userToAuth);
         try {
             const params = new URLSearchParams();
-            params.append('username', username);
-            params.append('password', password);
+            params.append('username', userToAuth);
+            params.append('password', passToAuth);
             
             let res: Response;
             try {
@@ -80,134 +100,269 @@ export default function Login() {
             else if (normRole === 'OUTSOURCE_WORKER') router.push('/worker');
             else router.push('/admin');
         } catch(err: any) {
-            setError(err.message);
+            setError(err.message || 'Authentication failed');
         } finally {
             setLoading(false);
+            setActiveLoginUser(null);
         }
     };
 
-    const fillDemo = (user: string) => {
-        setUsername(user);
-        setPassword('devpass123');
+    const handleFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await executeLogin(username, password);
+    };
+
+    const handle1TapLogin = (userToAuth: string, passToAuth: string = 'devpass123') => {
+        setUsername(userToAuth);
+        setPassword(passToAuth);
+        executeLogin(userToAuth, passToAuth);
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 py-8 px-4">
-            <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-100">
-                <div className="flex justify-center mb-6">
-                    <img src="/logo.jpg" alt="Mr. Valet Parking" className="h-20 w-auto object-contain drop-shadow-sm" />
+        <div className="min-h-screen bg-slate-900 text-gray-100 flex flex-col justify-center items-center py-8 px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-2xl bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+                
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-amber-600 via-[#dbb457] to-amber-600 p-6 text-center text-slate-950">
+                    <div className="flex justify-center mb-2">
+                        <div className="bg-white/90 p-2 rounded-xl shadow-md">
+                            <img src="/logo.jpg" alt="Mr. Valet Parking" className="h-14 w-auto object-contain" />
+                        </div>
+                    </div>
+                    <h1 className="text-2xl font-black tracking-tight">Manpower Control System</h1>
+                    <p className="text-xs font-semibold text-slate-900/80 mt-1">Unified Operations & Outsource Agency Portal</p>
                 </div>
-                <h1 className="text-xl font-bold text-center text-gray-800 mb-1">Manpower Control System</h1>
-                <p className="text-center text-xs text-gray-500 mb-6">Sign in to access your portal</p>
-                
-                {error && <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4 text-xs font-medium">{error}</div>}
-                
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Email / WhatsApp</label>
-                        <input 
-                            type="text" 
-                            value={username} 
-                            onChange={e=>setUsername(e.target.value)} 
-                            required 
-                            placeholder="user@example.com"
-                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#dbb457] focus:outline-none" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Password</label>
-                        <input 
-                            type="password" 
-                            value={password} 
-                            onChange={e=>setPassword(e.target.value)} 
-                            required 
-                            placeholder="••••••••"
-                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#dbb457] focus:outline-none" 
-                        />
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                        <Link href="/forgot-password" className="text-[#dbb457] font-semibold hover:underline">Forgot password?</Link>
-                    </div>
+
+                {/* View Switcher Tabs */}
+                <div className="flex border-b border-slate-700 bg-slate-850">
                     <button 
-                        type="submit" 
-                        disabled={loading} 
-                        className="w-full bg-[#dbb457] text-white p-3 rounded-lg hover:bg-[#c29d45] font-bold text-sm shadow transition-colors duration-150 disabled:opacity-50"
+                        type="button"
+                        onClick={() => setViewMode('quick')}
+                        className={`flex-1 py-3 text-xs sm:text-sm font-bold text-center transition-all ${
+                            viewMode === 'quick' 
+                                ? 'bg-slate-800 text-[#dbb457] border-b-2 border-[#dbb457]' 
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/50'
+                        }`}
                     >
-                        {loading ? 'Authenticating...' : 'Sign In'}
+                        ⚡ 1-Tap Portal Access (Testing Mode)
                     </button>
-                </form>
+                    <button 
+                        type="button"
+                        onClick={() => setViewMode('manual')}
+                        className={`flex-1 py-3 text-xs sm:text-sm font-bold text-center transition-all ${
+                            viewMode === 'manual' 
+                                ? 'bg-slate-800 text-[#dbb457] border-b-2 border-[#dbb457]' 
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/50'
+                        }`}
+                    >
+                        🔑 Manual Credentials Login
+                    </button>
+                </div>
 
-                {/* Quick test credentials assistant */}
-                <div className="mt-8 pt-6 border-t border-gray-100 space-y-3">
-                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Quick Test Logins (Password: devpass123)</div>
-                    
-                    {/* Operations Managers Direct Testing */}
-                    <div className="bg-amber-50/50 p-2.5 rounded-lg border border-amber-200/60">
-                        <div className="text-[11px] font-bold text-amber-800 uppercase mb-1.5 flex items-center justify-between">
-                            <span>Operations Managers (Assigned Sites)</span>
-                            <span className="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded">Filtered</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5 text-xs">
-                            <button type="button" onClick={()=>fillDemo('wissem.chagtmi@mrvalet.com')} className="p-1.5 bg-white hover:bg-amber-100 border border-amber-200 rounded text-center font-bold text-amber-900 transition-colors">
-                                Wissem (25 Sites)
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('hani.abdelsallam@mrvalet.com')} className="p-1.5 bg-white hover:bg-amber-100 border border-amber-200 rounded text-center font-bold text-amber-900 transition-colors">
-                                Hani (18 Sites)
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('maen.klaib@mrvalet.com')} className="p-1.5 bg-white hover:bg-amber-100 border border-amber-200 rounded text-center font-bold text-amber-900 transition-colors">
-                                Maen (29 Sites)
-                            </button>
-                        </div>
+                {/* Error Banner */}
+                {error && (
+                    <div className="mx-6 mt-4 p-3 bg-red-950/80 border border-red-500 text-red-200 rounded-lg text-xs flex items-center justify-between">
+                        <span>⚠️ {error}</span>
+                        <button onClick={() => setError('')} className="text-red-400 font-bold ml-2">✕</button>
                     </div>
+                )}
 
-                    {/* Outsource Agency Heads Direct Testing */}
-                    <div className="bg-blue-50/50 p-2.5 rounded-lg border border-blue-200/60">
-                        <div className="text-[11px] font-bold text-blue-800 uppercase mb-1.5 flex items-center justify-between">
-                            <span>Outsource Agency Heads (Suppliers)</span>
-                            <span className="text-[10px] bg-blue-100 text-blue-900 px-1.5 py-0.5 rounded">Dispatch Portals</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-1.5 text-xs">
-                            <button type="button" onClick={()=>fillDemo('hanees@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
-                                🏢 Hanees
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('deepu@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
-                                🏢 Deepu
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('kanan@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
-                                🏢 Kanan
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('nizar@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
-                                🏢 Nizar
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('dennis@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
-                                🏢 Dennis
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('naboth@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors">
-                                🏢 Naboth
-                            </button>
-                            <button type="button" onClick={()=>fillDemo('henry@supplier.mrvalet.local')} className="p-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded text-center font-bold text-blue-900 transition-colors col-span-2">
-                                🏢 Henry
-                            </button>
-                        </div>
-                    </div>
+                <div className="p-6">
+                    {/* TAB 1: QUICK ACCESS CARDS */}
+                    {viewMode === 'quick' && (
+                        <div className="space-y-6">
 
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                        <button type="button" onClick={()=>fillDemo('admin@example.com')} className="p-1.5 bg-gray-50 hover:bg-amber-50 border rounded text-left font-medium text-gray-700 hover:text-amber-800 transition-colors">
-                            👑 Super Admin (All Sites)
-                        </button>
-                        <button type="button" onClick={()=>fillDemo('supplier@example.com')} className="p-1.5 bg-gray-50 hover:bg-amber-50 border rounded text-left font-medium text-gray-700 hover:text-amber-800 transition-colors">
-                            🏢 Supplier Agency
-                        </button>
-                        <button type="button" onClick={()=>fillDemo('accounting@example.com')} className="p-1.5 bg-gray-50 hover:bg-amber-50 border rounded text-left font-medium text-gray-700 hover:text-amber-800 transition-colors">
-                            💰 Accounting Team
-                        </button>
-                        <button type="button" onClick={()=>fillDemo('gm@example.com')} className="p-1.5 bg-gray-50 hover:bg-amber-50 border rounded text-left font-medium text-gray-700 hover:text-amber-800 transition-colors">
-                            📊 General Manager
-                        </button>
-                        <button type="button" onClick={()=>fillDemo('worker@example.com')} className="p-1.5 bg-gray-50 hover:bg-amber-50 border rounded text-left font-medium text-gray-700 hover:text-amber-800 transition-colors col-span-2 text-center">
-                            👷 Worker Mobile Check-In
-                        </button>
-                    </div>
+                            {/* 1. OUTSOURCE SUPPLIER AGENCIES */}
+                            <div className="bg-slate-850 p-4 rounded-xl border border-blue-500/30">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-lg">🏢</span>
+                                        <div>
+                                            <div className="text-xs font-black uppercase text-blue-400 tracking-wider">
+                                                Outsource Supplier Agencies
+                                            </div>
+                                            <div className="text-[11px] text-gray-400">
+                                                Track shift requests, negotiate quotas, and assign drivers
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] bg-blue-500/20 text-blue-300 font-mono px-2 py-0.5 rounded border border-blue-500/30">
+                                        Pass: devpass123
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    {SUPPLIERS.map((sup) => {
+                                        const isLoggingIn = loading && activeLoginUser === sup.shortUser;
+                                        return (
+                                            <div 
+                                                key={sup.name}
+                                                className="bg-slate-800 hover:bg-slate-750 p-3 rounded-lg border border-slate-700 flex flex-col justify-between transition-colors shadow-sm"
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                                                            <span>{sup.name}</span>
+                                                            <span className="text-[10px] bg-blue-900/60 text-blue-300 px-1.5 py-0.2 rounded font-mono">Agency #{sup.agencyId}</span>
+                                                        </div>
+                                                        <div className="text-[11px] text-gray-400 font-mono mt-0.5">{sup.shortUser}</div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        disabled={loading}
+                                                        onClick={() => handle1TapLogin(sup.shortUser)}
+                                                        className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-md shadow transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                                                    >
+                                                        {isLoggingIn ? 'Entering...' : '1-Tap Login →'}
+                                                    </button>
+                                                </div>
+                                                <div className="text-[10px] text-gray-500 mt-2 flex justify-between border-t border-slate-700/60 pt-1.5">
+                                                    <span>Email: {sup.email}</span>
+                                                    <span className="font-mono text-gray-400">{sup.phone}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 2. OPERATIONS MANAGERS */}
+                            <div className="bg-slate-850 p-4 rounded-xl border border-amber-500/30">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-lg">👔</span>
+                                        <div>
+                                            <div className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                                                Operations Managers (HQ)
+                                            </div>
+                                            <div className="text-[11px] text-gray-400">
+                                                Create requests, review agency proposals, and give final approval
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded border border-amber-500/30">
+                                        Pass: devpass123
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    {OPS_MANAGERS.slice(0, 3).map((mgr) => {
+                                        const isLoggingIn = loading && activeLoginUser === mgr.email;
+                                        return (
+                                            <div 
+                                                key={mgr.name}
+                                                className="bg-slate-800 hover:bg-slate-750 p-3 rounded-lg border border-slate-700 flex flex-col justify-between transition-colors shadow-sm"
+                                            >
+                                                <div>
+                                                    <div className="font-bold text-sm text-white">{mgr.name}</div>
+                                                    <div className="text-[10px] text-amber-400 font-bold mt-0.5">{mgr.sitesCount} Assigned Sites</div>
+                                                    <div className="text-[10px] text-gray-400 truncate mt-0.5">{mgr.highlight}</div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={loading}
+                                                    onClick={() => handle1TapLogin(mgr.email)}
+                                                    className="w-full mt-3 text-xs bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-1.5 rounded-md shadow transition-colors text-center disabled:opacity-50 cursor-pointer"
+                                                >
+                                                    {isLoggingIn ? 'Entering...' : '1-Tap Login →'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 3. ADMINISTRATION & OTHER ROLES */}
+                            <div className="bg-slate-850 p-3 rounded-xl border border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                <div className="text-gray-400 font-bold text-[11px] uppercase tracking-wider">Other Portals:</div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handle1TapLogin('admin@example.com')} 
+                                        className="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-2.5 py-1.5 rounded font-medium text-white transition-colors cursor-pointer"
+                                    >
+                                        👑 Super Admin
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handle1TapLogin('accounting@example.com')} 
+                                        className="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-2.5 py-1.5 rounded font-medium text-white transition-colors cursor-pointer"
+                                    >
+                                        💰 Accounting
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handle1TapLogin('gm@example.com')} 
+                                        className="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-2.5 py-1.5 rounded font-medium text-white transition-colors cursor-pointer"
+                                    >
+                                        📊 General Manager
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handle1TapLogin('worker@example.com')} 
+                                        className="bg-emerald-800/50 hover:bg-emerald-700/60 border border-emerald-600 px-2.5 py-1.5 rounded font-bold text-emerald-200 transition-colors cursor-pointer"
+                                    >
+                                        👷 Driver Mobile App
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB 2: MANUAL CREDENTIALS LOGIN */}
+                    {viewMode === 'manual' && (
+                        <form onSubmit={handleFormSubmit} className="space-y-4 max-w-md mx-auto">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                                    Username / Email / WhatsApp
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={username} 
+                                    onChange={e => setUsername(e.target.value)} 
+                                    required 
+                                    placeholder="e.g. hanees, deepu, or maen.klaib@mrvalet.com"
+                                    className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#dbb457] focus:outline-none" 
+                                />
+                                <p className="text-[11px] text-gray-400 mt-1">
+                                    Tip: You can just type the supplier's first name: <strong className="text-white">hanees</strong>, <strong className="text-white">deepu</strong>, <strong className="text-white">kanan</strong>, etc.
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                                    Password
+                                </label>
+                                <input 
+                                    type="password" 
+                                    value={password} 
+                                    onChange={e => setPassword(e.target.value)} 
+                                    required 
+                                    placeholder="••••••••"
+                                    className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#dbb457] focus:outline-none" 
+                                />
+                                <p className="text-[11px] text-gray-400 mt-1">
+                                    Default testing password is: <strong className="text-[#dbb457]">devpass123</strong>
+                                </p>
+                            </div>
+                            <div className="flex justify-between items-center text-xs pt-1">
+                                <Link href="/forgot-password" className="text-[#dbb457] font-semibold hover:underline">
+                                    Forgot password?
+                                </Link>
+                            </div>
+                            <button 
+                                type="submit" 
+                                disabled={loading} 
+                                className="w-full bg-[#dbb457] hover:bg-[#c29d45] text-slate-950 font-black p-3 rounded-lg text-sm shadow transition-colors disabled:opacity-50 cursor-pointer"
+                            >
+                                {loading ? 'Signing In...' : 'Sign In to Portal'}
+                            </button>
+                        </form>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="bg-slate-850 p-4 text-center border-t border-slate-700 text-xs text-gray-500">
+                    Mr. Valet Parking © 2026 • Real-Time Qatar Valet Manpower Control & Attendance System
                 </div>
             </div>
         </div>
