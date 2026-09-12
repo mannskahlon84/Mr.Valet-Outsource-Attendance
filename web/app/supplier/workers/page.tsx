@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
+import { validateQatarIdClient } from '@/lib/qidValidator';
 
 export default function SupplierWorkers() {
     const [workers, setWorkers] = useState<any[]>([]);
@@ -16,6 +17,8 @@ export default function SupplierWorkers() {
     const [qid, setQid] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('devpass123');
+
+    const qidValidation = qid ? validateQatarIdClient(qid) : null;
 
     const loadData = () => {
         fetchApi('/workers/')
@@ -49,14 +52,20 @@ export default function SupplierWorkers() {
     const handleCreateWorker = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (qidValidation && !qidValidation.isValid) {
+            setError(qidValidation.errorMessage || "Please enter a valid Qatar ID (QID).");
+            return;
+        }
+
         setSubmitting(true);
         try {
             const body = {
-                first_name: firstName,
-                last_name: lastName,
+                first_name: firstName.trim(),
+                last_name: lastName.trim(),
                 internal_worker_id: internalId,
-                qid,
-                whatsapp_number: phone,
+                qid: qid.trim(),
+                whatsapp_number: phone.trim(),
                 password
             };
 
@@ -220,7 +229,23 @@ export default function SupplierWorkers() {
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 text-red-700 text-xs p-3 rounded-lg font-medium">{error}</div>
+                            <div className={`p-3.5 rounded-xl text-xs font-medium border ${
+                                error.includes('already registered') 
+                                    ? 'bg-rose-50 border-rose-300 text-rose-900 shadow-sm' 
+                                    : 'bg-red-50 border-red-200 text-red-700'
+                            }`}>
+                                <div className="flex items-start gap-2.5">
+                                    <span className="text-lg leading-none mt-0.5">
+                                        {error.includes('already registered') ? '🚫' : '⚠️'}
+                                    </span>
+                                    <div className="space-y-1">
+                                        <div className="font-bold text-xs uppercase tracking-wide">
+                                            {error.includes('already registered') ? 'Cross-Supplier Registration Blocked' : 'Registration Error'}
+                                        </div>
+                                        <div className="leading-relaxed">{error}</div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         <form onSubmit={handleCreateWorker} className="space-y-3 text-sm">
@@ -271,11 +296,31 @@ export default function SupplierWorkers() {
                                     <input 
                                         type="text" 
                                         value={qid} 
-                                        onChange={e => setQid(e.target.value)} 
-                                        placeholder="11-digit QID"
+                                        maxLength={11}
+                                        onChange={e => setQid(e.target.value.replace(/\D/g, ''))} 
+                                        placeholder="11-digit QID (e.g. 295356...)"
                                         required 
-                                        className="w-full border p-2.5 rounded-lg font-mono text-sm"
+                                        className="w-full border p-2.5 rounded-lg font-mono text-sm tracking-wide"
                                     />
+                                    {qid.length > 0 && (
+                                        <div className={`mt-1.5 p-2 rounded-lg text-xs flex items-start gap-1.5 ${
+                                            qidValidation?.isValid 
+                                                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
+                                                : 'bg-amber-50 border border-amber-200 text-amber-800'
+                                        }`}>
+                                            <span className="text-sm leading-none mt-0.5">{qidValidation?.isValid ? '✓' : '⚠️'}</span>
+                                            <div>
+                                                <div className="font-semibold">
+                                                    {qidValidation?.isValid ? qidValidation.summary : qidValidation?.errorMessage}
+                                                </div>
+                                                {qidValidation?.isValid && (
+                                                    <div className="text-[10px] text-emerald-600 mt-0.5">
+                                                        Qatar MOI verified format • Anti-bogus check passed
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

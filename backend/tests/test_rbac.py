@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from tests.test_phase1b import get_auth_token
 
 def test_rbac_gm_readonly(client, db):
@@ -36,7 +36,7 @@ def test_rbac_ops_manager(client, db):
     assert res.status_code == 200
     
     # Cannot create worker
-    res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-OPS-1", "first_name": "A", "last_name": "B", "supplier_id": 1, "qid": "QID-OPS-1", "password": "password123", "whatsapp_number": "WAPP-OPS-1"}, headers=headers)
+    res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-OPS-1", "first_name": "A", "last_name": "B", "supplier_id": 1, "qid": "29563413001", "password": "password123", "whatsapp_number": "+97455033001"}, headers=headers)
     assert res.status_code == 403
 
 def test_rbac_supplier_head(client, db):
@@ -58,9 +58,9 @@ def test_rbac_supplier_head(client, db):
     res = client.post("/api/v1/sites/", json={"name": "Sup Site", "latitude": 1, "longitude": 1, "geofence_radius_meters": 10}, headers=headers)
     assert res.status_code == 403
     # Can request OTP for own worker
-    res = client.post("/api/v1/workers/register-request", json={"internal_worker_id": "W-SUP-1", "first_name": "A", "last_name": "B", "supplier_id": sup["id"], "qid": "QID-SUP-1", "password": "password123", "whatsapp_number": "WAPP-SUP-1"}, headers=headers)
+    res = client.post("/api/v1/workers/register-request", json={"internal_worker_id": "W-SUP-1", "first_name": "A", "last_name": "B", "supplier_id": sup["id"], "qid": "29563413002", "password": "password123", "whatsapp_number": "+97455033002"}, headers=headers)
     assert res.status_code == 200
     
     # Cannot request OTP for other supplier worker
-    res = client.post("/api/v1/workers/register-request", json={"internal_worker_id": "W-SUP-2", "first_name": "A", "last_name": "B", "supplier_id": sup2["id"], "qid": "QID-SUP-2", "password": "password123", "whatsapp_number": "WAPP-SUP-2"}, headers=headers)
+    res = client.post("/api/v1/workers/register-request", json={"internal_worker_id": "W-SUP-2", "first_name": "A", "last_name": "B", "supplier_id": sup2["id"], "qid": "29563413003", "password": "password123", "whatsapp_number": "+97455033003"}, headers=headers)
     assert res.status_code == 403

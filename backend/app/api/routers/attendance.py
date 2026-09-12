@@ -1,8 +1,10 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.db.session import get_db
-from app.models.all_models import Attendance, WorkerAssignment, SupplierResponse, ManpowerRequest, Site, User, RoleEnum, Worker
+from app.models.all_models import Attendance, WorkerAssignment, SupplierResponse, ManpowerRequest, Site, User, RoleEnum, Worker, Notification, Supplier
 from app.schemas.attendance import CheckInRequest, CheckOutRequest, AttendanceResponse
 from app.api.deps import get_current_user, require_role
 from app.services.audit import log_audit_event
@@ -142,6 +144,29 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
     att.face_verified = True
     att.liveness_score = l_score
     
+    # Notify Supplier Head & Operations Manager
+    w_name = f"{worker.first_name} {worker.last_name}"
+    sup = db.query(Supplier).filter(Supplier.id == worker.supplier_id).first() if worker.supplier_id else None
+    sup_name = sup.name if sup else "Agency"
+
+    if worker.supplier_id:
+        db.add(Notification(
+            supplier_id=worker.supplier_id,
+            title=f"🟢 Shift Started: {w_name}",
+            message=f"{w_name} clocked in at {qr_site.name} ({mr.start_time} - {mr.end_time}).",
+            entity_type="SHIFT_CHECKIN",
+            entity_id=att.id
+        ))
+
+    if mr.ops_manager_id:
+        db.add(Notification(
+            user_id=mr.ops_manager_id,
+            title=f"🟢 Driver Arrived: {qr_site.name}",
+            message=f"{w_name} ({sup_name}) clocked in at {qr_site.name}.",
+            entity_type="SHIFT_CHECKIN",
+            entity_id=att.id
+        ))
+
     db.commit()
     db.refresh(att)
     log_audit_event(db, current_user.id, current_user.role.value, "attendance_check_in", "attendance", att.id, None, {})
@@ -230,7 +255,164 @@ def check_out(req: CheckOutRequest, db: Session = Depends(get_db), current_user:
     att.check_out_verification_method = "QR_GPS_FACE"
     att.status = "CHECKED_OUT"
     
+    # Notify Supplier Head & Operations Manager
+    duty_hours = 0.0
+    if att.check_in_time and att.check_out_time:
+        t_out = att.check_out_time.replace(tzinfo=None) if att.check_out_time.tzinfo else att.check_out_time
+        t_in = att.check_in_time.replace(tzinfo=None) if att.check_in_time.tzinfo else att.check_in_time
+        delta = t_out - t_in
+        duty_hours = round(max(0.0, delta.total_seconds() / 3600.0), 2)
+
+    w_name = f"{worker.first_name} {worker.last_name}"
+    sup = db.query(Supplier).filter(Supplier.id == worker.supplier_id).first() if worker.supplier_id else None
+    sup_name = sup.name if sup else "Agency"
+
+    if worker.supplier_id:
+        db.add(Notification(
+            supplier_id=worker.supplier_id,
+            title=f"🔴 Shift Ended: {w_name}",
+            message=f"{w_name} completed shift at {qr_site.name}. Total duty hours: {duty_hours} hrs.",
+            entity_type="SHIFT_CHECKOUT",
+            entity_id=att.id
+        ))
+
+    if mr.ops_manager_id:
+        db.add(Notification(
+            user_id=mr.ops_manager_id,
+            title=f"🔴 Driver Clocked Out: {qr_site.name}",
+            message=f"{w_name} ({sup_name}) clocked out at {qr_site.name} ({duty_hours} hrs).",
+            entity_type="SHIFT_CHECKOUT",
+            entity_id=att.id
+        ))
+
     db.commit()
     db.refresh(att)
     log_audit_event(db, current_user.id, current_user.role.value, "attendance_check_out", "attendance", att.id, None, {})
     return att
+
+@router.get("/location-shifts")
+def get_location_shifts(
+    target_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Location-wise shift monitoring: how many employees start shift on this location, and how many end shift on same location."""
+    if current_user.role not in [RoleEnum.OPS_MANAGER, RoleEnum.SUPER_ADMIN, RoleEnum.GENERAL_MANAGER, RoleEnum.ACCOUNTING]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if target_date:
+        try:
+            filter_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+        except Exception:
+            filter_date = datetime.now(timezone.utc).date()
+    else:
+        filter_date = datetime.now(timezone.utc).date()
+
+    site_query = db.query(Site)
+    if current_user.role == RoleEnum.OPS_MANAGER:
+        site_query = site_query.filter(Site.manager_id == current_user.id)
+    sites = site_query.all()
+
+    results = []
+    for site in sites:
+        reqs = db.query(ManpowerRequest).filter(
+            ManpowerRequest.site_id == site.id,
+            func.date(ManpowerRequest.required_date) == filter_date
+        ).all()
+
+        total_scheduled = sum(r.total_required_workers for r in reqs)
+        req_ids = [r.id for r in reqs]
+
+        assignments = db.query(WorkerAssignment, Attendance, Worker, Supplier)\
+            .join(SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id)\
+            .outerjoin(Attendance, Attendance.worker_assignment_id == WorkerAssignment.id)\
+            .join(Worker, WorkerAssignment.worker_id == Worker.id)\
+            .join(Supplier, Worker.supplier_id == Supplier.id)\
+            .filter(SupplierResponse.manpower_request_id.in_(req_ids)).all() if req_ids else []
+
+        started_count = sum(1 for _, a, _, _ in assignments if a and a.check_in_time is not None)
+        ended_count = sum(1 for _, a, _, _ in assignments if a and a.check_out_time is not None)
+        active_on_site = started_count - ended_count
+
+        worker_list = []
+        for wa, a, wrk, sup in assignments:
+            worker_list.append({
+                "assignment_id": wa.id,
+                "worker_id": wrk.id,
+                "worker_name": f"{wrk.first_name} {wrk.last_name}",
+                "internal_worker_id": wrk.internal_worker_id,
+                "supplier_name": sup.name,
+                "check_in_time": a.check_in_time.isoformat() if a and a.check_in_time else None,
+                "check_out_time": a.check_out_time.isoformat() if a and a.check_out_time else None,
+                "status": a.status if a else "SCHEDULED"
+            })
+
+        results.append({
+            "site_id": site.id,
+            "site_name": site.name,
+            "site_address": site.address or "",
+            "date": filter_date.strftime("%Y-%m-%d"),
+            "total_scheduled": total_scheduled,
+            "started_shift_count": started_count,
+            "ended_shift_count": ended_count,
+            "active_on_site": max(active_on_site, 0),
+            "workers": worker_list
+        })
+
+    return results
+
+@router.get("/supplier-live")
+def get_supplier_live_attendance(
+    target_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))
+):
+    """Supplier Head live employee shift tracking: which workers started shift, location, time, and status."""
+    if target_date:
+        try:
+            filter_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+        except Exception:
+            filter_date = datetime.now(timezone.utc).date()
+    else:
+        filter_date = datetime.now(timezone.utc).date()
+
+    records = db.query(WorkerAssignment, Attendance, Worker, ManpowerRequest, Site)\
+        .join(SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id)\
+        .join(ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id)\
+        .join(Site, ManpowerRequest.site_id == Site.id)\
+        .join(Worker, WorkerAssignment.worker_id == Worker.id)\
+        .outerjoin(Attendance, Attendance.worker_assignment_id == WorkerAssignment.id)\
+        .filter(
+            SupplierResponse.supplier_id == current_user.supplier_id,
+            func.date(ManpowerRequest.required_date) == filter_date
+        ).all()
+
+    results = []
+    for wa, a, wrk, mr, site in records:
+        status_label = "SCHEDULED"
+        if a:
+            if a.check_out_time:
+                status_label = "SHIFT_ENDED"
+            elif a.check_in_time:
+                status_label = "ON_SHIFT"
+
+        duty_hours = 0.0
+        if a and a.check_in_time and a.check_out_time:
+            delta = a.check_out_time - a.check_in_time
+            duty_hours = round(delta.total_seconds() / 3600.0, 2)
+
+        results.append({
+            "worker_id": wrk.id,
+            "worker_name": f"{wrk.first_name} {wrk.last_name}",
+            "internal_worker_id": wrk.internal_worker_id,
+            "qid": wrk.qid or "",
+            "phone": wrk.whatsapp_number or wrk.phone or "",
+            "site_name": site.name,
+            "shift_window": f"{mr.start_time} - {mr.end_time}",
+            "check_in_time": a.check_in_time.isoformat() if a and a.check_in_time else None,
+            "check_out_time": a.check_out_time.isoformat() if a and a.check_out_time else None,
+            "duty_hours": duty_hours,
+            "status": status_label
+        })
+
+    return results

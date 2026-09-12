@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 import io
 from app.models.all_models import Supplier, Worker, Site
 
@@ -49,7 +49,7 @@ def test_workers_crud(client, db):
         "supplier_id": sup["id"],
         "first_name": "John",
         "last_name": "Smith"
-    , "qid": "QID-7f16df0b", "password": "password123", "whatsapp_number": "WAPP-7f16df0b"}, headers=headers)
+    , "qid": "29563410001", "password": "password123", "whatsapp_number": "+97455010001"}, headers=headers)
     assert res.status_code == 200
     w_id = res.json()["id"]
     
@@ -106,7 +106,7 @@ def test_rbac_supplier_head(client, db):
     sup2 = client.post("/api/v1/suppliers/", json={"name": "Supplier B"}, headers=headers_admin).json()
     
     # Create a worker for sup2
-    client.post("/api/v1/workers/", json={"internal_worker_id": "W-SUP2", "supplier_id": sup2["id"], "first_name": "Sup", "last_name": "Two", "qid": "QID-cf8bb42c", "password": "password123", "whatsapp_number": "WAPP-cf8bb42c"}, headers=headers_admin)
+    client.post("/api/v1/workers/", json={"internal_worker_id": "W-SUP2", "supplier_id": sup2["id"], "first_name": "Sup", "last_name": "Two", "qid": "29563410002", "password": "password123", "whatsapp_number": "+97455010002"}, headers=headers_admin)
     
     # Create Supplier Head user for sup1
     from app.models.all_models import User, RoleEnum

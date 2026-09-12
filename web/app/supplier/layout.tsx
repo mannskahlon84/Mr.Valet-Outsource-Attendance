@@ -18,6 +18,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     const navItems = [
         { label: 'Overview', href: '/supplier', icon: '📊' },
         { label: 'Requests', href: '/supplier/requests', icon: '📋' },
+        { label: 'Live Shift', href: '/supplier/attendance', icon: '⏱️' },
         { label: 'Workers', href: '/supplier/workers', icon: '👥' },
         { label: 'Invoices', href: '/supplier/invoices', icon: '🧾' },
         { label: 'Alerts', href: '/supplier/notifications', icon: '🔔' }

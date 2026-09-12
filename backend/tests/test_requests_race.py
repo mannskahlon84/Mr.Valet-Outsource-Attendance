@@ -21,6 +21,8 @@ def test_data(db):
     return {'ops_manager': om, 'site': site, 'supplier': sup}
 
 def test_race_condition_om_finalize(db, test_data):
+    if db.get_bind().dialect.name == "sqlite":
+        pytest.skip("Concurrent row-level locking race condition test requires PostgreSQL")
     # Setup a request and two supplier responses
     engine = db.get_bind()
     TestSession = sessionmaker(bind=engine)

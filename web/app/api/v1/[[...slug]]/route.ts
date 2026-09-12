@@ -584,20 +584,58 @@ export async function POST(
         return NextResponse.json(newWorker);
     }
 
-    // Attendance Check-In
+    // Generate Site QR
+    if (path.startsWith('sites/') && path.endsWith('/qr')) {
+        const siteId = parseInt(path.split('/')[1]);
+        const site = SITES_LIST.find(s => s.id === siteId);
+        if (!site) return NextResponse.json({ detail: "Site not found" }, { status: 404 });
+        const randomToken = Math.random().toString(36).substring(2, 12);
+        site.qr_token = `MC:LOC:${site.id}:${randomToken}`;
+        site.qr_status = "ACTIVE";
+        return NextResponse.json(site);
+    }
+
+    // Attendance Check-In (Strict Verification)
     if (path === 'attendance/check-in') {
         let body: any = {};
         try { body = await req.json(); } catch (e) {}
         
-        let matchedSite = SITES_LIST.find(s => s.name === "Fairmont Hotel") || SITES_LIST[0];
+        let matchedSite = null;
         if (body.qr_data) {
             const qr = String(body.qr_data).trim();
-            const found = SITES_LIST.find(s => s.qr_token === qr || qr.includes(`:LOC:${s.id}`) || qr.toLowerCase().includes(s.name.toLowerCase()));
-            if (found) matchedSite = found;
+            matchedSite = SITES_LIST.find(s => s.qr_token === qr || qr === `MC:LOC:${s.id}` || qr.startsWith(`MC:LOC:${s.id}:`));
         }
-        if (body.site_id) {
-            const found = SITES_LIST.find(s => s.id === Number(body.site_id));
-            if (found) matchedSite = found;
+
+        if (!matchedSite) {
+            return NextResponse.json({
+                detail: "Invalid or unrecognized location QR code. Attendance rejected. You must scan the authorized venue QR code."
+            }, { status: 400 });
+        }
+
+        // Live Selfie validation
+        if (!body.live_face_image || body.live_face_image.length < 50) {
+            return NextResponse.json({
+                detail: "Live facial selfie photo is required for anti-proxy biometric check-in."
+            }, { status: 400 });
+        }
+
+        // Geofence Coordinate Matching
+        if (body.latitude != null && body.longitude != null && matchedSite.latitude != null && matchedSite.longitude != null) {
+            const R = 6371000;
+            const dLat = (matchedSite.latitude - body.latitude) * Math.PI / 180;
+            const dLon = (matchedSite.longitude - body.longitude) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(body.latitude * Math.PI / 180) * Math.cos(matchedSite.latitude * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const dist = Math.round(R * c);
+            const allowed = (matchedSite.geofence_radius_meters || 100) + 50;
+
+            if (dist > allowed) {
+                return NextResponse.json({
+                    detail: `GPS Geofence Violation: Device is ${dist}m away from ${matchedSite.name} (Allowed perimeter: ${matchedSite.geofence_radius_meters}m). Coordinates must match location QR code.`
+                }, { status: 400 });
+            }
         }
 
         const now = new Date();

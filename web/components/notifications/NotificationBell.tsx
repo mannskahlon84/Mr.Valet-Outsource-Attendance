@@ -78,6 +78,11 @@ export default function NotificationBell() {
                                 });
                             } catch (e) {}
                         }
+
+                        // Emit event for pages to auto-refresh data immediately
+                        if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('portal_data_updated', { detail: latest }));
+                        }
                     }
                 }
 
@@ -89,10 +94,26 @@ export default function NotificationBell() {
         }
     };
 
-    // Initial load + smart polling every 20 seconds + on tab focus
+    // Cross-tab real-time sync via BroadcastChannel
+    useEffect(() => {
+        let bc: BroadcastChannel | null = null;
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            try {
+                bc = new BroadcastChannel('mr_valet_portal_sync');
+                bc.onmessage = () => {
+                    fetchNotifications(true);
+                };
+            } catch (e) {}
+        }
+        return () => {
+            if (bc) bc.close();
+        };
+    }, []);
+
+    // Initial load + fast 3-second polling for instant test updates + on tab focus
     useEffect(() => {
         fetchNotifications(false);
-        const interval = setInterval(() => fetchNotifications(true), 20000);
+        const interval = setInterval(() => fetchNotifications(true), 3000);
         const onFocus = () => fetchNotifications(true);
         window.addEventListener('focus', onFocus);
         return () => {

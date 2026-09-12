@@ -1,4 +1,4 @@
-﻿def test_phase1d_workflow(client, db):
+def test_phase1d_workflow(client, db):
     from tests.test_phase1b import get_auth_token
     from app.models.all_models import User, RoleEnum
     from app.core.security import get_password_hash
@@ -34,7 +34,7 @@
     # Create workers for this supplier
     workers = []
     for i in range(3):
-        w = client.post("/api/v1/workers/", json={"internal_worker_id": f"W-P1D-{i}", "qid": f"QID-{i}", "password": "password123", "whatsapp_number": f"WAPP-{i}", "supplier_id": sup_id, "first_name": "W", "last_name": str(i)}, headers=headers_admin).json()
+        w = client.post("/api/v1/workers/", json={"internal_worker_id": f"W-P1D-{i}", "qid": f"2956341100{i}", "password": "password123", "whatsapp_number": f"+9745502100{i}", "supplier_id": sup_id, "first_name": "W", "last_name": str(i)}, headers=headers_admin).json()
         workers.append(w["id"])
         
     req_date = (datetime.now(timezone.utc) + timedelta(days=2)).date().isoformat()

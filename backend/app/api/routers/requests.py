@@ -48,9 +48,13 @@ def create_request(req: ManpowerRequestCreate, db: Session = Depends(get_db), cu
         db.flush()
         
         # Requirement 1 & 3: Supplier Notification
+        manager_display = current_user.name or "Operations Manager"
+        site_display = site.name if site else f"Location #{req.site_id}"
+        req_date_str = req.required_date.strftime('%d %b %Y') if hasattr(req.required_date, 'strftime') else str(req.required_date)
         notif = Notification(
             supplier_id=route.supplier_id,
-            message=f"New Manpower Request (ID: {mr.id}) for {req.total_required_workers} workers on {req.required_date} at Location ID {req.site_id}. Shift: {req.start_time} - {req.end_time}.",
+            title=f"📋 New Shift Request #{mr.id} - {site_display}",
+            message=f"Ops Manager {manager_display} requested {route.requested_quantity} drivers for {site_display} on {req_date_str} ({req.start_time} - {req.end_time}).",
             entity_type="MANPOWER_REQUEST",
             entity_id=mr.id
         )
@@ -167,19 +171,31 @@ from app.models.all_models import RequestMessage, Supplier
 
 @router.get("/supplier")
 def get_supplier_requests(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
-    items = db.query(ManpowerRequest).join(SupplierResponse).filter(SupplierResponse.supplier_id == current_user.supplier_id).order_by(ManpowerRequest.id.desc()).all()
-    site_ids = {r.site_id for r in items if r.site_id}
+    items = db.query(ManpowerRequest, SupplierResponse)\
+        .join(SupplierResponse, ManpowerRequest.id == SupplierResponse.manpower_request_id)\
+        .filter(SupplierResponse.supplier_id == current_user.supplier_id)\
+        .order_by(ManpowerRequest.id.desc()).all()
+
+    site_ids = {r.site_id for r, _ in items if r.site_id}
     sites_map = {}
     if site_ids:
         sites_list = db.query(Site).filter(Site.id.in_(site_ids)).all()
         sites_map = {s.id: s for s in sites_list}
 
+    manager_ids = {r.ops_manager_id for r, _ in items if r.ops_manager_id}
+    managers_map = {}
+    if manager_ids:
+        managers_list = db.query(User).filter(User.id.in_(manager_ids)).all()
+        managers_map = {m.id: m.name for m in managers_list}
+
     result = []
-    for r in items:
+    for r, sr in items:
         s = sites_map.get(r.site_id)
         result.append({
             "id": r.id,
+            "response_id": sr.id,
             "ops_manager_id": r.ops_manager_id,
+            "ops_manager_name": managers_map.get(r.ops_manager_id) or "Operations Manager",
             "site_id": r.site_id,
             "site_name": s.name if s else f"Location #{r.site_id}",
             "site_address": s.address if s and s.address else "",
@@ -187,6 +203,12 @@ def get_supplier_requests(db: Session = Depends(get_db), current_user: User = De
             "start_time": r.start_time,
             "end_time": r.end_time,
             "total_required_workers": r.total_required_workers,
+            "requested_quantity": sr.requested_quantity,
+            "confirmed_quantity": sr.confirmed_quantity,
+            "supplier_response_status": sr.status,
+            "proposed_start_time": sr.proposed_start_time,
+            "proposed_end_time": sr.proposed_end_time,
+            "supplier_message": sr.supplier_message,
             "skill_category": r.skill_category,
             "notes": r.notes,
             "status": r.status,
@@ -213,9 +235,11 @@ def get_request_by_id(request_id: int, db: Session = Depends(get_db), current_us
             raise HTTPException(403, "Not authorized to view this request")
 
     site = db.query(Site).filter(Site.id == mr.site_id).first()
+    manager = db.query(User).filter(User.id == mr.ops_manager_id).first()
     return {
         "id": mr.id,
         "ops_manager_id": mr.ops_manager_id,
+        "ops_manager_name": manager.name if manager else "Operations Manager",
         "site_id": mr.site_id,
         "site_name": site.name if site else f"Location #{mr.site_id}",
         "site_address": site.address if site and site.address else "",
@@ -228,6 +252,28 @@ def get_request_by_id(request_id: int, db: Session = Depends(get_db), current_us
         "status": mr.status,
         "created_at": mr.created_at.isoformat() if hasattr(mr, "created_at") and mr.created_at else None
     }
+
+@router.get("/{request_id}/responses")
+def get_request_responses(request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    responses = db.query(SupplierResponse).filter(SupplierResponse.manpower_request_id == request_id).all()
+    res = []
+    for r in responses:
+        sup = db.query(Supplier).filter(Supplier.id == r.supplier_id).first()
+        res.append({
+            "id": r.id,
+            "manpower_request_id": r.manpower_request_id,
+            "supplier_id": r.supplier_id,
+            "supplier_name": sup.name if sup else f"Supplier #{r.supplier_id}",
+            "supplier_rate": sup.billing_rate if sup else 0.0,
+            "requested_quantity": r.requested_quantity,
+            "confirmed_quantity": r.confirmed_quantity,
+            "status": r.status,
+            "proposed_start_time": r.proposed_start_time,
+            "proposed_end_time": r.proposed_end_time,
+            "supplier_message": r.supplier_message,
+            "responded_at": r.responded_at.isoformat() if r.responded_at else None
+        })
+    return res
 
 @router.get("/{request_id}/messages")
 def get_request_messages(request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -303,11 +349,27 @@ def respond_to_request(request_id: int, update: SupplierResponseUpdate, db: Sess
     sr.responded_at = datetime.utcnow()
     
     # In-App Push Notification to Operations Manager
+    sup = db.query(Supplier).filter(Supplier.id == current_user.supplier_id).first()
+    sup_name = sup.name if sup else (current_user.name or "Agency")
+    site = db.query(Site).filter(Site.id == mr.site_id).first()
+    site_name = site.name if site else f"Location #{mr.site_id}"
+
+    if update.status == "ACCEPTED":
+        notif_title = f"✅ Request #{mr.id} APPROVED by {sup_name}"
+        notif_msg = f"{sup_name} APPROVED request for {site_name} ({update.confirmed_quantity} drivers confirmed)."
+    elif update.status == "REJECTED":
+        notif_title = f"❌ Request #{mr.id} REJECTED by {sup_name}"
+        reason = update.supplier_message or "Unable to fulfill shift quota"
+        notif_msg = f"{sup_name} REJECTED request for {site_name}. Reason: {reason}."
+    else:
+        notif_title = f"📝 Request #{mr.id} Proposal from {sup_name}"
+        notif_msg = f"{sup_name} responded with status '{update.status}' ({update.confirmed_quantity} drivers for {site_name}). Note: {update.supplier_message or 'None'}."
+
     if mr.ops_manager_id:
         om_notif = Notification(
             user_id=mr.ops_manager_id,
-            title="📋 Supplier Proposal Received",
-            message=f"Agency has responded to Request #{mr.id} with status '{update.status}' ({update.confirmed_quantity} drivers).",
+            title=notif_title,
+            message=notif_msg,
             entity_type="SUPPLIER_RESPONSE",
             entity_id=mr.id
         )
@@ -388,10 +450,12 @@ def finalize_supplier_response(
     )
     
     # Notify Supplier Head (Database In-App Notification)
+    site = db.query(Site).filter(Site.id == mr.site_id).first()
+    site_name = site.name if site else f"Location #{mr.site_id}"
     sup_notif = Notification(
         supplier_id=sr.supplier_id,
-        title="✅ Shift Allocation Finalized",
-        message=f"Operations Manager accepted your proposal for {payload.accepted_quantity} workers on Request #{mr.id}.",
+        title=f"✅ Shift Allocation Finalized: {site_name}",
+        message=f"Operations Manager accepted your proposal for {payload.accepted_quantity} drivers at {site_name} on Request #{mr.id}.",
         entity_type="MANPOWER_REQUEST",
         entity_id=mr.id
     )

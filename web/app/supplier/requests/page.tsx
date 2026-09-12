@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -8,20 +8,39 @@ export default function SupplierRequests() {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const loadData = useCallback(() => {
         fetchApi('/requests/supplier')
             .catch(() => fetchApi('/requests/').catch(() => []))
             .then(data => setRequests(data || []))
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => {
+        loadData();
+        const handleSync = () => loadData();
+        window.addEventListener('portal_data_updated', handleSync);
+        window.addEventListener('focus', handleSync);
+        return () => {
+            window.removeEventListener('portal_data_updated', handleSync);
+            window.removeEventListener('focus', handleSync);
+        };
+    }, [loadData]);
+
     if (loading) return <div className="p-8 text-center text-gray-500">Loading incoming requests...</div>;
+
+    const totalDrivers = requests.reduce((acc, r) => acc + (r.requested_quantity || r.total_required_workers || 0), 0);
+    const totalLocations = new Set(requests.map(r => r.site_id).filter(Boolean)).size;
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-black text-gray-900">Incoming Shift Requests</h1>
-                <p className="text-sm text-gray-500">Review manpower requests routed to your agency by Operations Managers</p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900">Incoming Shift Requests</h1>
+                    <p className="text-sm text-gray-500">Review manpower requests routed to your agency with location name, manager name, and required quotas</p>
+                </div>
+                <div className="text-xs bg-amber-50 text-amber-800 font-bold px-3 py-1.5 rounded-full border border-amber-200">
+                    {totalDrivers} Total Drivers across {totalLocations} Venues
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -33,7 +52,16 @@ export default function SupplierRequests() {
                                 <span className="text-xs font-black text-gray-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
                                     Req #{r.id}
                                 </span>
-                                <StatusBadge status={r.status} />
+                                <StatusBadge status={r.supplier_response_status || r.status} />
+                            </div>
+
+                            <div>
+                                <div className="text-sm font-black text-gray-900">
+                                    📍 {r.site_name || `Location #${r.site_id}`}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                    👤 Manager: <strong>{r.ops_manager_name || 'Operations Manager'}</strong>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-gray-100 font-medium">
@@ -49,13 +77,9 @@ export default function SupplierRequests() {
                                         {r.start_time} - {r.end_time}
                                     </span>
                                 </div>
-                                <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Quota</span>
-                                    <span className="text-[#dbb457] font-black">{r.total_required_workers} Drivers</span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Category</span>
-                                    <span className="text-gray-600">{r.skill_category || 'Valet Driver'}</span>
+                                <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-100">
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold">Your Agency Quota:</span>
+                                    <span className="text-[#dbb457] font-black">{r.requested_quantity || r.total_required_workers} Drivers</span>
                                 </div>
                             </div>
 
@@ -80,10 +104,10 @@ export default function SupplierRequests() {
                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                             <tr>
                                 <th className="px-5 py-3 text-left">Req ID</th>
-                                <th className="px-5 py-3 text-left">Date</th>
+                                <th className="px-5 py-3 text-left">Location / Venue</th>
+                                <th className="px-5 py-3 text-left">Ops Manager</th>
                                 <th className="px-5 py-3 text-left">Shift Window</th>
-                                <th className="px-5 py-3 text-left">Required Headcount</th>
-                                <th className="px-5 py-3 text-left">Skill</th>
+                                <th className="px-5 py-3 text-left">Agency Quota</th>
                                 <th className="px-5 py-3 text-left">Status</th>
                                 <th className="px-5 py-3 text-right">Actions</th>
                             </tr>
@@ -92,20 +116,24 @@ export default function SupplierRequests() {
                             {requests.map((r) => (
                                 <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-5 py-4 font-bold text-gray-900">#{r.id}</td>
-                                    <td className="px-5 py-4 text-gray-700 font-medium">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                    <td className="px-5 py-4">
+                                        <div className="font-bold text-gray-900">{r.site_name || `Location #${r.site_id}`}</div>
+                                        {r.site_address && <div className="text-xs text-gray-400">{r.site_address}</div>}
                                     </td>
-                                    <td className="px-5 py-4 text-gray-600 font-mono text-xs">
-                                        {r.start_time} - {r.end_time}
+                                    <td className="px-5 py-4 text-gray-800 font-semibold text-xs">
+                                        {r.ops_manager_name || 'Operations Manager'}
                                     </td>
-                                    <td className="px-5 py-4 font-bold text-gray-900">
-                                        {r.total_required_workers} Drivers
+                                    <td className="px-5 py-4 text-gray-700">
+                                        <div className="font-medium text-xs">{r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}</div>
+                                        <div className="text-xs text-gray-500 font-mono">{r.start_time} - {r.end_time}</div>
                                     </td>
-                                    <td className="px-5 py-4 text-gray-500">
-                                        {r.skill_category || 'Valet Driver'}
+                                    <td className="px-5 py-4 font-black text-gray-900">
+                                        <span className="bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded text-xs">
+                                            {r.requested_quantity || r.total_required_workers} Drivers
+                                        </span>
                                     </td>
                                     <td className="px-5 py-4">
-                                        <StatusBadge status={r.status} />
+                                        <StatusBadge status={r.supplier_response_status || r.status} />
                                     </td>
                                     <td className="px-5 py-4 text-right">
                                         <Link 

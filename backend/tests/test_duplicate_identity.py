@@ -1,4 +1,4 @@
-﻿import json
+import json
 import pytest
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -87,6 +87,8 @@ def test_different_faces_accepted(db, test_data):
     assert is_valid is True
 
 def test_concurrency_same_face_different_workers(db, test_data):
+    if db.get_bind().dialect.name == "sqlite":
+        pytest.skip("Concurrent duplicate identity check requires PostgreSQL")
     w1, w3, site = test_data["w1"], test_data["w3"], test_data["site"]
     wa1, wa3 = test_data["wa1"], test_data["wa3"]
     live_face = generate_embedding(1)

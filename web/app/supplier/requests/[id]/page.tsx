@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, broadcastPortalEvent } from '@/lib/api';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function SupplierRequestDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +26,8 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const [proposedStart, setProposedStart] = useState('');
     const [proposedEnd, setProposedEnd] = useState('');
     const [agencyNotes, setAgencyNotes] = useState('');
+    const [rejectReason, setRejectReason] = useState('');
+    const [showRejectModal, setShowRejectModal] = useState(false);
 
     const loadData = async () => {
         try {
@@ -49,13 +51,15 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
             const resp = (myResponses || []).find((r: any) => r.manpower_request_id?.toString() === requestId || r.request_id?.toString() === requestId);
             setMyResponse(resp);
 
+            const defaultQuota = resp?.requested_quantity || current?.requested_quantity || current?.total_required_workers || '1';
+
             if (resp) {
-                setConfirmedQty(resp.confirmed_quantity ? resp.confirmed_quantity.toString() : (resp.requested_quantity || current?.total_required_workers || '1').toString());
+                setConfirmedQty(resp.confirmed_quantity !== null && resp.confirmed_quantity !== undefined ? resp.confirmed_quantity.toString() : defaultQuota.toString());
                 setProposedStart(resp.proposed_start_time || current?.start_time || '08:00');
                 setProposedEnd(resp.proposed_end_time || current?.end_time || '17:00');
                 setAgencyNotes(resp.supplier_message || '');
             } else if (current) {
-                setConfirmedQty(current.total_required_workers ? current.total_required_workers.toString() : '1');
+                setConfirmedQty(defaultQuota.toString());
                 setProposedStart(current.start_time || '08:00');
                 setProposedEnd(current.end_time || '17:00');
             }
@@ -68,22 +72,34 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
 
     useEffect(() => {
         loadData();
+        const handleSync = () => loadData();
+        window.addEventListener('portal_data_updated', handleSync);
         const timer = setInterval(() => {
             fetchApi(`/requests/${requestId}/messages`).then(setMessages).catch(() => {});
-        }, 5000);
-        return () => clearInterval(timer);
+        }, 4000);
+        return () => {
+            window.removeEventListener('portal_data_updated', handleSync);
+            clearInterval(timer);
+        };
     }, [requestId]);
 
-    const handleSendResponse = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleActionResponse = async (status: 'ACCEPTED' | 'REJECTED' | 'COUNTER_PROPOSED') => {
         setSubmittingResp(true);
         try {
+            const quotaNeeded = request?.requested_quantity || request?.total_required_workers || 1;
+            let qty = parseInt(confirmedQty) || 0;
+            if (status === 'ACCEPTED') {
+                qty = quotaNeeded;
+            } else if (status === 'REJECTED') {
+                qty = 0;
+            }
+
             const body = {
-                confirmed_quantity: parseInt(confirmedQty),
-                proposed_start_time: proposedStart,
-                proposed_end_time: proposedEnd,
-                supplier_message: agencyNotes,
-                status: 'PENDING'
+                confirmed_quantity: qty,
+                proposed_start_time: proposedStart || request?.start_time || '08:00',
+                proposed_end_time: proposedEnd || request?.end_time || '17:00',
+                supplier_message: status === 'REJECTED' ? (rejectReason || 'Agency cannot supply requested quota') : agencyNotes,
+                status: status
             };
 
             await fetchApi(`/requests/${requestId}/respond`, {
@@ -91,13 +107,26 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                 body: JSON.stringify(body)
             });
 
-            alert("Proposal submitted to Operations Manager!");
+            broadcastPortalEvent('supplier_response_updated', {
+                requestId: request.id,
+                status,
+                siteName: request.site_name || site?.name,
+                supplierMessage: body.supplier_message
+            });
+
+            setShowRejectModal(false);
+            alert(`Request successfully marked as ${status}! Operations has been notified.`);
             loadData();
         } catch (err: any) {
             alert(err.message);
         } finally {
             setSubmittingResp(false);
         }
+    };
+
+    const handleSendProposal = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await handleActionResponse('COUNTER_PROPOSED');
     };
 
     const handleAllocateWorkers = async (e: React.FormEvent) => {
@@ -174,29 +203,143 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <div className="text-xs font-bold uppercase text-gray-400">Target Location</div>
-                    <div className="text-base font-bold text-gray-900 mt-1">{site?.name || `Site #${request.site_id}`}</div>
-                    <div className="text-xs text-gray-500">{site?.address || 'Qatar'}</div>
+                    <div className="text-base font-bold text-gray-900 mt-1">{request.site_name || site?.name || `Site #${request.site_id}`}</div>
+                    <div className="text-xs text-gray-500">{request.site_address || site?.address || 'Qatar'}</div>
+                </div>
+                <div>
+                    <div className="text-xs font-bold uppercase text-gray-400">Operations Manager</div>
+                    <div className="text-base font-bold text-gray-900 mt-1">{request.ops_manager_name || 'Operations Lead'}</div>
+                    <div className="text-xs text-gray-500">Requesting Authority</div>
                 </div>
                 <div>
                     <div className="text-xs font-bold uppercase text-gray-400">Scheduled Hours</div>
                     <div className="text-base font-mono font-bold text-gray-900 mt-1">
                         {request.start_time} - {request.end_time}
                     </div>
-                    <div className="text-xs text-gray-500">Requested timing</div>
+                    <div className="text-xs text-gray-500">{request.required_date ? new Date(request.required_date).toLocaleDateString() : 'Shift Date'}</div>
                 </div>
                 <div>
-                    <div className="text-xs font-bold uppercase text-gray-400">Headcount Needed</div>
-                    <div className="text-base font-black text-gray-900 mt-1">{request.total_required_workers} Drivers</div>
-                    <div className="text-xs text-gray-500">{request.skill_category || 'Valet Driver'}</div>
-                </div>
-                <div>
-                    <div className="text-xs font-bold uppercase text-gray-400">Your Allocation Status</div>
-                    <div className="text-base font-bold text-[#dbb457] mt-1">{myResponse?.status || 'PENDING'}</div>
+                    <div className="text-xs font-bold uppercase text-gray-400">Requested for Your Agency</div>
+                    <div className="text-base font-black text-[#dbb457] mt-1">
+                        {request.requested_quantity || request.total_required_workers} Drivers
+                    </div>
                     <div className="text-xs text-gray-500">
-                        {myResponse ? `Confirmed: ${myResponse.confirmed_quantity || 0}` : 'No response sent yet'}
+                        Status: <span className="font-semibold">{myResponse?.status || 'ACTION REQUIRED'}</span>
                     </div>
                 </div>
             </div>
+
+            {/* Quick Action Decision Banner if Pending */}
+            {(!myResponse || myResponse.status === 'PENDING') && (
+                <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 className="text-base font-bold text-amber-900">Action Required: Approve or Decline Shift Request</h3>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                            {request.ops_manager_name || 'Operations Manager'} is waiting for your confirmation for {request.requested_quantity || request.total_required_workers} drivers at <b>{request.site_name || site?.name}</b>.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <button
+                            type="button"
+                            onClick={() => handleActionResponse('ACCEPTED')}
+                            disabled={submittingResp}
+                            className="flex-1 md:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-5 py-2.5 rounded-lg shadow transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span>✓</span> Approve Quota ({request.requested_quantity || request.total_required_workers} Drivers)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowRejectModal(true)}
+                            disabled={submittingResp}
+                            className="flex-1 md:flex-initial bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-sm px-5 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span>✕</span> Reject
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Status Callout if already resolved */}
+            {myResponse && myResponse.status !== 'PENDING' && (
+                <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                    myResponse.status === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' :
+                    myResponse.status === 'REJECTED' ? 'bg-rose-50 border-rose-200 text-rose-900' :
+                    'bg-blue-50 border-blue-200 text-blue-900'
+                }`}>
+                    <div className="text-sm">
+                        <b>Current Response: {myResponse.status}</b>
+                        {myResponse.status === 'ACCEPTED' && ` • Supplying ${myResponse.confirmed_quantity} drivers.`}
+                        {myResponse.status === 'REJECTED' && ` • Reason: ${myResponse.supplier_message || 'Shift declined by agency'}`}
+                        {myResponse.status === 'COUNTER_PROPOSED' && ` • Proposed ${myResponse.confirmed_quantity} drivers (${myResponse.proposed_start_time} - ${myResponse.proposed_end_time}).`}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('response')}
+                        className="text-xs font-bold underline hover:opacity-80"
+                    >
+                        Modify Response
+                    </button>
+                </div>
+            )}
+
+            {/* Reject Modal */}
+            {showRejectModal && (
+                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-gray-900">Decline Shift Request</h3>
+                            <button onClick={() => setShowRejectModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-lg">✕</button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            Let Operations know why your agency cannot supply staff for this shift. This will instantly notify the Operations Manager.
+                        </p>
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold uppercase text-gray-600">Quick Reason</label>
+                            <div className="flex flex-wrap gap-2">
+                                {['No drivers available', 'Shift time conflict', 'Notice too short', 'Location outside coverage'].map(reason => (
+                                    <button
+                                        key={reason}
+                                        type="button"
+                                        onClick={() => setRejectReason(reason)}
+                                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                                            rejectReason === reason ? 'bg-rose-50 border-rose-400 text-rose-800 font-bold' : 'bg-gray-50 border-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        {reason}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Reason / Notes</label>
+                            <textarea
+                                rows={3}
+                                value={rejectReason}
+                                onChange={e => setRejectReason(e.target.value)}
+                                placeholder="Explain reason for rejecting this request..."
+                                className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowRejectModal(false)}
+                                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleActionResponse('REJECTED')}
+                                disabled={submittingResp}
+                                className="px-5 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow transition-colors disabled:opacity-50"
+                            >
+                                {submittingResp ? 'Submitting...' : 'Confirm Rejection'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex border-b border-gray-200 space-x-6">
@@ -206,7 +349,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         activeTab === 'response' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    1. Submit / Update Proposal
+                    1. Submit / Counter-Proposal
                 </button>
                 <button 
                     onClick={() => setActiveTab('assign')}
@@ -228,8 +371,16 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
 
             {/* TAB 1: RESPONSE FORM */}
             {activeTab === 'response' && (
-                <form onSubmit={handleSendResponse} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
-                    <h3 className="font-bold text-base text-gray-900 mb-2">Confirm Availability or Counter-Offer</h3>
+                <form onSubmit={handleSendProposal} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-bold text-base text-gray-900">Custom Counter-Offer or Partial Quota</h3>
+                            <p className="text-xs text-gray-500">If you cannot provide the full quota or need to adjust times, propose your terms here.</p>
+                        </div>
+                        <div className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-mono">
+                            Requested: {request.requested_quantity || request.total_required_workers} Drivers
+                        </div>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -276,13 +427,31 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         />
                     </div>
 
-                    <button 
-                        type="submit" 
-                        disabled={submittingResp}
-                        className="bg-[#dbb457] text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-[#c29d45] shadow transition-colors disabled:opacity-50"
-                    >
-                        {submittingResp ? 'Submitting...' : 'Send Confirmation to Operations'}
-                    </button>
+                    <div className="flex flex-wrap gap-3 pt-2">
+                        <button 
+                            type="button" 
+                            onClick={() => handleActionResponse('ACCEPTED')}
+                            disabled={submittingResp}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow transition-colors disabled:opacity-50 flex items-center gap-2"
+                        >
+                            <span>✓</span> One-Click Accept Requested Quota
+                        </button>
+                        <button 
+                            type="submit" 
+                            disabled={submittingResp}
+                            className="bg-[#dbb457] text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-[#c29d45] shadow transition-colors disabled:opacity-50"
+                        >
+                            {submittingResp ? 'Submitting...' : 'Submit Counter-Proposal'}
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setShowRejectModal(true)}
+                            disabled={submittingResp}
+                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-5 py-2.5 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+                        >
+                            Reject Request
+                        </button>
+                    </div>
                 </form>
             )}
 

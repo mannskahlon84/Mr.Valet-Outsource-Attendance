@@ -74,3 +74,18 @@ export async function fetchApi(endpoint: string, options: any = {}, rawResponse 
     
     return rawResponse ? res : res.json();
 }
+
+export function broadcastPortalEvent(event: string, payload: any = {}) {
+    if (typeof window !== 'undefined') {
+        try {
+            if ('BroadcastChannel' in window) {
+                const bc = new BroadcastChannel('mr_valet_portal_sync');
+                bc.postMessage({ event, payload, timestamp: Date.now() });
+                bc.close();
+            }
+        } catch (e) {}
+        try {
+            window.dispatchEvent(new CustomEvent('portal_data_updated', { detail: { event, payload } }));
+        } catch (e) {}
+    }
+}

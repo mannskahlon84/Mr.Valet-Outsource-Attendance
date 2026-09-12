@@ -17,7 +17,8 @@ export default function GMLayout({ children }: { children: React.ReactNode }) {
         { label: 'Executive Cockpit', href: '/gm' },
         { label: 'Financials & Spend', href: '/gm/financials' },
         { label: 'Operational Coverage', href: '/gm/operations' },
-        { label: 'Supplier Scorecards', href: '/gm/suppliers' }
+        { label: 'Supplier Scorecards', href: '/gm/suppliers' },
+        { label: 'Workers Directory', href: '/gm/workers' }
     ];
 
     return (

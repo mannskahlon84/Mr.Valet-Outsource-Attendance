@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from fastapi.testclient import TestClient
 from app.models.all_models import User, Site, Supplier, Worker, RoleEnum
 
@@ -44,14 +44,14 @@ def test_master_data_crud(client: TestClient, db):
     
     # Create Worker
     client.put(f"/api/v1/suppliers/{sup_id}", json={"status": "active"}, headers=headers)
-    r5 = client.post("/api/v1/workers/", json={"internal_worker_id": "W123", "first_name": "W", "last_name": "1", "qid": "123", "whatsapp_number": "+123456", "password": "pass", "supplier_id": sup_id}, headers=headers)
+    r5 = client.post("/api/v1/workers/", json={"internal_worker_id": "W123", "first_name": "W", "last_name": "1", "qid": "29563412345", "whatsapp_number": "+123456", "password": "pass", "supplier_id": sup_id}, headers=headers)
     print("r5:", r5.json())
     w_id = r5.json()["id"]
     
     # Update Worker
-    r6 = client.put(f"/api/v1/workers/{w_id}", json={"qid": "456", "status": "inactive"}, headers=headers)
+    r6 = client.put(f"/api/v1/workers/{w_id}", json={"qid": "29563412346", "status": "inactive"}, headers=headers)
     assert r6.status_code == 200
     w = db.query(Worker).filter(Worker.id == w_id).first()
-    assert w.qid == "456"
+    assert w.qid == "29563412346"
     assert w.status == "inactive"
     

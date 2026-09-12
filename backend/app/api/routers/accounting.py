@@ -81,7 +81,7 @@ def get_accounting_summary(
         # Sum confirmed quantity for responses in the target month/year
         req_filters = [
             SupplierResponse.supplier_id == sup.id,
-            SupplierResponse.status == 'CONFIRMED'
+            SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED'])
         ]
         if day:
             req_filters.append(extract('day', ManpowerRequest.required_date) == day)
@@ -125,7 +125,7 @@ def generate_invoice(
         
     total_workers = db.query(func.sum(SupplierResponse.confirmed_quantity)).join(ManpowerRequest).filter(
         SupplierResponse.supplier_id == sup.id,
-        SupplierResponse.status == 'CONFIRMED',
+        SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED']),
         extract('month', ManpowerRequest.required_date) == invoice_in.month,
         extract('year', ManpowerRequest.required_date) == invoice_in.year
     ).scalar() or 0
@@ -236,7 +236,7 @@ def download_custom_invoice(
     site_name = "All Locations"
     filters = [
         SupplierResponse.supplier_id == sup.id,
-        SupplierResponse.status == 'CONFIRMED',
+        SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED']),
         ManpowerRequest.required_date >= req.start_date,
         ManpowerRequest.required_date <= req.end_date
     ]
@@ -290,3 +290,109 @@ def download_custom_invoice(
     return Response(content=pdf_bytes, media_type="application/pdf", headers={
         "Content-Disposition": f"attachment; filename={invoice_num}.pdf"
     })
+
+@router.get("/daily-breakdown")
+def get_daily_breakdown(
+    target_date: Optional[str] = Query(None),
+    supplier_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Daily tracking for accounting: how many employees from which supplier side, locations worked, and daily payables."""
+    if current_user.role not in [RoleEnum.SUPER_ADMIN, RoleEnum.ACCOUNTING, RoleEnum.GENERAL_MANAGER, RoleEnum.SUPPLIER_HEAD]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if target_date:
+        try:
+            filter_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+        except Exception:
+            filter_date = datetime.utcnow().date()
+    else:
+        filter_date = datetime.utcnow().date()
+
+    # Supplier filter
+    sup_query = db.query(Supplier)
+    if current_user.role == RoleEnum.SUPPLIER_HEAD:
+        sup_query = sup_query.filter(Supplier.id == current_user.supplier_id)
+    elif supplier_id:
+        sup_query = sup_query.filter(Supplier.id == supplier_id)
+
+    suppliers = sup_query.all()
+    from app.models.all_models import WorkerAssignment, Attendance, Worker, Site
+
+    results = []
+    for sup in suppliers:
+        sr_list = db.query(SupplierResponse, ManpowerRequest, Site)\
+            .join(ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id)\
+            .join(Site, ManpowerRequest.site_id == Site.id)\
+            .filter(
+                SupplierResponse.supplier_id == sup.id,
+                SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED']),
+                func.date(ManpowerRequest.required_date) == filter_date
+            ).all()
+
+        sr_ids = [sr.id for sr, _, _ in sr_list]
+        locations = list({site.name for _, _, site in sr_list})
+        total_scheduled = sum(sr.confirmed_quantity for sr, _, _ in sr_list)
+
+        assignments = db.query(WorkerAssignment, Attendance, Worker, Site)\
+            .join(SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id)\
+            .join(ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id)\
+            .join(Site, ManpowerRequest.site_id == Site.id)\
+            .outerjoin(Attendance, Attendance.worker_assignment_id == WorkerAssignment.id)\
+            .join(Worker, WorkerAssignment.worker_id == Worker.id)\
+            .filter(SupplierResponse.id.in_(sr_ids)).all() if sr_ids else []
+
+        started_count = sum(1 for _, att, _, _ in assignments if att and att.check_in_time is not None)
+        ended_count = sum(1 for _, att, _, _ in assignments if att and att.check_out_time is not None)
+
+        total_duty_hours = 0.0
+        worker_items = []
+        for wa, att, wrk, site in assignments:
+            duty_hours = 0.0
+            if att and att.check_in_time and att.check_out_time:
+                delta = att.check_out_time - att.check_in_time
+                duty_hours = round(delta.total_seconds() / 3600.0, 2)
+                total_duty_hours += duty_hours
+
+            worker_items.append({
+                "worker_id": wrk.id,
+                "worker_name": f"{wrk.first_name} {wrk.last_name}",
+                "internal_worker_id": wrk.internal_worker_id,
+                "qid": wrk.qid or "",
+                "site_name": site.name,
+                "check_in_time": att.check_in_time.isoformat() if att and att.check_in_time else None,
+                "check_out_time": att.check_out_time.isoformat() if att and att.check_out_time else None,
+                "duty_hours": duty_hours,
+                "status": att.status if att else "SCHEDULED"
+            })
+
+        effective_hours = total_duty_hours if total_duty_hours > 0 else (total_scheduled * 8.0)
+        estimated_cost = round(effective_hours * (sup.billing_rate or 0.0), 2)
+
+        sup_head = db.query(User).filter(User.supplier_id == sup.id, User.role == RoleEnum.SUPPLIER_HEAD).first()
+        head_name = sup_head.name if sup_head else (sup.contact_person or "Agency Head")
+
+        results.append({
+            "supplier_id": sup.id,
+            "supplier_name": sup.name,
+            "supplier_head_name": head_name,
+            "date": filter_date.strftime("%Y-%m-%d"),
+            "billing_rate": sup.billing_rate or 0.0,
+            "scheduled_workers": total_scheduled,
+            "assigned_workers_count": len(assignments),
+            "started_shift_count": started_count,
+            "ended_shift_count": ended_count,
+            "locations": locations,
+            "total_duty_hours": round(total_duty_hours, 2),
+            "estimated_daily_cost": estimated_cost,
+            "workers": worker_items
+        })
+
+    return {
+        "date": filter_date.strftime("%Y-%m-%d"),
+        "total_suppliers": len(results),
+        "total_workers_attended": sum(r["started_shift_count"] for r in results),
+        "total_daily_cost": sum(r["estimated_daily_cost"] for r in results),
+        "records": results
+    }

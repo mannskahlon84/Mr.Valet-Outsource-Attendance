@@ -27,6 +27,8 @@ class WorkerResponse(WorkerBase):
     id: int
     status: str
     created_at: datetime
+    supplier_name: Optional[str] = None
+    supplier_head_name: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from datetime import datetime, timezone, timedelta
 from app.models.all_models import WorkerAssignment, Site, Worker, Supplier, User, RoleEnum, ManpowerRequest, SupplierResponse, Attendance
 from tests.test_phase1b import get_auth_token
@@ -29,7 +29,7 @@ def test_reports_functionality(client, db):
     s = db.query(Site).filter(Site.id == site_id).first()
     s.manager_id = ops_id
     
-    w1_res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-REP-1", "supplier_id": sup_id, "first_name": "Hist", "last_name": "Work", "qid": "Q-REP-1", "password": "password123", "whatsapp_number": "W-REP-1"}, headers=headers_admin)
+    w1_res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-REP-1", "supplier_id": sup_id, "first_name": "Hist", "last_name": "Work", "qid": "29563414001", "password": "password123", "whatsapp_number": "+97455034001"}, headers=headers_admin)
     w1_id = w1_res.json()["id"]
     
     db.commit()

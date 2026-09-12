@@ -246,6 +246,7 @@ export default function WorkerPortal() {
 
     // Helper: Identify venue from decoded QR text
     const identifyVenueFromQr = (rawQr: string) => {
+        if (!rawQr || typeof rawQr !== 'string') return null;
         const trimmed = rawQr.trim();
         // 1. Match by MC:LOC:<id>
         if (trimmed.startsWith("MC:LOC:")) {
@@ -260,12 +261,11 @@ export default function WorkerPortal() {
         const byId = QATAR_SITES.find(s => `MC:LOC:${s.id}:token${s.id}` === trimmed || String(s.id) === trimmed);
         if (byId) return byId;
 
-        // 3. Match by venue name inside QR
-        const byName = QATAR_SITES.find(s => trimmed.toLowerCase().includes(s.name.toLowerCase()));
+        // 3. Match by venue name inside QR if explicit
+        const byName = QATAR_SITES.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
         if (byName) return byName;
 
-        // Default fallback to Fairmont Hotel if test QR
-        return QATAR_SITES.find(s => s.name === "Fairmont Hotel") || QATAR_SITES[0];
+        return null;
     };
 
     // =========================================================================
@@ -345,8 +345,9 @@ export default function WorkerPortal() {
                 if (code && code.data) {
                     processCheckInQr(code.data);
                 } else {
-                    // Fallback to identify venue from file or set test site
-                    processCheckInQr("MC:LOC:27:FairmontHotel");
+                    setQrScanError("No QR Code detected in image. Please point your camera directly at the official Mr. Valet venue QR code poster.");
+                    setQrVerified(false);
+                    setDetectedSite(null);
                 }
             };
             img.src = event.target?.result as string;
@@ -357,29 +358,31 @@ export default function WorkerPortal() {
     const processCheckInQr = async (rawQr: string) => {
         const site = identifyVenueFromQr(rawQr);
         if (!site) {
-            setQrScanError("Unrecognized QR Code. Please scan the official Mr. Valet QR code poster at your venue.");
+            setQrScanError("Invalid QR Code. This is not an authorized Mr. Valet venue QR code. Please scan the official poster.");
             setQrVerified(false);
+            setDetectedSite(null);
             return;
         }
-
-        setScannedQrData(rawQr);
-        setDetectedSite(site);
 
         // Verify device GPS coordinates
         const coords = await getCoordinates();
         const dist = haversineDistance(coords.lat, coords.lng, site.lat, site.lng);
         setUserDistance(dist);
 
-        // Geofence check
-        const maxRadius = site.radius || 100;
-        if (dist > maxRadius && dist > 500) {
-            // If GPS is too far in production
-            console.warn(`User distance: ${dist}m to ${site.name}`);
+        // Strict Geofence check: device GPS must be within venue perimeter
+        const allowedRadius = (site.radius || 100) + 50;
+        if (dist > allowedRadius) {
+            setQrScanError(`GPS Geofence Violation: You are ${dist}m away from "${site.name}" (Allowed perimeter: ${site.radius || 100}m). Your coordinates do not match the QR code location. Attendance must be marked on-site.`);
+            setQrVerified(false);
+            setDetectedSite(null);
+            return;
         }
 
-        // Successfully resolved location from QR code!
+        setScannedQrData(rawQr);
+        setDetectedSite(site);
         setQrVerified(true);
         setQrScanError('');
+        playSuccessChime();
     };
 
     // =========================================================================
@@ -562,7 +565,8 @@ export default function WorkerPortal() {
                 if (code && code.data) {
                     processCheckoutQr(code.data);
                 } else {
-                    processCheckoutQr(scannedQrData || `MC:LOC:${detectedSite?.id}`);
+                    setCheckoutQrError("No QR Code detected in image. Please clearly capture the official venue QR code poster.");
+                    setCheckoutQrVerified(false);
                 }
             };
             img.src = event.target?.result as string;
@@ -570,10 +574,26 @@ export default function WorkerPortal() {
         reader.readAsDataURL(file);
     };
 
-    const processCheckoutQr = (rawQr: string) => {
+    const processCheckoutQr = async (rawQr: string) => {
         const site = identifyVenueFromQr(rawQr);
-        if (!site || (detectedSite && site.id !== detectedSite.id)) {
-            setCheckoutQrError(`Location mismatch: Scanned QR code belongs to "${site?.name || 'Unknown'}", but your active shift was started at "${detectedSite?.name}". You must clock out at your duty venue.`);
+        if (!site) {
+            setCheckoutQrError("Invalid QR code. Please scan the official Mr. Valet venue QR code poster.");
+            setCheckoutQrVerified(false);
+            return;
+        }
+
+        if (detectedSite && site.id !== detectedSite.id) {
+            setCheckoutQrError(`Location mismatch: Scanned QR code belongs to "${site.name}", but your active shift was started at "${detectedSite.name}". You must clock out at your duty venue.`);
+            setCheckoutQrVerified(false);
+            return;
+        }
+
+        // Verify device GPS coordinates
+        const coords = await getCoordinates();
+        const dist = haversineDistance(coords.lat, coords.lng, site.lat, site.lng);
+        const allowedRadius = (site.radius || 100) + 50;
+        if (dist > allowedRadius) {
+            setCheckoutQrError(`GPS Geofence Violation: You are ${dist}m away from "${site.name}". You must be physically at the venue to clock out.`);
             setCheckoutQrVerified(false);
             return;
         }
