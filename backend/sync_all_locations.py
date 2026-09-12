@@ -134,17 +134,20 @@ if ops_demo:
     ops_demo.password_hash = get_password_hash("devpass123")
     db.commit()
 
+from geocode_all_qatar_sites import KNOWN_COORDINATES
+
 # Now sync all 82 sites
 for loc, mgr_name in locations_data:
     mgr_id = managers_map.get(mgr_name)
+    lat, lng, address = KNOWN_COORDINATES.get(loc, (25.2854, 51.5310, "Doha, Qatar"))
     site = db.query(Site).filter(Site.name == loc).first()
     if not site:
         site = Site(
             name=loc,
-            address="Doha, Qatar",
-            latitude=25.2854,
-            longitude=51.5310,
-            geofence_radius_meters=100.0,
+            address=address,
+            latitude=lat,
+            longitude=lng,
+            geofence_radius_meters=200.0,
             manager_id=mgr_id,
             status="active",
             qr_status="ACTIVE",
@@ -154,6 +157,10 @@ for loc, mgr_name in locations_data:
     else:
         site.manager_id = mgr_id
         site.status = "active"
+        site.address = address
+        site.latitude = lat
+        site.longitude = lng
+        site.geofence_radius_meters = 200.0
         if not site.qr_token:
             site.qr_token = f"MC:LOC:{site.id}:{uuid.uuid4().hex[:12]}"
             site.qr_status = "ACTIVE"
