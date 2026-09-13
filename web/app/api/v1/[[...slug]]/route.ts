@@ -122,7 +122,7 @@ async function tryProxy(req: NextRequest, slug: string[]): Promise<Response | nu
 
         let body: any = undefined;
         if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-            body = await req.arrayBuffer();
+            body = await req.clone().arrayBuffer();
         }
 
         const controller = new AbortController();
