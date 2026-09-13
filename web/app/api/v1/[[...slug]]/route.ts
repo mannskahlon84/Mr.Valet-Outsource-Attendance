@@ -385,7 +385,7 @@ export async function GET(
     }
 
     // Specific Request Detail
-    if (path.startsWith('requests/') && !path.includes('/')) {
+    if (path.startsWith('requests/') && path.split('/').length === 2) {
         const reqId = parseInt(path.split('/')[1]);
         const found = REQUESTS_DATA.find(r => r.id === reqId) || REQUESTS_DATA[0];
         const site = SITES_LIST.find(s => s.id === found.site_id) || SITES_LIST[0];
