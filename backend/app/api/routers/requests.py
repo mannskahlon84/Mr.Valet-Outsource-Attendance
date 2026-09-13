@@ -322,10 +322,33 @@ def send_request_message(request_id: int, req: ChatMessageCreate, db: Session = 
         message=req.message
     )
     db.add(new_msg)
+    
+    # Notify recipient of chat message
+    sender_name = current_user.name or ("Operations" if current_user.role == RoleEnum.OPS_MANAGER else "Agency")
+    preview = (req.message[:90] + '...') if len(req.message) > 90 else req.message
+    if current_user.role == RoleEnum.OPS_MANAGER:
+        # Notify routed suppliers
+        responses = db.query(SupplierResponse).filter(SupplierResponse.manpower_request_id == request_id).all()
+        for sr in responses:
+            db.add(Notification(
+                supplier_id=sr.supplier_id,
+                title=f"💬 Message on Request #{mr.id} from {sender_name}",
+                message=preview,
+                entity_type="CHAT_MESSAGE",
+                entity_id=mr.id
+            ))
+    elif current_user.role == RoleEnum.SUPPLIER_HEAD:
+        # Notify Operations Manager
+        if mr.ops_manager_id:
+            db.add(Notification(
+                user_id=mr.ops_manager_id,
+                title=f"💬 Message on Request #{mr.id} from {sender_name}",
+                message=preview,
+                entity_type="CHAT_MESSAGE",
+                entity_id=mr.id
+            ))
+            
     db.commit()
-    
-    # Trigger push notification logic here if needed (Optional: simple background task to exponent_server_sdk)
-    
     return {"message": "Sent", "id": new_msg.id}
 
 

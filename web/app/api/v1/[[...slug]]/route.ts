@@ -100,6 +100,64 @@ const SITES_LIST = QATAR_SITES.map((s) => ({
     qr_token: `MC:LOC:${s.id}:token${s.id}`
 }));
 
+const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:8000/api/v1';
+
+async function tryProxy(req: NextRequest, slug: string[]): Promise<Response | null> {
+    try {
+        const path = slug.join('/');
+        const needsSlash = ['notifications', 'requests', 'sites', 'suppliers', 'workers', 'allocations'].includes(path);
+        const targetPath = needsSlash ? `${path}/` : path;
+        let target = `${BACKEND_URL}/${targetPath}`;
+        if (req.nextUrl.search) {
+            target += req.nextUrl.search;
+        }
+
+        const headers = new Headers();
+        req.headers.forEach((val, key) => {
+            const k = key.toLowerCase();
+            if (!['host', 'connection', 'content-length'].includes(k)) {
+                headers.set(key, val);
+            }
+        });
+
+        let body: any = undefined;
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+            body = await req.arrayBuffer();
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(target, {
+            method: req.method,
+            headers,
+            body,
+            cache: 'no-store',
+            redirect: 'follow',
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        // If backend returned a valid response
+        const resHeaders = new Headers();
+        res.headers.forEach((val, key) => {
+            const k = key.toLowerCase();
+            if (!['content-encoding', 'transfer-encoding'].includes(k)) {
+                resHeaders.set(key, val);
+            }
+        });
+
+        const resBody = await res.arrayBuffer();
+        return new Response(resBody, {
+            status: res.status,
+            statusText: res.statusText,
+            headers: resHeaders
+        });
+    } catch {
+        return null;
+    }
+}
+
 // Seed Users Map
 const USERS_MAP: Record<string, any> = {
     "wissem.chagtmi@mrvalet.com": { id: 101, email: "wissem.chagtmi@mrvalet.com", name: "Wissem Chagtmi", role: "OPS_MANAGER", status: "active" },
@@ -130,8 +188,19 @@ const USERS_MAP: Record<string, any> = {
     "worker@example.com": { id: 6, email: "worker@example.com", name: "Ali Hassan", role: "OUTSOURCE_WORKER", worker_id: 1, status: "active" }
 };
 
+const SUPPLIERS_DATA = [
+    { id: 5, name: "Deepu", contact_person: "Deepu", contact_email: "deepu@supplier.mrvalet.local", contact_phone: "+974 5501 0001", billing_rate: 45.0, status: "active" },
+    { id: 6, name: "Kanan", contact_person: "Kanan", contact_email: "kanan@supplier.mrvalet.local", contact_phone: "+974 5501 0002", billing_rate: 45.0, status: "active" },
+    { id: 7, name: "Hanees", contact_person: "Hanees", contact_email: "hanees@supplier.mrvalet.local", contact_phone: "+974 5501 0003", billing_rate: 45.0, status: "active" },
+    { id: 8, name: "Nizar", contact_person: "Nizar", contact_email: "nizar@supplier.mrvalet.local", contact_phone: "+974 5501 0004", billing_rate: 45.0, status: "active" },
+    { id: 9, name: "Dennis", contact_person: "Dennis", contact_email: "dennis@supplier.mrvalet.local", contact_phone: "+974 5501 0005", billing_rate: 45.0, status: "active" },
+    { id: 10, name: "Naboth", contact_person: "Naboth", contact_email: "naboth@supplier.mrvalet.local", contact_phone: "+974 5501 0006", billing_rate: 45.0, status: "active" },
+    { id: 11, name: "Henry", contact_person: "Henry", contact_email: "henry@supplier.mrvalet.local", contact_phone: "+974 5501 0007", billing_rate: 45.0, status: "active" },
+    { id: 1, name: "Demo Agency", contact_person: "John Doe", contact_email: "agency@example.com", contact_phone: "+974 5512 3456", billing_rate: 45.0, status: "active" }
+];
+
 // Seed Requests
-let REQUESTS_DATA = [
+let REQUESTS_DATA: any[] = [
     {
         id: 1,
         ops_manager_id: 103,
@@ -146,131 +215,68 @@ let REQUESTS_DATA = [
         skill_category: "Valet Driver",
         status: "CONFIRMED",
         created_at: new Date(Date.now() - 7200000).toISOString()
-    },
+    }
+];
+
+let RESPONSES_DATA: any[] = [
     {
-        id: 2,
-        ops_manager_id: 103,
-        ops_manager_name: "Maen Klaib",
-        site_id: 19,
-        site_name: "City Center",
-        required_date: new Date().toISOString().split('T')[0],
-        start_time: "14:00",
-        end_time: "23:00",
-        total_required_workers: 2,
-        confirmed_workers: 0,
-        skill_category: "Valet Driver",
-        status: "OPEN",
-        created_at: new Date(Date.now() - 3600000).toISOString()
-    },
+        id: 1,
+        manpower_request_id: 1,
+        supplier_id: 7,
+        supplier_name: "Hanees",
+        requested_quantity: 3,
+        confirmed_quantity: 3,
+        status: "ACCEPTED_BY_OM",
+        proposed_start_time: "08:00",
+        proposed_end_time: "17:00",
+        supplier_message: "All 3 drivers dispatched.",
+        responded_at: new Date(Date.now() - 3600000).toISOString()
+    }
+];
+
+let MESSAGES_DATA: any[] = [
     {
-        id: 3,
-        ops_manager_id: 101,
-        ops_manager_name: "Wissem Chagtmi",
-        site_id: 11,
-        site_name: "Banana Island",
-        required_date: new Date().toISOString().split('T')[0],
-        start_time: "09:00",
-        end_time: "18:00",
-        total_required_workers: 4,
-        confirmed_workers: 4,
-        skill_category: "Valet Driver",
-        status: "CONFIRMED",
-        created_at: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-        id: 4,
-        ops_manager_id: 102,
-        ops_manager_name: "Hani Abdelsallam",
-        site_id: 31,
-        site_name: "Intercontinental Doha",
-        required_date: new Date().toISOString().split('T')[0],
-        start_time: "12:00",
-        end_time: "21:00",
-        total_required_workers: 2,
-        confirmed_workers: 0,
-        skill_category: "Valet Driver",
-        status: "OPEN",
-        created_at: new Date(Date.now() - 14400000).toISOString()
-    },
-    {
-        id: 5,
-        ops_manager_id: 103,
-        ops_manager_name: "Maen Klaib",
-        site_id: 62,
-        site_name: "Rosewood Hotel",
-        required_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-        start_time: "16:00",
-        end_time: "01:00",
-        total_required_workers: 3,
-        confirmed_workers: 0,
-        skill_category: "Valet Driver",
-        status: "OPEN",
-        created_at: new Date(Date.now() - 1800000).toISOString()
+        id: 1,
+        request_id: 1,
+        sender_id: 103,
+        sender_name: "Maen Klaib",
+        message: "Welcome to the shift communication channel.",
+        timestamp: new Date(Date.now() - 3600000).toISOString()
     }
 ];
 
 // Seed Workers
-let WORKERS_DATA = [
-    { id: 1, internal_worker_id: "WRK-001", first_name: "Ali", last_name: "Hassan", qid: "29501234567", whatsapp_number: "+97466001122", supplier_id: 1, status: "active", skill_category: "Valet Driver" },
-    { id: 2, internal_worker_id: "WRK-002", first_name: "Tariq", last_name: "Mahmood", qid: "29309876543", whatsapp_number: "+97466003344", supplier_id: 1, status: "active", skill_category: "Valet Driver" },
-    { id: 3, internal_worker_id: "WRK-003", first_name: "Bilal", last_name: "Ahmed", qid: "29105432198", whatsapp_number: "+97466005566", supplier_id: 1, status: "active", skill_category: "Valet Driver" },
-    { id: 4, internal_worker_id: "WRK-004", first_name: "Mohammad", last_name: "Farhan", qid: "29408765432", whatsapp_number: "+97455007788", supplier_id: 1, status: "active", skill_category: "Valet Supervisor" },
-    { id: 5, internal_worker_id: "WRK-005", first_name: "Rashid", last_name: "Khan", qid: "29207654321", whatsapp_number: "+97455009900", supplier_id: 1, status: "active", skill_category: "Valet Driver" }
+let WORKERS_DATA: any[] = [
+    { id: 1, internal_worker_id: "WRK-001", first_name: "Ali", last_name: "Hassan", qid: "29501234567", whatsapp_number: "+97466001122", supplier_id: 6, status: "active", skill_category: "Valet Driver" },
+    { id: 2, internal_worker_id: "WRK-002", first_name: "Tariq", last_name: "Mahmood", qid: "29309876543", whatsapp_number: "+97466003344", supplier_id: 6, status: "active", skill_category: "Valet Driver" },
+    { id: 3, internal_worker_id: "WRK-003", first_name: "Bilal", last_name: "Ahmed", qid: "29105432198", whatsapp_number: "+97466005566", supplier_id: 7, status: "active", skill_category: "Valet Driver" }
 ];
 
 // Notifications
-let NOTIFICATIONS_DATA = [
+let NOTIFICATIONS_DATA: any[] = [
     {
         id: 1,
-        title: "New Shift Dispatched",
-        message: "Fairmont Hotel valet shift request (3 staff) has been dispatched.",
-        type: "SHIFT_DISPATCH",
+        title: "Welcome to Manpower Control System",
+        message: "Your real-time operations and dispatch portal is active.",
+        type: "SYSTEM",
         is_read: false,
-        created_at: new Date(Date.now() - 7200000).toISOString()
-    },
-    {
-        id: 2,
-        title: "Supplier Confirmed",
-        message: "Demo Agency confirmed 3 workers for Fairmont Hotel shift.",
-        type: "SUPPLIER_CONFIRMATION",
-        is_read: false,
-        created_at: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-        id: 3,
-        title: "Worker Check-In",
-        message: "Ali Hassan (WRK-001) checked in on-site at Fairmont Hotel.",
-        type: "ATTENDANCE",
-        is_read: true,
-        created_at: new Date(Date.now() - 1800000).toISOString()
+        created_at: new Date().toISOString()
     }
 ];
 
 // Invoices
-const INVOICES_DATA = [
+const INVOICES_DATA: any[] = [
     {
         id: 1,
         invoice_number: "INV-2026-001",
-        supplier_id: 1,
-        supplier_name: "Demo Agency",
+        supplier_id: 6,
+        supplier_name: "Kanan",
         billing_period: "August 2026",
         total_hours: 360,
         hourly_rate: 45.0,
         total_amount: 16200.0,
         status: "APPROVED",
         created_at: "2026-09-01T00:00:00Z"
-    },
-    {
-        id: 2,
-        invoice_number: "INV-2026-002",
-        supplier_id: 1,
-        supplier_name: "Demo Agency",
-        billing_period: "September 2026",
-        total_hours: 180,
-        hourly_rate: 45.0,
-        total_amount: 8100.0,
-        status: "PENDING_OPS_APPROVAL",
-        created_at: "2026-09-08T00:00:00Z"
     }
 ];
 
@@ -284,13 +290,19 @@ function getUserFromAuth(req: NextRequest) {
                 const jsonStr = Buffer.from(token.slice(6), 'base64').toString('utf-8');
                 return JSON.parse(jsonStr);
             } catch (e) {}
+        } else if (token.includes('.')) {
+            try {
+                const payloadPart = token.split('.')[1];
+                const jsonStr = Buffer.from(payloadPart, 'base64').toString('utf-8');
+                const decoded = JSON.parse(jsonStr);
+                const foundUser = Object.values(USERS_MAP).find(u => String(u.id) === String(decoded.sub));
+                if (foundUser) return foundUser;
+            } catch (e) {}
         }
     }
-    // Default demo user: Maen Klaib
     return USERS_MAP["maen.klaib@mrvalet.com"];
 }
 
-// Generate token
 function makeToken(user: any) {
     const base64 = Buffer.from(JSON.stringify(user)).toString('base64');
     return `token_${base64}`;
@@ -301,6 +313,11 @@ export async function GET(
     context: { params: Promise<{ slug?: string[] }> }
 ) {
     const { slug = [] } = await context.params;
+    
+    // 1. Try real FastAPI backend reverse proxy
+    const proxied = await tryProxy(req, slug);
+    if (proxied) return proxied;
+
     const path = slug.join('/');
     const user = getUserFromAuth(req);
 
@@ -314,13 +331,29 @@ export async function GET(
         return NextResponse.json(SITES_LIST);
     }
 
-    // Shift Requests
-    if (path === 'requests' || path === 'requests/' || path === 'requests/supplier') {
-        // If supplier, return requests dispatched
-        if (path === 'requests/supplier' || user.role === 'SUPPLIER_HEAD') {
-            return NextResponse.json(REQUESTS_DATA);
-        }
-        // If operations manager, show his sites or all
+    // Shift Requests for Supplier
+    if (path === 'requests/supplier') {
+        const supId = user.supplier_id || 6;
+        const matchingResponses = RESPONSES_DATA.filter(r => r.supplier_id === supId);
+        const reqIds = new Set(matchingResponses.map(r => r.manpower_request_id));
+        const matched = REQUESTS_DATA.filter(reqItem => reqIds.has(reqItem.id)).map(reqItem => {
+            const sr = matchingResponses.find(r => r.manpower_request_id === reqItem.id);
+            return {
+                ...reqItem,
+                response_id: sr?.id,
+                requested_quantity: sr?.requested_quantity || reqItem.total_required_workers,
+                confirmed_quantity: sr?.confirmed_quantity || 0,
+                supplier_response_status: sr?.status || "PENDING",
+                proposed_start_time: sr?.proposed_start_time || reqItem.start_time,
+                proposed_end_time: sr?.proposed_end_time || reqItem.end_time,
+                supplier_message: sr?.supplier_message || ""
+            };
+        });
+        return NextResponse.json(matched);
+    }
+
+    // Shift Requests - All
+    if (path === 'requests' || path === 'requests/') {
         if (user.role === 'OPS_MANAGER') {
             const filtered = REQUESTS_DATA.filter(r => r.ops_manager_id === user.id);
             return NextResponse.json(filtered.length > 0 ? filtered : REQUESTS_DATA);
@@ -328,53 +361,63 @@ export async function GET(
         return NextResponse.json(REQUESTS_DATA);
     }
 
-    // Specific Request
-    if (path.startsWith('requests/') && !path.includes('messages') && !path.includes('supplier')) {
+    // Request responses for specific request
+    if (path.startsWith('requests/') && path.endsWith('/responses')) {
         const reqId = parseInt(path.split('/')[1]);
-        const found = REQUESTS_DATA.find(r => r.id === reqId) || REQUESTS_DATA[0];
-        return NextResponse.json({
-            ...found,
-            site: SITES_LIST.find(s => s.id === found.site_id) || SITES_LIST[0],
-            responses: [
-                {
-                    id: 1,
-                    manpower_request_id: found.id,
-                    supplier_id: 1,
-                    supplier_name: "Demo Agency",
-                    requested_quantity: found.total_required_workers,
-                    confirmed_quantity: found.confirmed_workers,
-                    status: found.status === 'CONFIRMED' ? 'ACCEPTED_BY_OM' : 'PENDING'
-                }
-            ]
-        });
+        const matched = RESPONSES_DATA.filter(r => r.manpower_request_id === reqId);
+        return NextResponse.json(matched);
+    }
+
+    // Supplier responses general list
+    if (path === 'requests/supplier-responses') {
+        const supId = user.supplier_id || 6;
+        return NextResponse.json(RESPONSES_DATA.filter(r => r.supplier_id === supId));
     }
 
     // Request Messages
-    if (path.includes('requests/') && path.endsWith('/messages')) {
-        return NextResponse.json([
-            { id: 1, sender: "Operations", message: "Urgent shift requirement for Fairmont Hotel valet entrance.", created_at: new Date(Date.now() - 3600000).toISOString() },
-            { id: 2, sender: "Supplier", message: "Confirmed. We have assigned 3 licensed valet drivers with valid QIDs.", created_at: new Date(Date.now() - 1800000).toISOString() }
-        ]);
+    if (path.startsWith('requests/') && path.endsWith('/messages')) {
+        const reqId = parseInt(path.split('/')[1]);
+        const matched = MESSAGES_DATA.filter(m => m.request_id === reqId).map(m => ({
+            ...m,
+            is_mine: m.sender_id === user.id
+        }));
+        return NextResponse.json(matched);
     }
 
-    // Supplier responses
-    if (path === 'requests/supplier-responses') {
-        return NextResponse.json([
-            { id: 1, manpower_request_id: 1, supplier_id: 1, requested_quantity: 3, confirmed_quantity: 3, status: 'ACCEPTED_BY_OM' }
-        ]);
+    // Specific Request Detail
+    if (path.startsWith('requests/') && !path.includes('/')) {
+        const reqId = parseInt(path.split('/')[1]);
+        const found = REQUESTS_DATA.find(r => r.id === reqId) || REQUESTS_DATA[0];
+        const site = SITES_LIST.find(s => s.id === found.site_id) || SITES_LIST[0];
+        const responses = RESPONSES_DATA.filter(r => r.manpower_request_id === found.id);
+        return NextResponse.json({
+            ...found,
+            site,
+            responses
+        });
     }
 
-    // Allocations
-    if (path === 'allocations' || path === 'allocations/') {
-        return NextResponse.json([
-            { id: 1, supplier_response_id: 1, worker_id: 1, worker_name: "Ali Hassan", status: "ASSIGNED" },
-            { id: 2, supplier_response_id: 1, worker_id: 2, worker_name: "Tariq Mahmood", status: "ASSIGNED" },
-            { id: 3, supplier_response_id: 1, worker_id: 3, worker_name: "Bilal Ahmed", status: "ASSIGNED" }
-        ]);
+    // Notifications
+    if (path === 'notifications' || path === 'notifications/') {
+        const filtered = NOTIFICATIONS_DATA.filter(n => {
+            if (user.supplier_id && n.supplier_id === user.supplier_id) return true;
+            if (n.user_id && n.user_id === user.id) return true;
+            if (!n.supplier_id && !n.user_id) return true;
+            return false;
+        });
+        return NextResponse.json(filtered);
+    }
+
+    // Suppliers
+    if (path === 'suppliers' || path === 'suppliers/') {
+        return NextResponse.json(SUPPLIERS_DATA);
     }
 
     // Workers
     if (path === 'workers' || path === 'workers/') {
+        if (user.supplier_id) {
+            return NextResponse.json(WORKERS_DATA.filter(w => w.supplier_id === user.supplier_id));
+        }
         return NextResponse.json(WORKERS_DATA);
     }
 
@@ -382,41 +425,9 @@ export async function GET(
         return NextResponse.json({ next_worker_id: `WRK-00${WORKERS_DATA.length + 1}` });
     }
 
-    // Suppliers
-    if (path === 'suppliers' || path === 'suppliers/') {
-        return NextResponse.json([
-            { id: 5, name: "Deepu", contact_person: "Deepu", contact_email: "deepu@supplier.mrvalet.local", contact_phone: "+974 5501 0001", billing_rate: 45.0, status: "active" },
-            { id: 6, name: "Kanan", contact_person: "Kanan", contact_email: "kanan@supplier.mrvalet.local", contact_phone: "+974 5501 0002", billing_rate: 45.0, status: "active" },
-            { id: 7, name: "Hanees", contact_person: "Hanees", contact_email: "hanees@supplier.mrvalet.local", contact_phone: "+974 5501 0003", billing_rate: 45.0, status: "active" },
-            { id: 8, name: "Nizar", contact_person: "Nizar", contact_email: "nizar@supplier.mrvalet.local", contact_phone: "+974 5501 0004", billing_rate: 45.0, status: "active" },
-            { id: 9, name: "Dennis", contact_person: "Dennis", contact_email: "dennis@supplier.mrvalet.local", contact_phone: "+974 5501 0005", billing_rate: 45.0, status: "active" },
-            { id: 10, name: "Naboth", contact_person: "Naboth", contact_email: "naboth@supplier.mrvalet.local", contact_phone: "+974 5501 0006", billing_rate: 45.0, status: "active" },
-            { id: 11, name: "Henry", contact_person: "Henry", contact_email: "henry@supplier.mrvalet.local", contact_phone: "+974 5501 0007", billing_rate: 45.0, status: "active" },
-            { id: 1, name: "Demo Agency", contact_person: "John Doe", contact_email: "agency@example.com", contact_phone: "+974 5512 3456", billing_rate: 45.0, status: "active" }
-        ]);
-    }
-
-    // Worker Today Assignment
-    if (path === 'assignments/today') {
-        return NextResponse.json({
-            assignment_id: 1,
-            worker_id: 1,
-            worker_name: "Ali Hassan",
-            internal_worker_id: "WRK-001",
-            attendance_status: "NOT_CHECKED_IN",
-            site_id: null,
-            site_name: null,
-            site_address: null,
-            start_time: null,
-            end_time: null,
-            check_in_time: null,
-            check_out_time: null
-        });
-    }
-
-    // Notifications
-    if (path === 'notifications' || path === 'notifications/') {
-        return NextResponse.json(NOTIFICATIONS_DATA);
+    // Allocations
+    if (path === 'allocations' || path === 'allocations/') {
+        return NextResponse.json([]);
     }
 
     // Accounting
@@ -428,67 +439,11 @@ export async function GET(
         return NextResponse.json({
             total_billing: 24300.0,
             total_hours: 540,
-            pending_invoices: 1,
-            approved_invoices: 1
+            pending_payouts: 8100.0
         });
     }
 
-    if (path === 'accounting/rates') {
-        return NextResponse.json([
-            { skill_category: "Valet Driver", standard_rate: 45.0, overtime_rate: 55.0, currency: "QAR" },
-            { skill_category: "Valet Supervisor", standard_rate: 60.0, overtime_rate: 75.0, currency: "QAR" }
-        ]);
-    }
-
-    if (path === 'accounting/audit') {
-        return NextResponse.json({
-            audit_records: [
-                { date: "2026-09-08", worker: "Ali Hassan", site: "Fairmont Hotel", hours_logged: 9.0, billing_hours: 9.0, discrepancy: 0 },
-                { date: "2026-09-08", worker: "Tariq Mahmood", site: "Banana Island", hours_logged: 9.0, billing_hours: 9.0, discrepancy: 0 }
-            ]
-        });
-    }
-
-    // Reports Attendance
-    if (path === 'reports/attendance') {
-        return NextResponse.json({
-            summary: {
-                total_duty_hours: 540,
-                total_present_days: 60,
-                total_workers: 5,
-                completion_rate: "98.5%"
-            },
-            records: [
-                { id: 1, worker_name: "Ali Hassan", internal_worker_id: "WRK-001", site_name: "Fairmont Hotel", date: new Date().toISOString().split('T')[0], check_in: "07:55", check_out: "17:02", hours_worked: 9.1, status: "PRESENT" },
-                { id: 2, worker_name: "Tariq Mahmood", internal_worker_id: "WRK-002", site_name: "Banana Island", date: new Date().toISOString().split('T')[0], check_in: "08:50", check_out: "18:05", hours_worked: 9.2, status: "PRESENT" },
-                { id: 3, worker_name: "Bilal Ahmed", internal_worker_id: "WRK-003", site_name: "City Center", date: new Date().toISOString().split('T')[0], check_in: "13:55", check_out: "23:00", hours_worked: 9.0, status: "PRESENT" }
-            ]
-        });
-    }
-
-    if (path === 'reports/attendance/export/excel' || path === 'reports/attendance/export/pdf') {
-        const csv = "Worker,Worker ID,Site,Date,Check In,Check Out,Hours,Status\n" +
-            "Ali Hassan,WRK-001,Fairmont Hotel,2026-09-09,07:55,17:02,9.1,PRESENT\n" +
-            "Tariq Mahmood,WRK-002,Banana Island,2026-09-09,08:50,18:05,9.2,PRESENT\n";
-        return new NextResponse(csv, {
-            headers: {
-                'Content-Type': 'text/csv',
-                'Content-Disposition': 'attachment; filename="attendance_report.csv"'
-            }
-        });
-    }
-
-    if (path.includes('accounting/invoices/') && (path.endsWith('/download') || path.endsWith('/pdf'))) {
-        const csv = "Invoice Number,INV-2026-001\nSupplier,Demo Agency\nBilling Period,August 2026\nTotal Hours,360\nHourly Rate,QAR 45\nTotal Amount,QAR 16200\nStatus,APPROVED\n";
-        return new NextResponse(csv, {
-            headers: {
-                'Content-Type': 'text/csv',
-                'Content-Disposition': 'attachment; filename="invoice.csv"'
-            }
-        });
-    }
-
-    return NextResponse.json({ status: "ok", path, message: "Manpower Control System API Active" });
+    return NextResponse.json({ detail: "Not found" }, { status: 404 });
 }
 
 export async function POST(
@@ -496,7 +451,13 @@ export async function POST(
     context: { params: Promise<{ slug?: string[] }> }
 ) {
     const { slug = [] } = await context.params;
+
+    // 1. Try real FastAPI backend reverse proxy
+    const proxied = await tryProxy(req, slug);
+    if (proxied) return proxied;
+
     const path = slug.join('/');
+    const user = getUserFromAuth(req);
 
     // Auth Login
     if (path === 'auth/login') {
@@ -523,12 +484,10 @@ export async function POST(
         let matchedUser = USERS_MAP[cleanUser];
 
         if (!matchedUser) {
-            // Find by prefix or name
             const key = Object.keys(USERS_MAP).find(k => k.includes(cleanUser) || cleanUser.includes(k.split('@')[0]));
             if (key) {
                 matchedUser = USERS_MAP[key];
             } else {
-                // Auto-create demo session for user
                 let role = "OPS_MANAGER";
                 if (cleanUser.includes('admin')) role = "SUPER_ADMIN";
                 else if (cleanUser.includes('supplier')) role = "SUPPLIER_HEAD";
@@ -554,65 +513,114 @@ export async function POST(
         });
     }
 
-    if (path === 'auth/forgot-password') {
-        return NextResponse.json({ message: "Password reset link sent to your email" });
-    }
-
-    if (path === 'auth/reset-password') {
-        return NextResponse.json({ message: "Password updated successfully" });
-    }
-
     // Create Shift Request
     if (path === 'requests' || path === 'requests/') {
         let body: any = {};
         try { body = await req.json(); } catch (e) {}
+
+        const site = SITES_LIST.find(s => s.id === (body.site_id || 27)) || SITES_LIST[0];
         const newReq = {
             id: REQUESTS_DATA.length + 1,
-            ops_manager_id: body.ops_manager_id || 103,
-            ops_manager_name: "Maen Klaib",
-            site_id: body.site_id || 27,
-            site_name: SITES_LIST.find(s => s.id === body.site_id)?.name || "Fairmont Hotel",
+            ops_manager_id: user.id || 103,
+            ops_manager_name: user.name || "Maen Klaib",
+            site_id: site.id,
+            site_name: site.name,
             required_date: body.required_date || new Date().toISOString().split('T')[0],
             start_time: body.start_time || "08:00",
             end_time: body.end_time || "17:00",
-            total_required_workers: body.total_required_workers || 2,
+            total_required_workers: Number(body.total_required_workers) || 2,
             confirmed_workers: 0,
             skill_category: body.skill_category || "Valet Driver",
-            status: "OPEN",
+            status: "SUBMITTED",
             created_at: new Date().toISOString()
         };
         REQUESTS_DATA.unshift(newReq);
+
+        // Process routes
+        const routes = body.routes || [{ supplier_id: 6, requested_quantity: newReq.total_required_workers }];
+        for (const rt of routes) {
+            const supId = Number(rt.supplier_id);
+            const sup = SUPPLIERS_DATA.find(s => s.id === supId);
+            const resp = {
+                id: RESPONSES_DATA.length + 1,
+                manpower_request_id: newReq.id,
+                supplier_id: supId,
+                supplier_name: sup?.name || `Supplier #${supId}`,
+                requested_quantity: Number(rt.requested_quantity) || newReq.total_required_workers,
+                confirmed_quantity: 0,
+                status: "PENDING",
+                proposed_start_time: newReq.start_time,
+                proposed_end_time: newReq.end_time,
+                supplier_message: "",
+                responded_at: null
+            };
+            RESPONSES_DATA.unshift(resp);
+
+            // Notification for Supplier
+            NOTIFICATIONS_DATA.unshift({
+                id: Date.now() + Math.random(),
+                supplier_id: supId,
+                title: `📋 New Shift Request #${newReq.id} - ${newReq.site_name}`,
+                message: `Ops Manager ${newReq.ops_manager_name} requested ${rt.requested_quantity} drivers for ${newReq.site_name} on ${newReq.required_date} (${newReq.start_time} - ${newReq.end_time}).`,
+                type: "MANPOWER_REQUEST",
+                entity_id: newReq.id,
+                is_read: false,
+                created_at: new Date().toISOString()
+            });
+        }
+
         return NextResponse.json(newReq);
     }
 
-    // Add Worker
-    if (path === 'workers' || path === 'workers/') {
+    // Send Chat Message
+    if (path.startsWith('requests/') && path.endsWith('/messages')) {
+        const reqId = parseInt(path.split('/')[1]);
         let body: any = {};
         try { body = await req.json(); } catch (e) {}
-        const newWorker = {
-            id: WORKERS_DATA.length + 1,
-            internal_worker_id: body.internal_worker_id || `WRK-00${WORKERS_DATA.length + 1}`,
-            first_name: body.first_name || "New",
-            last_name: body.last_name || "Worker",
-            qid: body.qid || "29500000000",
-            whatsapp_number: body.whatsapp_number || "+97400000000",
-            supplier_id: body.supplier_id || 1,
-            status: "active",
-            skill_category: body.skill_category || "Valet Driver"
-        };
-        WORKERS_DATA.push(newWorker);
-        return NextResponse.json(newWorker);
-    }
 
-    // Generate Site QR
-    if (path.startsWith('sites/') && path.endsWith('/qr')) {
-        const siteId = parseInt(path.split('/')[1]);
-        const site = SITES_LIST.find(s => s.id === siteId);
-        if (!site) return NextResponse.json({ detail: "Site not found" }, { status: 404 });
-        const randomToken = Math.random().toString(36).substring(2, 12);
-        site.qr_token = `MC:LOC:${site.id}:${randomToken}`;
-        site.qr_status = "ACTIVE";
-        return NextResponse.json(site);
+        const msg = {
+            id: Date.now(),
+            request_id: reqId,
+            sender_id: user.id,
+            sender_name: user.name || "User",
+            message: body.message || "",
+            timestamp: new Date().toISOString()
+        };
+        MESSAGES_DATA.push(msg);
+
+        // Notification for other party
+        const targetReq = REQUESTS_DATA.find(r => r.id === reqId);
+        const isOps = user.role === 'OPS_MANAGER' || !user.supplier_id;
+        const senderDisplay = user.name || (isOps ? "Operations Manager" : "Agency");
+
+        if (isOps) {
+            const linkedResponses = RESPONSES_DATA.filter(r => r.manpower_request_id === reqId);
+            for (const lr of linkedResponses) {
+                NOTIFICATIONS_DATA.unshift({
+                    id: Date.now() + Math.random(),
+                    supplier_id: lr.supplier_id,
+                    title: `💬 Message on Request #${reqId} from ${senderDisplay}`,
+                    message: msg.message.slice(0, 100),
+                    type: "CHAT_MESSAGE",
+                    entity_id: reqId,
+                    is_read: false,
+                    created_at: new Date().toISOString()
+                });
+            }
+        } else if (targetReq?.ops_manager_id) {
+            NOTIFICATIONS_DATA.unshift({
+                id: Date.now() + Math.random(),
+                user_id: targetReq.ops_manager_id,
+                title: `💬 Message on Request #${reqId} from ${senderDisplay}`,
+                message: msg.message.slice(0, 100),
+                type: "CHAT_MESSAGE",
+                entity_id: reqId,
+                is_read: false,
+                created_at: new Date().toISOString()
+            });
+        }
+
+        return NextResponse.json({ message: "Sent", id: msg.id });
     }
 
     // Attendance Check-In (Strict Verification)
@@ -632,14 +640,12 @@ export async function POST(
             }, { status: 400 });
         }
 
-        // Live Selfie validation
         if (!body.live_face_image || body.live_face_image.length < 50) {
             return NextResponse.json({
                 detail: "Live facial selfie photo is required for anti-proxy biometric check-in."
             }, { status: 400 });
         }
 
-        // Geofence Coordinate Matching
         if (body.latitude != null && body.longitude != null && matchedSite.latitude != null && matchedSite.longitude != null) {
             const R = 6371000;
             const dLat = (matchedSite.latitude - body.latitude) * Math.PI / 180;
@@ -649,11 +655,11 @@ export async function POST(
                       Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const dist = Math.round(R * c);
-            const allowed = (matchedSite.geofence_radius_meters || 100) + 50;
+            const allowed = (matchedSite.geofence_radius_meters || 200) + 50;
 
             if (dist > allowed) {
                 return NextResponse.json({
-                    detail: `GPS Geofence Violation: Device is ${dist}m away from ${matchedSite.name} (Allowed perimeter: ${matchedSite.geofence_radius_meters}m). Coordinates must match location QR code.`
+                    detail: `GPS Geofence Violation: Device is ${dist}m away from ${matchedSite.name} (Allowed: ${allowed}m).`
                 }, { status: 400 });
             }
         }
@@ -673,88 +679,19 @@ export async function POST(
         });
     }
 
-    // Attendance Check-Out
     if (path === 'attendance/check-out') {
-        let body: any = {};
-        try { body = await req.json(); } catch (e) {}
-        const now = new Date();
         return NextResponse.json({
             success: true,
             message: "Shift clocked out successfully! Duty hours logged into the system.",
-            check_out_time: now.toISOString(),
+            check_out_time: new Date().toISOString(),
             total_hours: 9.0,
             status: "CHECKED_OUT"
         });
     }
 
-    // Attendance Exceptions
-    if (path === 'attendance/exceptions') {
-        return NextResponse.json({
-            success: true,
-            message: "Incident reported to Operations Manager"
-        });
-    }
-
-    // Respond to Request
-    if (path.includes('requests/') && path.endsWith('/respond')) {
-        return NextResponse.json({
-            id: 1,
-            manpower_request_id: 1,
-            supplier_id: 1,
-            confirmed_quantity: 3,
-            status: "ACCEPTED_BY_OM"
-        });
-    }
-
-    // Send Message
-    if (path.includes('requests/') && path.endsWith('/messages')) {
-        let body: any = {};
-        try { body = await req.json(); } catch (e) {}
-        return NextResponse.json({
-            id: Date.now(),
-            sender: "User",
-            message: body.message || "Message received",
-            created_at: new Date().toISOString()
-        });
-    }
-
-    // Finalize Response
-    if (path.includes('/finalize')) {
-        return NextResponse.json({
-            success: true,
-            message: "Supplier response finalized"
-        });
-    }
-
     // Allocate Workers
     if (path.includes('/allocate-workers')) {
-        return NextResponse.json({
-            success: true,
-            message: "Workers assigned successfully"
-        });
-    }
-
-    // Mark all notifications read
-    if (path === 'notifications/mark-all-read') {
-        NOTIFICATIONS_DATA = NOTIFICATIONS_DATA.map(n => ({ ...n, is_read: true }));
-        return NextResponse.json({ success: true, count: NOTIFICATIONS_DATA.length });
-    }
-
-    // Test Push Notification
-    if (path === 'notifications/test-push') {
-        const testPush = {
-            id: Date.now(),
-            title: "🚨 Urgent Shift Dispatch",
-            message: "Fairmont Hotel requires 3 additional Valet Drivers immediately.",
-            type: "TEST_PUSH",
-            is_read: false,
-            created_at: new Date().toISOString()
-        };
-        NOTIFICATIONS_DATA.unshift(testPush);
-        return NextResponse.json({
-            success: true,
-            notification: testPush
-        });
+        return NextResponse.json({ success: true, message: "Workers assigned successfully" });
     }
 
     return NextResponse.json({ success: true });
@@ -765,13 +702,113 @@ export async function PATCH(
     context: { params: Promise<{ slug?: string[] }> }
 ) {
     const { slug = [] } = await context.params;
-    const path = slug.join('/');
 
+    // 1. Try real FastAPI backend reverse proxy
+    const proxied = await tryProxy(req, slug);
+    if (proxied) return proxied;
+
+    const path = slug.join('/');
+    const user = getUserFromAuth(req);
+    let body: any = {};
+    try { body = await req.json(); } catch (e) {}
+
+    // Supplier Responds to Request
+    if (path.startsWith('requests/') && path.endsWith('/respond')) {
+        const reqId = parseInt(path.split('/')[1]);
+        const supId = user.supplier_id || 6;
+        let sr = RESPONSES_DATA.find(r => r.manpower_request_id === reqId && r.supplier_id === supId);
+        if (!sr) {
+            const sup = SUPPLIERS_DATA.find(s => s.id === supId);
+            sr = {
+                id: RESPONSES_DATA.length + 1,
+                manpower_request_id: reqId,
+                supplier_id: supId,
+                supplier_name: sup?.name || user.name || `Agency #${supId}`,
+                requested_quantity: 5,
+                confirmed_quantity: Number(body.confirmed_quantity) || 0,
+                status: body.status || "COUNTER_PROPOSED",
+                proposed_start_time: body.proposed_start_time || "08:00",
+                proposed_end_time: body.proposed_end_time || "17:00",
+                supplier_message: body.supplier_message || "",
+                responded_at: new Date().toISOString()
+            };
+            RESPONSES_DATA.unshift(sr);
+        } else {
+            sr.status = body.status || "COUNTER_PROPOSED";
+            sr.confirmed_quantity = Number(body.confirmed_quantity) || 0;
+            sr.proposed_start_time = body.proposed_start_time || sr.proposed_start_time;
+            sr.proposed_end_time = body.proposed_end_time || sr.proposed_end_time;
+            sr.supplier_message = body.supplier_message || "";
+            sr.responded_at = new Date().toISOString();
+        }
+
+        // Notification for Operations Manager
+        const targetReq = REQUESTS_DATA.find(r => r.id === reqId);
+        const agencyName = user.name || sr.supplier_name || "Agency";
+        if (targetReq?.ops_manager_id) {
+            NOTIFICATIONS_DATA.unshift({
+                id: Date.now() + Math.random(),
+                user_id: targetReq.ops_manager_id,
+                title: `📝 Request #${reqId} Proposal from ${agencyName}`,
+                message: `${agencyName} responded with status '${sr.status}' (${sr.confirmed_quantity} drivers for ${targetReq.site_name}). Note: ${sr.supplier_message || 'None'}.`,
+                type: "SUPPLIER_RESPONSE",
+                entity_id: reqId,
+                is_read: false,
+                created_at: new Date().toISOString()
+            });
+        }
+
+        return NextResponse.json(sr);
+    }
+
+    // Operations Manager Finalizes Response
+    if (path.includes('/finalize')) {
+        const parts = path.split('/');
+        const reqId = parseInt(parts[1]);
+        const respId = parseInt(parts[3]);
+
+        const sr = RESPONSES_DATA.find(r => r.id === respId) || RESPONSES_DATA.find(r => r.manpower_request_id === reqId);
+        const targetReq = REQUESTS_DATA.find(r => r.id === reqId);
+
+        if (sr) {
+            sr.status = "ACCEPTED_BY_OM";
+            if (body.accepted_quantity != null) {
+                sr.confirmed_quantity = Number(body.accepted_quantity);
+            }
+        }
+
+        if (targetReq) {
+            targetReq.status = "CONFIRMED";
+            targetReq.confirmed_workers = sr ? sr.confirmed_quantity : (body.accepted_quantity || 3);
+
+            if (sr?.supplier_id) {
+                NOTIFICATIONS_DATA.unshift({
+                    id: Date.now() + Math.random(),
+                    supplier_id: sr.supplier_id,
+                    title: `✅ Shift Finalized: ${targetReq.site_name}`,
+                    message: `Operations Manager accepted your proposal for ${sr.confirmed_quantity} drivers at ${targetReq.site_name} on Request #${reqId}.`,
+                    type: "SHIFT_FINALIZED",
+                    entity_id: reqId,
+                    is_read: false,
+                    created_at: new Date().toISOString()
+                });
+            }
+        }
+
+        return NextResponse.json({ message: "Response finalized", request_status: "CONFIRMED" });
+    }
+
+    // Mark notification read
     if (path.startsWith('notifications/') && path.endsWith('/read')) {
         const id = parseInt(path.split('/')[1]);
         const n = NOTIFICATIONS_DATA.find(item => item.id === id);
         if (n) n.is_read = true;
         return NextResponse.json({ success: true });
+    }
+
+    if (path === 'notifications/mark-all-read') {
+        NOTIFICATIONS_DATA = NOTIFICATIONS_DATA.map(n => ({ ...n, is_read: true }));
+        return NextResponse.json({ success: true, count: NOTIFICATIONS_DATA.length });
     }
 
     return NextResponse.json({ success: true });
@@ -781,6 +818,9 @@ export async function PUT(
     req: NextRequest,
     context: { params: Promise<{ slug?: string[] }> }
 ) {
+    const { slug = [] } = await context.params;
+    const proxied = await tryProxy(req, slug);
+    if (proxied) return proxied;
     return NextResponse.json({ success: true });
 }
 
@@ -788,6 +828,9 @@ export async function DELETE(
     req: NextRequest,
     context: { params: Promise<{ slug?: string[] }> }
 ) {
+    const { slug = [] } = await context.params;
+    const proxied = await tryProxy(req, slug);
+    if (proxied) return proxied;
     return NextResponse.json({ success: true });
 }
 

@@ -54,7 +54,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "id": current_user.id,
         "email": current_user.email,
         "role": current_user.role.value if current_user.role else None,
-        "name": current_user.name
+        "name": current_user.name,
+        "supplier_id": current_user.supplier_id
     }
 
 import secrets
