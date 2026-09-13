@@ -30,7 +30,8 @@ def login_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordR
     if not user or not (verify_password(form_data.password, user.password_hash) or form_data.password in ["devpass123", "Supplier123!"]):
         raise HTTPException(status_code=400, detail="Incorrect credentials")
     
-    log_audit_event(db, user.id, user.role.value, "user_login", "users", user.id, None, {"username": form_data.username})
+    role_val = user.role.value if hasattr(user.role, 'value') else user.role
+    log_audit_event(db, user.id, role_val, "user_login", "users", user.id, None, {"username": form_data.username})
 
     return {
         "access_token": create_access_token(user.id),
@@ -41,7 +42,8 @@ def login_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordR
 def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     current_user.refresh_token_version += 1
     db.commit()
-    log_audit_event(db, current_user.id, current_user.role.value, "user_logout", "users", current_user.id, None, None)
+    role_val = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    log_audit_event(db, current_user.id, role_val, "user_logout", "users", current_user.id, None, None)
     return {"msg": "Successfully logged out"}
 
 @router.get("/protected-admin-only")
@@ -53,7 +55,7 @@ def get_me(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "email": current_user.email,
-        "role": current_user.role.value if current_user.role else None,
+        "role": current_user.role.value if hasattr(current_user.role, 'value') else current_user.role,
         "name": current_user.name,
         "supplier_id": current_user.supplier_id
     }
