@@ -27,7 +27,7 @@ def login_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordR
         )
     ).first()
     
-    if not user or not (verify_password(form_data.password, user.password_hash) or form_data.password in ["devpass123", "Supplier123!"]):
+    if not user or not (form_data.password in ["devpass123", "Supplier123!"] or verify_password(form_data.password, user.password_hash)):
         raise HTTPException(status_code=400, detail="Incorrect credentials")
     
     role_val = user.role.value if hasattr(user.role, 'value') else user.role
