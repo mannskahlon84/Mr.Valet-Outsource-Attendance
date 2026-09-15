@@ -96,6 +96,10 @@ export default function OperationsRequests() {
                                     <span className="text-[10px] text-gray-400 block uppercase font-bold">Role</span>
                                     <span className="text-gray-600">{r.skill_category || 'Valet Driver'}</span>
                                 </div>
+                                <div className="col-span-2 sm:col-span-1">
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Supplier(s)</span>
+                                    <span className="text-gray-700 font-medium">{r.supplier_names || 'N/A'}</span>
+                                </div>
                             </div>
 
                             <Link 
@@ -124,6 +128,7 @@ export default function OperationsRequests() {
                                 <th className="px-5 py-3 text-left">Shift Window</th>
                                 <th className="px-5 py-3 text-left">Required Headcount</th>
                                 <th className="px-5 py-3 text-left">Skill Category</th>
+                                <th className="px-5 py-3 text-left">Supplier(s)</th>
                                 <th className="px-5 py-3 text-left">Status</th>
                                 <th className="px-5 py-3 text-right">Actions</th>
                             </tr>
@@ -150,6 +155,9 @@ export default function OperationsRequests() {
                                     <td className="px-5 py-4 text-gray-500">
                                         {r.skill_category || 'Valet Driver'}
                                     </td>
+                                    <td className="px-5 py-4 font-medium text-gray-700">
+                                        {r.supplier_names || 'N/A'}
+                                    </td>
                                     <td className="px-5 py-4">
                                         <StatusBadge status={r.status} />
                                     </td>
@@ -165,7 +173,7 @@ export default function OperationsRequests() {
                             ))}
                             {filtered.length === 0 && !loading && (
                                 <tr>
-                                    <td colSpan={8} className="px-5 py-8 text-center text-gray-400">
+                                    <td colSpan={9} className="px-5 py-8 text-center text-gray-400">
                                         No requests found matching this filter.
                                     </td>
                                 </tr>

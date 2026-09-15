@@ -142,9 +142,29 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
         sites_list = db.query(Site).filter(Site.id.in_(site_ids)).all()
         sites_map = {s.id: s for s in sites_list}
 
+    request_ids = {r.id for r in items}
+    from app.models.all_models import Supplier
+    responses = []
+    if request_ids:
+        responses = db.query(SupplierResponse).filter(SupplierResponse.manpower_request_id.in_(request_ids)).all()
+        
+    supplier_ids = {sr.supplier_id for sr in responses}
+    suppliers_map = {}
+    if supplier_ids:
+        suppliers_list = db.query(Supplier).filter(Supplier.id.in_(supplier_ids)).all()
+        suppliers_map = {s.id: s.name for s in suppliers_list}
+        
+    responses_by_req = {}
+    for sr in responses:
+        if sr.manpower_request_id not in responses_by_req:
+            responses_by_req[sr.manpower_request_id] = []
+        sup_name = suppliers_map.get(sr.supplier_id, f"Supplier #{sr.supplier_id}")
+        responses_by_req[sr.manpower_request_id].append(sup_name)
+
     result = []
     for r in items:
         s = sites_map.get(r.site_id)
+        supplier_names_str = ", ".join(responses_by_req.get(r.id, []))
         result.append({
             "id": r.id,
             "ops_manager_id": r.ops_manager_id,
@@ -156,6 +176,7 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
             "end_time": r.end_time,
             "total_required_workers": r.total_required_workers,
             "skill_category": r.skill_category,
+            "supplier_names": supplier_names_str,
             "notes": r.notes,
             "status": r.status,
             "created_at": r.created_at.isoformat() if hasattr(r, "created_at") and r.created_at else None
