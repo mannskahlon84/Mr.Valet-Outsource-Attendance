@@ -44,3 +44,14 @@ from app.api.routers import accounting, notifications
 app.include_router(accounting.router, prefix=f"{settings.API_V1_STR}/accounting", tags=["accounting"])
 app.include_router(notifications.router, prefix=f"{settings.API_V1_STR}/notifications", tags=["notifications"])
 
+from app.db.base import Base
+from app.db.session import engine
+import app.models.all_models  # noqa
+
+@app.on_event("startup")
+def on_startup():
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Database initialization warning: {e}")
+

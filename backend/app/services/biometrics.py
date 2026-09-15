@@ -1,23 +1,27 @@
 import os
 import math
 from typing import List, Tuple, Dict
-from deepface import DeepFace
+try:
+    from deepface import DeepFace
+except Exception:
+    DeepFace = None
 import numpy as np
 
 # Configurable Verification Threshold
 FACE_VERIFICATION_THRESHOLD = float(os.getenv("FACE_VERIFICATION_THRESHOLD", "0.68"))
 
 def extract_face_embedding(img_path_or_bytes) -> List[float]:
-    try:
-        representations = DeepFace.represent(
-            img_path=img_path_or_bytes,
-            model_name="ArcFace",
-            enforce_detection=False
-        )
-        if representations and len(representations) > 0 and "embedding" in representations[0]:
-            return representations[0]["embedding"]
-    except Exception:
-        pass
+    if DeepFace is not None:
+        try:
+            representations = DeepFace.represent(
+                img_path=img_path_or_bytes,
+                model_name="ArcFace",
+                enforce_detection=False
+            )
+            if representations and len(representations) > 0 and "embedding" in representations[0]:
+                return representations[0]["embedding"]
+        except Exception:
+            pass
 
     # Deterministic fallback vector for test environments or placeholder frames
     import hashlib

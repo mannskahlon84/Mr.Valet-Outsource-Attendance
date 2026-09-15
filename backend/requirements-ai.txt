@@ -1,0 +1,4 @@
+# Optional local heavy AI packages for DeepFace on systems with >4GB RAM
+deepface>=0.0.90
+opencv-python>=4.9.0
+tf-keras>=2.16.0
