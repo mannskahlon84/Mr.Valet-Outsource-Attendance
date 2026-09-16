@@ -166,15 +166,7 @@ for loc, mgr_name in locations_data:
             site.qr_status = "ACTIVE"
     db.commit()
 
-# Give ops@example.com at least 2 locations as well for testing
-if ops_demo:
-    site_demo1 = db.query(Site).filter(Site.name == "121 Tower").first()
-    if site_demo1:
-        site_demo1.manager_id = ops_demo.id
-    site_demo2 = db.query(Site).filter(Site.name == "City Center").first()
-    if site_demo2:
-        site_demo2.manager_id = ops_demo.id
-    db.commit()
+
 
 print("\n" + "="*60)
 print(f"SYNCED {len(locations_data)} SITES TO MANAGERS SUCCESSFULLY:")

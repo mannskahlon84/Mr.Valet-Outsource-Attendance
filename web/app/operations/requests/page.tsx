@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { filterRequestsForManager } from '@/lib/managerFilter';
 
 export default function OperationsRequests() {
     const [requests, setRequests] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export default function OperationsRequests() {
 
     const loadData = () => {
         fetchApi('/requests/')
-            .then(data => setRequests(data || []))
+            .then(data => setRequests(filterRequestsForManager(data || [])))
             .catch(console.error)
             .finally(() => setLoading(false));
     };

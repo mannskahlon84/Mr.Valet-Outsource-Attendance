@@ -71,6 +71,8 @@ export default function TopNavigation({
             localStorage.setItem('role', normRole);
             localStorage.setItem('role_display', me.role);
             localStorage.setItem('name', me.name || me.email || 'User');
+            localStorage.setItem('email', me.email || userToAuth || '');
+            localStorage.setItem('user_id', String(me.id || ''));
             document.cookie = `role=${normRole}; path=/; max-age=86400; SameSite=Lax`;
             document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
             
@@ -99,8 +101,13 @@ export default function TopNavigation({
                         <span className="text-xl font-bold leading-none">☰</span>
                     </button>
                 )}
-                <div className="text-base md:text-xl font-black text-gray-900 tracking-tight truncate max-w-[160px] sm:max-w-none">
-                    {title}
+                <div>
+                    <h2 className="text-base md:text-lg font-bold text-gray-900 leading-tight">
+                        {title}
+                    </h2>
+                    <p className="text-[10px] md:text-xs text-gray-500 font-medium">
+                        Mr. Valet Parking Operations
+                    </p>
                 </div>
             </div>
             <div className="flex items-center space-x-2 md:space-x-4">
@@ -112,82 +119,150 @@ export default function TopNavigation({
                     <button
                         type="button"
                         onClick={() => setShowSwitcher(!showSwitcher)}
-                        className="bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors shadow-sm"
+                        disabled={switching}
+                        className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-sm disabled:opacity-50"
                         title="Switch between Operations Manager and Outsource Agency"
                     >
-                        <span>⚡ Switch Persona</span>
-                        <span className="text-[10px]">▼</span>
+                        <span>⚡</span>
+                        <span className="hidden sm:inline">{switching ? 'Switching...' : 'Switch Persona'}</span>
+                        <span className="text-[9px]">▼</span>
                     </button>
 
                     {showSwitcher && (
-                        <div className="absolute right-0 mt-2 w-64 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
-                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-blue-400 border-b border-slate-800">
-                                🏢 Outsource Agency Heads
+                        <div className="absolute right-0 mt-2 w-72 bg-slate-900 text-gray-100 rounded-xl shadow-2xl border border-slate-700 py-2 z-50 text-xs max-h-[85vh] overflow-y-auto divide-y divide-slate-800">
+                            
+                            {/* 1. OPERATIONS MANAGERS */}
+                            <div>
+                                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-amber-400">
+                                    👔 Operations Managers (5 Accounts)
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('maen.klaib@mrvalet.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">👔 Maen Klaib (30 Sites)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('wissem.chagtmi@mrvalet.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">👔 Wissem Chagtmi (25 Sites)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('hani.abdelsallam@mrvalet.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">👔 Hani Abdelsallam (19 Sites)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('brahim.hayouni@mrvalet.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">👔 Brahim Hayouni (5 Sites)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('ghazi.alshammari@mrvalet.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">👔 Ghazi Alshammari (3 Sites)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('hanees')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">🏢 Hanees (Agency #7)</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('deepu')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">🏢 Deepu (Agency #5)</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('kanan')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">🏢 Kanan (Agency #6)</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
 
-                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-amber-400 border-t border-b border-slate-800 mt-1">
-                                👔 Operations Managers
+                            {/* 2. OUTSOURCE SUPPLIERS */}
+                            <div>
+                                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-blue-400">
+                                    🏢 Outsource Agencies (7 Suppliers)
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('kanan')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Kanan (Agency #6)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('hanees')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Hanees (Agency #7)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('deepu')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Deepu (Agency #5)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('nizar')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Nizar (Agency #8)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('dennis')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Dennis (Agency #9)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('naboth')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Naboth (Agency #10)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('henry')}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">🏢 Henry (Agency #11)</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('maen.klaib@mrvalet.com')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">👔 Maen Klaib (29 Sites)</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('wissem.chagtmi@mrvalet.com')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">👔 Wissem (25 Sites)</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('hani.abdelsallam@mrvalet.com')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">👔 Hani (18 Sites)</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
 
-                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-purple-400 border-t border-b border-slate-800 mt-1">
-                                👑 Management & Admin
+                            {/* 3. MANAGEMENT & ADMIN */}
+                            <div>
+                                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-purple-400">
+                                    👑 Management & Admin
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('admin@example.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">👑 Super Admin</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchUser('accounting@example.com')}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                                >
+                                    <span className="font-bold">📊 Accounting Officer</span>
+                                    <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => switchUser('admin@example.com')}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center justify-between transition-colors"
-                            >
-                                <span className="font-bold">👑 Super Admin</span>
-                                <span className="text-[10px] text-gray-400 font-mono">Switch →</span>
-                            </button>
                         </div>
                     )}
                 </div>

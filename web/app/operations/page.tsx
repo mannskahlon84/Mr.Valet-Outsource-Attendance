@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { filterSitesForManager, filterRequestsForManager } from '@/lib/managerFilter';
 
 export default function OperationsDashboard() {
     const [requests, setRequests] = useState<any[]>([]);
@@ -16,8 +17,8 @@ export default function OperationsDashboard() {
             fetchApi('/sites/').catch(() => []),
             fetchApi('/reports/attendance').catch(() => null)
         ]).then(([reqs, s, att]) => {
-            setRequests(reqs || []);
-            setSites(s || []);
+            setRequests(filterRequestsForManager(reqs || []));
+            setSites(filterSitesForManager(s || []));
             setAttendanceReport(att);
         }).finally(() => setLoading(false));
     }, []);

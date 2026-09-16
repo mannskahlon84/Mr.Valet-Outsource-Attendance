@@ -27,11 +27,11 @@ const SUPPLIERS = [
 ];
 
 const OPS_MANAGERS = [
-    { name: "Maen Klaib", email: "maen.klaib@mrvalet.com", sitesCount: 29, highlight: "Fairmont, City Center, Lusail" },
-    { name: "Wissem Chagtmi", email: "wissem.chagtmi@mrvalet.com", sitesCount: 25, highlight: "Banana Island, Old Doha Port, Msheireb" },
-    { name: "Hani Abdelsallam", email: "hani.abdelsallam@mrvalet.com", sitesCount: 18, highlight: "The Pearl, Katara, West Bay" },
-    { name: "Brahim Hayouni", email: "brahim.hayouni@mrvalet.com", sitesCount: 5, highlight: "Centro Mall, Al Maha, Tower 18" },
-    { name: "Ghazi Alshammari", email: "ghazi.alshammari@mrvalet.com", sitesCount: 3, highlight: "M Gallery, Msheireb, Park Hyatt" }
+    { name: "Maen Klaib", email: "maen.klaib@mrvalet.com", sitesCount: 30, highlight: "Fairmont, City Center, Lusail, Mall of Qatar" },
+    { name: "Wissem Chagtmi", email: "wissem.chagtmi@mrvalet.com", sitesCount: 25, highlight: "Banana Island, Katara Village, The Ned, Msheireb" },
+    { name: "Hani Abdelsallam", email: "hani.abdelsallam@mrvalet.com", sitesCount: 19, highlight: "121 Tower, The Pearl, Katara Hills, Lagoona" },
+    { name: "Brahim Hayouni", email: "brahim.hayouni@mrvalet.com", sitesCount: 5, highlight: "Al Maha Island, Centro Mall, Old Doha Port, Tower 18" },
+    { name: "Ghazi Alshammari", email: "ghazi.alshammari@mrvalet.com", sitesCount: 3, highlight: "M Gallery Hotel, Msheireb Downtown, Park Hyatt" }
 ];
 
 export default function Login() {
@@ -88,6 +88,8 @@ export default function Login() {
             localStorage.setItem('role', normRole);
             localStorage.setItem('role_display', me.role);
             localStorage.setItem('name', me.name || me.email || 'User');
+            localStorage.setItem('email', me.email || userToAuth || '');
+            localStorage.setItem('user_id', String(me.id || ''));
             
             document.cookie = `role=${normRole}; path=/; max-age=86400; SameSite=Lax`;
             document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
@@ -245,8 +247,8 @@ export default function Login() {
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                                    {OPS_MANAGERS.slice(0, 3).map((mgr) => {
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                    {OPS_MANAGERS.map((mgr) => {
                                         const isLoggingIn = loading && activeLoginUser === mgr.email;
                                         return (
                                             <div 

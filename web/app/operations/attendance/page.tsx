@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { fetchApi, API_URL } from '@/lib/api';
+import { filterLocationShiftsForManager } from '@/lib/managerFilter';
 
 export default function OperationsAttendance() {
     const [report, setReport] = useState<any>(null);
@@ -18,7 +19,7 @@ export default function OperationsAttendance() {
         ]).then(([rep, exc, locs]) => {
             setReport(rep);
             setExceptions(exc || []);
-            setLocationShifts(locs || []);
+            setLocationShifts(filterLocationShiftsForManager(locs || []));
         }).finally(() => setLoading(false));
     };
 

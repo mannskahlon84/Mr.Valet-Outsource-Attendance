@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
+import { filterSitesForManager } from '@/lib/managerFilter';
 
 interface RouteAllocation {
     supplier_id: string;
@@ -68,9 +69,10 @@ export default function NewShiftRequest() {
             fetchApi('/sites/').catch(() => []),
             fetchApi('/suppliers/').catch(() => [])
         ]).then(([s, sup]) => {
-            setSites(s || []);
+            const mySites = filterSitesForManager(s || []);
+            setSites(mySites);
             setSuppliers(sup || []);
-            if (s && s.length > 0) setSiteId(s[0].id.toString());
+            if (mySites && mySites.length > 0) setSiteId(mySites[0].id.toString());
             if (sup && sup.length > 0) {
                 setShifts(prev => prev.map(sh => ({
                     ...sh,

@@ -158,6 +158,24 @@ async function tryProxy(req: NextRequest, slug: string[]): Promise<Response | nu
     }
 }
 
+// Mapping of DB User IDs to accounts
+const DB_ID_TO_EMAIL: Record<string, string> = {
+    "5": "hani.abdelsallam@mrvalet.com",
+    "6": "maen.klaib@mrvalet.com",
+    "7": "brahim.hayouni@mrvalet.com",
+    "8": "wissem.chagtmi@mrvalet.com",
+    "16": "ghazi.alshammari@mrvalet.com",
+    "101": "wissem.chagtmi@mrvalet.com",
+    "102": "hani.abdelsallam@mrvalet.com",
+    "103": "maen.klaib@mrvalet.com",
+    "104": "brahim.hayouni@mrvalet.com",
+    "105": "ghazi.alshammari@mrvalet.com",
+    "1": "admin@example.com",
+    "2": "manpreet@alsharqiholding.com",
+    "3": "ops@example.com",
+    "4": "accounting@example.com"
+};
+
 // Seed Users Map
 const USERS_MAP: Record<string, any> = {
     "wissem.chagtmi@mrvalet.com": { id: 101, email: "wissem.chagtmi@mrvalet.com", name: "Wissem Chagtmi", role: "OPS_MANAGER", status: "active" },
@@ -165,6 +183,11 @@ const USERS_MAP: Record<string, any> = {
     "maen.klaib@mrvalet.com": { id: 103, email: "maen.klaib@mrvalet.com", name: "Maen Klaib", role: "OPS_MANAGER", status: "active" },
     "brahim.hayouni@mrvalet.com": { id: 104, email: "brahim.hayouni@mrvalet.com", name: "Brahim Hayouni", role: "OPS_MANAGER", status: "active" },
     "ghazi.alshammari@mrvalet.com": { id: 105, email: "ghazi.alshammari@mrvalet.com", name: "Ghazi Alshammari", role: "OPS_MANAGER", status: "active" },
+    "wissem": { id: 101, email: "wissem.chagtmi@mrvalet.com", name: "Wissem Chagtmi", role: "OPS_MANAGER", status: "active" },
+    "hani": { id: 102, email: "hani.abdelsallam@mrvalet.com", name: "Hani Abdelsallam", role: "OPS_MANAGER", status: "active" },
+    "maen": { id: 103, email: "maen.klaib@mrvalet.com", name: "Maen Klaib", role: "OPS_MANAGER", status: "active" },
+    "brahim": { id: 104, email: "brahim.hayouni@mrvalet.com", name: "Brahim Hayouni", role: "OPS_MANAGER", status: "active" },
+    "ghazi": { id: 105, email: "ghazi.alshammari@mrvalet.com", name: "Ghazi Alshammari", role: "OPS_MANAGER", status: "active" },
     "ops@example.com": { id: 106, email: "ops@example.com", name: "Operations Manager", role: "OPS_MANAGER", status: "active" },
     "admin@example.com": { id: 1, email: "admin@example.com", name: "Super Admin", role: "SUPER_ADMIN", status: "active" },
     "manpreet@alsharqiholding.com": { id: 2, email: "manpreet@alsharqiholding.com", name: "Manpreet", role: "SUPER_ADMIN", status: "active" },
@@ -295,7 +318,13 @@ function getUserFromAuth(req: NextRequest) {
                 const payloadPart = token.split('.')[1];
                 const jsonStr = Buffer.from(payloadPart, 'base64').toString('utf-8');
                 const decoded = JSON.parse(jsonStr);
-                const foundUser = Object.values(USERS_MAP).find(u => String(u.id) === String(decoded.sub));
+                const subStr = String(decoded.sub);
+                
+                if (DB_ID_TO_EMAIL[subStr]) {
+                    const mappedEmail = DB_ID_TO_EMAIL[subStr];
+                    if (USERS_MAP[mappedEmail]) return USERS_MAP[mappedEmail];
+                }
+                const foundUser = Object.values(USERS_MAP).find(u => String(u.id) === subStr || u.email === subStr);
                 if (foundUser) return foundUser;
             } catch (e) {}
         }
@@ -326,8 +355,23 @@ export async function GET(
         return NextResponse.json(user);
     }
 
-    // Sites
+    // Sites - STRICTLY FILTER BY ASSIGNED OPERATIONS MANAGER
     if (path === 'sites' || path === 'sites/') {
+        if (user && (user.role === 'OPS_MANAGER' || user.role === 'Operations Manager')) {
+            const userEmail = (user.email || '').toLowerCase();
+            const userName = (user.name || '').toLowerCase();
+            const mySites = SITES_LIST.filter(s => {
+                const sMgr = (s.manager_name || '').toLowerCase();
+                const sMgrId = s.manager_id;
+                if (userEmail.includes('maen') || userName.includes('maen')) return sMgr.includes('maen') || sMgrId === 103 || sMgrId === 6;
+                if (userEmail.includes('wissem') || userName.includes('wissem')) return sMgr.includes('wissem') || sMgrId === 101 || sMgrId === 8;
+                if (userEmail.includes('hani') || userName.includes('hani')) return sMgr.includes('hani') || sMgrId === 102 || sMgrId === 5;
+                if (userEmail.includes('brahim') || userName.includes('brahim')) return sMgr.includes('brahim') || sMgrId === 104 || sMgrId === 7;
+                if (userEmail.includes('ghazi') || userName.includes('ghazi')) return sMgr.includes('ghazi') || sMgrId === 105 || sMgrId === 16;
+                return sMgrId === user.id || (userName && sMgr.includes(userName.split(' ')[0]));
+            });
+            return NextResponse.json(mySites);
+        }
         return NextResponse.json(SITES_LIST);
     }
 
@@ -352,11 +396,21 @@ export async function GET(
         return NextResponse.json(matched);
     }
 
-    // Shift Requests - All
+    // Shift Requests - All (Filtered strictly for Operations Manager)
     if (path === 'requests' || path === 'requests/') {
-        if (user.role === 'OPS_MANAGER') {
-            const filtered = REQUESTS_DATA.filter(r => r.ops_manager_id === user.id);
-            return NextResponse.json(filtered.length > 0 ? filtered : REQUESTS_DATA);
+        if (user && (user.role === 'OPS_MANAGER' || user.role === 'Operations Manager')) {
+            const userEmail = (user.email || '').toLowerCase();
+            const userName = (user.name || '').toLowerCase();
+            const filtered = REQUESTS_DATA.filter(r => {
+                const rMgr = (r.ops_manager_name || '').toLowerCase();
+                if (userEmail.includes('maen') || userName.includes('maen')) return rMgr.includes('maen') || r.ops_manager_id === 103 || r.ops_manager_id === 6;
+                if (userEmail.includes('wissem') || userName.includes('wissem')) return rMgr.includes('wissem') || r.ops_manager_id === 101 || r.ops_manager_id === 8;
+                if (userEmail.includes('hani') || userName.includes('hani')) return rMgr.includes('hani') || r.ops_manager_id === 102 || r.ops_manager_id === 5;
+                if (userEmail.includes('brahim') || userName.includes('brahim')) return rMgr.includes('brahim') || r.ops_manager_id === 104 || r.ops_manager_id === 7;
+                if (userEmail.includes('ghazi') || userName.includes('ghazi')) return rMgr.includes('ghazi') || r.ops_manager_id === 105 || r.ops_manager_id === 16;
+                return r.ops_manager_id === user.id || (userName && rMgr.includes(userName.split(' ')[0]));
+            });
+            return NextResponse.json(filtered);
         }
         return NextResponse.json(REQUESTS_DATA);
     }

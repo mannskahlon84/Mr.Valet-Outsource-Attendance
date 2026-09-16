@@ -1,22 +1,36 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
+import { filterSitesForManager } from '@/lib/managerFilter';
 
 export default function OperationsSites() {
     const [sites, setSites] = useState<any[]>([]);
+    const [managerName, setManagerName] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchApi('/sites/').then(setSites).finally(() => setLoading(false));
+        const name = localStorage.getItem('name') || '';
+        setManagerName(name);
+        fetchApi('/sites/')
+            .then(data => {
+                const filtered = filterSitesForManager(data || []);
+                setSites(filtered);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading managed sites...</div>;
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-black text-gray-900">Managed Locations</h1>
-                <p className="text-sm text-gray-500">Active valet parking client sites and configured geofences</p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900">Managed Locations</h1>
+                    <p className="text-sm text-gray-500">Active valet parking client sites under your operational supervision</p>
+                </div>
+                <div className="text-xs bg-amber-50 border border-amber-200 text-amber-900 font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                    📍 {sites.length} Assigned Locations for {managerName || 'Operations Manager'}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
