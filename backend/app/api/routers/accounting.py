@@ -332,7 +332,6 @@ def get_daily_breakdown(
             ).all()
 
         sr_ids = [sr.id for sr, _, _ in sr_list]
-        locations = list({site.name for _, _, site in sr_list})
         total_scheduled = sum(sr.confirmed_quantity for sr, _, _ in sr_list)
 
         assignments = db.query(WorkerAssignment, Attendance, Worker, Site)\
@@ -342,6 +341,20 @@ def get_daily_breakdown(
             .outerjoin(Attendance, Attendance.worker_assignment_id == WorkerAssignment.id)\
             .join(Worker, WorkerAssignment.worker_id == Worker.id)\
             .filter(SupplierResponse.id.in_(sr_ids)).all() if sr_ids else []
+
+        # Build structured locations
+        locations_dict = {}
+        for sr, req, site in sr_list:
+            if site.name not in locations_dict:
+                locations_dict[site.name] = {"site_name": site.name, "workers_allocated": 0, "started_shift": 0, "sr_ids": []}
+            locations_dict[site.name]["workers_allocated"] += sr.confirmed_quantity
+            locations_dict[site.name]["sr_ids"].append(sr.id)
+
+        for wa, att, wrk, site in assignments:
+            if site.name in locations_dict and att and att.check_in_time:
+                locations_dict[site.name]["started_shift"] += 1
+                
+        locations_objects = list(locations_dict.values())
 
         started_count = sum(1 for _, att, _, _ in assignments if att and att.check_in_time is not None)
         ended_count = sum(1 for _, att, _, _ in assignments if att and att.check_out_time is not None)
@@ -376,23 +389,22 @@ def get_daily_breakdown(
         results.append({
             "supplier_id": sup.id,
             "supplier_name": sup.name,
-            "supplier_head_name": head_name,
+            "contact_person": head_name,
             "date": filter_date.strftime("%Y-%m-%d"),
             "billing_rate": sup.billing_rate or 0.0,
-            "scheduled_workers": total_scheduled,
+            "total_workers_allocated": total_scheduled,
             "assigned_workers_count": len(assignments),
             "started_shift_count": started_count,
             "ended_shift_count": ended_count,
-            "locations": locations,
+            "locations": locations_objects,
             "total_duty_hours": round(total_duty_hours, 2),
-            "estimated_daily_cost": estimated_cost,
+            "daily_total_payable": estimated_cost,
             "workers": worker_items
         })
 
     return {
         "date": filter_date.strftime("%Y-%m-%d"),
-        "total_suppliers": len(results),
-        "total_workers_attended": sum(r["started_shift_count"] for r in results),
-        "total_daily_cost": sum(r["estimated_daily_cost"] for r in results),
-        "records": results
+        "total_daily_workers": sum(r["started_shift_count"] for r in results),
+        "total_daily_payables": sum(r["daily_total_payable"] for r in results),
+        "suppliers": results
     }
