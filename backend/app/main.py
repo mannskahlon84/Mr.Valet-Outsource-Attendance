@@ -46,12 +46,10 @@ app.include_router(notifications.router, prefix=f"{settings.API_V1_STR}/notifica
 
 from app.db.base import Base
 from app.db.session import engine
-import app.models.all_models  # noqa
+from app.models import all_models  # noqa
 
-@app.on_event("startup")
-def on_startup():
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"Database initialization warning: {e}")
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    pass
 
