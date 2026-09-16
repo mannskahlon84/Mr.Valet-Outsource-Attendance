@@ -7,17 +7,67 @@ import { filterRequestsForManager } from '@/lib/managerFilter';
 
 export default function OperationsRequests() {
     const [requests, setRequests] = useState<any[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [loading, setLoading] = useState(true);
 
     const loadData = () => {
-        fetchApi('/requests/')
-            .then(data => setRequests(filterRequestsForManager(data || [])))
+        Promise.all([
+            fetchApi('/requests/').catch(() => []),
+            fetchApi('/suppliers/').catch(() => [])
+        ])
+            .then(([reqData, supData]) => {
+                setRequests(filterRequestsForManager(reqData || []));
+                if (Array.isArray(supData)) setSuppliers(supData);
+            })
             .catch(console.error)
             .finally(() => setLoading(false));
     };
 
     useEffect(() => { loadData(); }, []);
+
+    const getSupplierNames = (r: any): string[] => {
+        // 1. Direct comma-separated supplier_names string
+        if (r.supplier_names && r.supplier_names !== 'N/A' && r.supplier_names.trim() !== '') {
+            return r.supplier_names.split(',').map((s: string) => s.trim()).filter(Boolean);
+        }
+        // 2. From routes array
+        if (Array.isArray(r.routes) && r.routes.length > 0) {
+            const names = r.routes.map((rt: any) => {
+                const found = suppliers.find(s => s.id === Number(rt.supplier_id));
+                return found?.name || `Supplier #${rt.supplier_id}`;
+            }).filter(Boolean);
+            if (names.length > 0) return Array.from(new Set(names));
+        }
+        // 3. Fallback to singular supplier_name
+        if (r.supplier_name && r.supplier_name !== 'N/A') {
+            return [r.supplier_name];
+        }
+        // 4. Fallback to supplier_id
+        if (r.supplier_id) {
+            const found = suppliers.find(s => s.id === Number(r.supplier_id));
+            if (found) return [found.name];
+        }
+        // 5. Default fallback to active agency
+        return ['Kanan'];
+    };
+
+    const renderSupplierBadges = (r: any) => {
+        const names = getSupplierNames(r);
+        return (
+            <div className="flex flex-wrap gap-1.5 items-center">
+                {names.map((name, idx) => (
+                    <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200/90 shadow-2xs"
+                    >
+                        <span className="text-[11px]">🏢</span>
+                        <span>{name}</span>
+                    </span>
+                ))}
+            </div>
+        );
+    };
 
     const filtered = requests.filter(r => {
         if (filterStatus === 'ALL') return true;
@@ -98,8 +148,8 @@ export default function OperationsRequests() {
                                     <span className="text-gray-600">{r.skill_category || 'Valet Driver'}</span>
                                 </div>
                                 <div className="col-span-2 sm:col-span-1">
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Supplier(s)</span>
-                                    <span className="text-gray-700 font-medium">{r.supplier_names || 'N/A'}</span>
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold mb-1">Supplier(s)</span>
+                                    {renderSupplierBadges(r)}
                                 </div>
                             </div>
 
@@ -156,8 +206,8 @@ export default function OperationsRequests() {
                                     <td className="px-5 py-4 text-gray-500">
                                         {r.skill_category || 'Valet Driver'}
                                     </td>
-                                    <td className="px-5 py-4 font-medium text-gray-700">
-                                        {r.supplier_names || 'N/A'}
+                                    <td className="px-5 py-4">
+                                        {renderSupplierBadges(r)}
                                     </td>
                                     <td className="px-5 py-4">
                                         <StatusBadge status={r.status} />

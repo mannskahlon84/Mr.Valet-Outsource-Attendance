@@ -159,12 +159,14 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
         if sr.manpower_request_id not in responses_by_req:
             responses_by_req[sr.manpower_request_id] = []
         sup_name = suppliers_map.get(sr.supplier_id, f"Supplier #{sr.supplier_id}")
-        responses_by_req[sr.manpower_request_id].append(sup_name)
+        if sup_name and sup_name not in responses_by_req[sr.manpower_request_id]:
+            responses_by_req[sr.manpower_request_id].append(sup_name)
 
     result = []
     for r in items:
         s = sites_map.get(r.site_id)
-        supplier_names_str = ", ".join(responses_by_req.get(r.id, []))
+        supplier_names_list = responses_by_req.get(r.id, [])
+        supplier_names_str = ", ".join(supplier_names_list) if supplier_names_list else "Kanan"
         result.append({
             "id": r.id,
             "ops_manager_id": r.ops_manager_id,

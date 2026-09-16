@@ -8,7 +8,7 @@ class SupplierRoute(BaseModel):
     requested_quantity: int
 
 class ManpowerRequestCreate(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     site_id: int
     required_date: date
     start_time: str
@@ -16,6 +16,7 @@ class ManpowerRequestCreate(BaseModel):
     total_required_workers: int
     skill_category: Optional[str] = None
     notes: Optional[str] = None
+    supplier_names: Optional[str] = None
     routes: List[SupplierRoute]
 
 class SupplierResponseUpdate(BaseModel):

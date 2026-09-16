@@ -236,6 +236,7 @@ let REQUESTS_DATA: any[] = [
         total_required_workers: 3,
         confirmed_workers: 3,
         skill_category: "Valet Driver",
+        supplier_names: "Hanees",
         status: "CONFIRMED",
         created_at: new Date(Date.now() - 7200000).toISOString()
     }
@@ -396,8 +397,27 @@ export async function GET(
         return NextResponse.json(matched);
     }
 
-    // Shift Requests - All (Filtered strictly for Operations Manager)
+    // Shift Requests - All (Filtered strictly for Operations Manager and enriched with Supplier Names)
     if (path === 'requests' || path === 'requests/') {
+        const enrichWithSuppliers = (r: any) => {
+            const resps = RESPONSES_DATA.filter(resp => resp.manpower_request_id === r.id);
+            const supNames = resps.map(resp => resp.supplier_name || SUPPLIERS_DATA.find(s => s.id === resp.supplier_id)?.name).filter(Boolean);
+            const uniqueNames = Array.from(new Set(supNames));
+            if (uniqueNames.length > 0) {
+                return { ...r, supplier_names: uniqueNames.join(', ') };
+            }
+            if (r.supplier_names && r.supplier_names !== 'N/A') {
+                return r;
+            }
+            if (Array.isArray(r.routes) && r.routes.length > 0) {
+                const rtNames = r.routes.map((rt: any) => SUPPLIERS_DATA.find(s => s.id === Number(rt.supplier_id))?.name).filter(Boolean);
+                if (rtNames.length > 0) {
+                    return { ...r, supplier_names: Array.from(new Set(rtNames)).join(', ') };
+                }
+            }
+            return { ...r, supplier_names: "Kanan" };
+        };
+
         if (user && (user.role === 'OPS_MANAGER' || user.role === 'Operations Manager')) {
             const userEmail = (user.email || '').toLowerCase();
             const userName = (user.name || '').toLowerCase();
@@ -410,9 +430,9 @@ export async function GET(
                 if (userEmail.includes('ghazi') || userName.includes('ghazi')) return rMgr.includes('ghazi') || r.ops_manager_id === 105 || r.ops_manager_id === 16;
                 return r.ops_manager_id === user.id || (userName && rMgr.includes(userName.split(' ')[0]));
             });
-            return NextResponse.json(filtered);
+            return NextResponse.json(filtered.map(enrichWithSuppliers));
         }
-        return NextResponse.json(REQUESTS_DATA);
+        return NextResponse.json(REQUESTS_DATA.map(enrichWithSuppliers));
     }
 
     // Request responses for specific request
@@ -573,25 +593,34 @@ export async function POST(
         try { body = await req.json(); } catch (e) {}
 
         const site = SITES_LIST.find(s => s.id === (body.site_id || 27)) || SITES_LIST[0];
+        const routes = body.routes || [{ supplier_id: 6, requested_quantity: Number(body.total_required_workers) || 2 }];
+        const routedSupNames: string[] = [];
+        for (const rt of routes) {
+            const supId = Number(rt.supplier_id);
+            const sup = SUPPLIERS_DATA.find(s => s.id === supId);
+            routedSupNames.push(sup?.name || (body.supplier_names || `Supplier #${supId}`));
+        }
+        const supplierNamesStr = Array.from(new Set(routedSupNames)).join(', ') || body.supplier_names || "Kanan";
+
         const newReq = {
             id: REQUESTS_DATA.length + 1,
             ops_manager_id: user.id || 103,
-            ops_manager_name: user.name || "Maen Klaib",
+            ops_manager_name: user.name || "Operations Manager",
             site_id: site.id,
             site_name: site.name,
+            site_address: site.address || "",
             required_date: body.required_date || new Date().toISOString().split('T')[0],
             start_time: body.start_time || "08:00",
             end_time: body.end_time || "17:00",
             total_required_workers: Number(body.total_required_workers) || 2,
             confirmed_workers: 0,
             skill_category: body.skill_category || "Valet Driver",
+            supplier_names: supplierNamesStr,
+            routes: routes,
             status: "SUBMITTED",
             created_at: new Date().toISOString()
         };
         REQUESTS_DATA.unshift(newReq);
-
-        // Process routes
-        const routes = body.routes || [{ supplier_id: 6, requested_quantity: newReq.total_required_workers }];
         for (const rt of routes) {
             const supId = Number(rt.supplier_id);
             const sup = SUPPLIERS_DATA.find(s => s.id === supId);

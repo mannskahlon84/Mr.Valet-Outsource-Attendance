@@ -231,10 +231,20 @@ export default function NewShiftRequest() {
                 const sh = shifts[i];
                 setSubmitStatus(`Dispatching shift ${i + 1} of ${shifts.length} (${sh.name})...`);
 
-                const validRoutes = sh.routes.map(r => ({
+                let validRoutes = sh.routes.map(r => ({
                     supplier_id: parseInt(r.supplier_id, 10),
                     requested_quantity: parseInt(r.requested_quantity, 10)
                 })).filter(r => !isNaN(r.supplier_id) && r.requested_quantity > 0);
+
+                if (validRoutes.length === 0 && suppliers.length > 0) {
+                    validRoutes = [{ supplier_id: suppliers[0].id, requested_quantity: parseInt(sh.totalWorkers, 10) || 5 }];
+                }
+
+                const routedNames = validRoutes.map(r => {
+                    const sup = suppliers.find(s => s.id?.toString() === r.supplier_id.toString());
+                    return sup ? sup.name : `Supplier #${r.supplier_id}`;
+                });
+                const supplierNamesStr = Array.from(new Set(routedNames)).join(', ') || (suppliers[0]?.name || 'Kanan');
 
                 const body = {
                     site_id: parseInt(siteId, 10),
@@ -244,6 +254,7 @@ export default function NewShiftRequest() {
                     total_required_workers: parseInt(sh.totalWorkers, 10),
                     skill_category: 'Valet Driver', // Fixed to Valet Driver as requested
                     notes: sh.notes ? `[${sh.name}] ${sh.notes}` : `[${sh.name}]`,
+                    supplier_names: supplierNamesStr,
                     routes: validRoutes
                 };
 
