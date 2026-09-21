@@ -29,6 +29,25 @@ def login_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordR
     
     if not user or not (form_data.password in ["devpass123", "Supplier123!"] or verify_password(form_data.password, user.password_hash)):
         raise HTTPException(status_code=400, detail="Incorrect credentials")
+        
+    # Device Binding Check for Outsource Workers
+    if user.role == RoleEnum.OUTSOURCE_WORKER:
+        worker = db.query(Worker).filter(Worker.id == user.worker_id).first()
+        if worker:
+            device_id = form_data.client_id
+            if not device_id:
+                raise HTTPException(status_code=400, detail="Device ID is missing from login request.")
+            
+            if not worker.device_id:
+                # First login -> bind device
+                worker.device_id = device_id
+                db.commit()
+            elif worker.device_id != device_id:
+                # Subsequent login -> verify device
+                raise HTTPException(
+                    status_code=403, 
+                    detail="This account is securely bound to another mobile device. Only a Super Admin can reset the binding."
+                )
     
     role_val = user.role.value if hasattr(user.role, 'value') else user.role
     log_audit_event(db, user.id, role_val, "user_login", "users", user.id, None, {"username": form_data.username})

@@ -247,10 +247,10 @@ def create_worker(
     db.add(worker)
     db.flush()
     
-    # Create corresponding User
+    # Create corresponding User using QID as the login username
     from app.core.security import get_password_hash
     user = User(
-        email=f"worker_{worker.internal_worker_id.lower()}@mrvalet.system.local",
+        email=worker.qid,  # The worker will use their QID to log into the mobile app
         password_hash=get_password_hash(password),
         role=RoleEnum.OUTSOURCE_WORKER,
         worker_id=worker.id
@@ -314,7 +314,8 @@ def get_workers(
             "status": w.status,
             "created_at": w.created_at,
             "supplier_name": sup.name if sup else "Direct / Unassigned",
-            "supplier_head_name": head_name
+            "supplier_head_name": head_name,
+            "device_id": w.device_id
         }
         result.append(WorkerResponse(**w_dict))
 
@@ -474,6 +475,28 @@ def update_worker(worker_id: int, worker_in: WorkerUpdate, db: Session = Depends
     new_state = { "first_name": worker.first_name, "last_name": worker.last_name, "qid": worker.qid, "whatsapp_number": worker.whatsapp_number, "supplier_id": worker.supplier_id, "status": worker.status }
     log_audit_event(db, current_user.id, current_user.role.value, "worker_updated", "workers", worker.id, old_state, new_state)
     return {"id": worker.id}
+
+@router.post("/{worker_id}/reset-device")
+def reset_worker_device(
+    worker_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN]))
+):
+    """
+    Super Admin exclusive endpoint to reset a worker's device binding.
+    This clears the device_id so they can log in from a new device.
+    """
+    worker = db.query(Worker).filter(Worker.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+        
+    old_state = {"device_id": worker.device_id}
+    worker.device_id = None
+    db.commit()
+    
+    from app.services.audit import log_audit_event
+    log_audit_event(db, current_user.id, current_user.role.value, "worker_device_reset", "workers", worker.id, old_state, {"device_id": None})
+    return {"message": "Device binding has been successfully reset."}
 
 @router.delete("/{worker_id}")
 def delete_worker(

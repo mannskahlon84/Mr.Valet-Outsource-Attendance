@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchApi, API_URL } from '../../lib/api';
+import { v4 as uuidv4 } from 'uuid';
 
 function normalizeRole(role?: string): string {
     if (!role) return '';
@@ -51,6 +52,14 @@ export default function Login() {
             const params = new URLSearchParams();
             params.append('username', userToAuth);
             params.append('password', passToAuth);
+            
+            // Get or generate Device ID for binding
+            let deviceId = localStorage.getItem('deviceId');
+            if (!deviceId) {
+                deviceId = uuidv4();
+                localStorage.setItem('deviceId', deviceId);
+            }
+            params.append('client_id', deviceId);
             
             let res: Response;
             try {

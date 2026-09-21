@@ -1,11 +1,11 @@
-﻿from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 
 class CheckInRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
-    assignment_id: int
+    site_id: Optional[int] = None
     latitude: float
     longitude: float
     accuracy: float
@@ -16,7 +16,7 @@ class CheckInRequest(BaseModel):
 class CheckOutRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
-    assignment_id: int
+    site_id: Optional[int] = None
     latitude: float
     longitude: float
     accuracy: float

@@ -90,6 +90,22 @@ export default function Workers() {
         }
     };
 
+    const handleResetDevice = async (worker: any) => {
+        const workerName = `${worker.first_name} ${worker.last_name}`.trim();
+        const confirmReset = window.confirm(
+            `Are you sure you want to reset the device binding for "${workerName}"?\n\nThis will allow them to log into the Worker App from a new mobile device.`
+        );
+        if (!confirmReset) return;
+
+        try {
+            const res = await fetchApi(`/workers/${worker.id}/reset-device`, { method: 'POST' });
+            alert(res.message || `Device binding reset successfully.`);
+            loadData();
+        } catch (err: any) {
+            alert(err.message || 'Failed to reset device binding.');
+        }
+    };
+
     const handleSubmit = async (e: any) => {
         e.preventDefault();
         setError('');
@@ -186,14 +202,38 @@ export default function Workers() {
         },
         { header: 'Status', field: (row: any) => <StatusBadge status={row.status || 'active'} /> },
         { 
+            header: 'Device Binding', 
+            field: (row: any) => (
+                <div className="flex flex-col gap-1">
+                    {row.device_id ? (
+                        <>
+                            <span className="font-mono text-[10px] text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded break-all max-w-[120px]">
+                                {row.device_id.substring(0, 15)}...
+                            </span>
+                            <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Locked</span>
+                        </>
+                    ) : (
+                        <span className="text-[10px] text-gray-400 font-medium">Unbound</span>
+                    )}
+                </div>
+            ) 
+        },
+        { 
             header: 'Actions', 
             field: (row: any) => (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                     <button 
                         onClick={() => openEdit(row)} 
                         className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 px-2.5 py-1 rounded border border-blue-100"
                     >
                         Edit
+                    </button>
+                    <button 
+                        onClick={() => handleResetDevice(row)} 
+                        className="text-amber-600 hover:text-amber-800 font-bold text-xs bg-amber-50 px-2.5 py-1 rounded border border-amber-200 hover:bg-amber-100 transition-colors"
+                        title="Reset mobile device binding so they can log in from a new phone"
+                    >
+                        Reset Device
                     </button>
                     <button 
                         onClick={() => handleDelete(row)} 

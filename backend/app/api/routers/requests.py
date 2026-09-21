@@ -509,3 +509,64 @@ def finalize_supplier_response(
     db.commit()
 
     return {"message": "Response finalized", "request_status": mr.status}
+
+
+@router.post("/check-shortfalls")
+def check_shortfalls(db: Session = Depends(get_db)):
+    from datetime import datetime, timezone
+    from app.models.all_models import Attendance, WorkerAssignment
+    today = datetime.now(timezone.utc).date()
+    
+    # Get today's active requests
+    mrs = db.query(ManpowerRequest).filter(
+        func.date(ManpowerRequest.required_date) == today,
+        ManpowerRequest.status.notin_(["CANCELLED"])
+    ).all()
+    
+    notifications = []
+    
+    for mr in mrs:
+        site = db.query(Site).filter(Site.id == mr.site_id).first()
+        site_name = site.name if site else f"Location #{mr.site_id}"
+        
+        # Check all accepted supplier responses
+        srs = db.query(SupplierResponse).filter(
+            SupplierResponse.manpower_request_id == mr.id,
+            SupplierResponse.status == "ACCEPTED"
+        ).all()
+        
+        for sr in srs:
+            # Check how many workers actually checked in for this response today
+            # We count worker assignments created dynamically + checked in
+            was = db.query(WorkerAssignment).filter(WorkerAssignment.supplier_response_id == sr.id).all()
+            wa_ids = [wa.id for wa in was]
+            checked_in_count = db.query(Attendance).filter(
+                Attendance.worker_assignment_id.in_(wa_ids),
+                Attendance.status == "CHECKED_IN"
+            ).count() if wa_ids else 0
+            
+            confirmed = sr.confirmed_quantity or 0
+            if checked_in_count < confirmed:
+                missing = confirmed - checked_in_count
+                
+                # Notify Supplier Head
+                db.add(Notification(
+                    supplier_id=sr.supplier_id,
+                    title=f"⚠️ Missing Employees Alert: {site_name}",
+                    message=f"You confirmed {confirmed} employees for {site_name} today, but only {checked_in_count} have checked in. You are short by {missing} employees.",
+                    entity_type="MANPOWER_REQUEST",
+                    entity_id=mr.id
+                ))
+                
+                # Notify Ops Manager
+                db.add(Notification(
+                    user_id=mr.ops_manager_id,
+                    title=f"⚠️ Shortfall Alert: {site_name}",
+                    message=f"Supplier ID {sr.supplier_id} is short by {missing} employees at {site_name} (Confirmed: {confirmed}, Checked-in: {checked_in_count}).",
+                    entity_type="MANPOWER_REQUEST",
+                    entity_id=mr.id
+                ))
+                notifications.append({"request_id": mr.id, "supplier_id": sr.supplier_id, "missing": missing})
+    
+    db.commit()
+    return {"status": "Shortfall check completed", "shortfalls_detected": len(notifications), "details": notifications}

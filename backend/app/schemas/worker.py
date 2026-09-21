@@ -29,6 +29,7 @@ class WorkerResponse(WorkerBase):
     created_at: datetime
     supplier_name: Optional[str] = None
     supplier_head_name: Optional[str] = None
+    device_id: Optional[str] = None
 
     class Config:
         from_attributes = True

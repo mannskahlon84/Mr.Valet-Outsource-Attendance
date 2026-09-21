@@ -33,28 +33,6 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "accuracy", "val": req.accuracy})
         raise HTTPException(400, "Unable to verify your current location.")
         
-    # Check Assignment
-    wa = db.query(WorkerAssignment).filter(WorkerAssignment.id == req.assignment_id).first()
-    if not wa: 
-        raise HTTPException(404, "Assignment not found")
-    if wa.worker_id != current_user.worker_id:
-        log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "wrong_worker"})
-        raise HTTPException(403, "You are not assigned to this location.")
-
-    if wa.status != "ASSIGNED":
-        raise HTTPException(400, "Assignment is not active")
-        
-    sr = db.query(SupplierResponse).filter(SupplierResponse.id == wa.supplier_response_id).first()
-    mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
-    assignment_site = db.query(Site).filter(Site.id == mr.site_id).first()
-    if assignment_site.status == "inactive": 
-        raise HTTPException(400, "Location is inactive")
-    
-    # Check Date
-    today = datetime.now(timezone.utc).date()
-    if mr.required_date.date() != today:
-        raise HTTPException(400, "Assignment is not for today's date")
-        
     # Check QR validity
     qr_site = db.query(Site).filter(Site.qr_token == req.qr_data).first()
     if not qr_site and req.qr_data.startswith("MC:LOC:"):
@@ -62,14 +40,55 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         if len(parts) >= 3 and parts[2].isdigit():
             qr_site = db.query(Site).filter(Site.id == int(parts[2])).first()
 
+    if not qr_site and req.site_id:
+        qr_site = db.query(Site).filter(Site.id == req.site_id).first()
+
     if not qr_site:
         raise HTTPException(400, "Invalid location QR code. Please scan the QR code posted at your venue.")
-    if qr_site.qr_status != "ACTIVE":
-        raise HTTPException(400, "Deactivated location QR code.")
+    if qr_site.status == "inactive" or qr_site.qr_status != "ACTIVE":
+        raise HTTPException(400, "Location or QR code is inactive.")
         
-    # Check Assignment/Site match
-    if qr_site.id != assignment_site.id:
-        raise HTTPException(403, f"QR code is for '{qr_site.name}', but your scheduled shift is at '{assignment_site.name}'.")
+    assignment_site = qr_site
+
+    worker = db.query(Worker).filter(Worker.id == current_user.worker_id).first()
+    if not worker:
+        raise HTTPException(400, "Worker profile missing.")
+
+    # Find active ManpowerRequest and SupplierResponse
+    today = datetime.now(timezone.utc).date()
+    mrs = db.query(ManpowerRequest).filter(ManpowerRequest.site_id == assignment_site.id).all()
+    mrs = [m for m in mrs if m.required_date.date() == today and m.status != "CANCELLED"]
+    
+    sr = None
+    mr = None
+    for req_mr in mrs:
+        sr = db.query(SupplierResponse).filter(
+            SupplierResponse.manpower_request_id == req_mr.id,
+            SupplierResponse.supplier_id == worker.supplier_id,
+            SupplierResponse.status == "ACCEPTED"
+        ).first()
+        if sr:
+            mr = req_mr
+            break
+            
+    if not sr:
+        log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "no_active_shift"})
+        raise HTTPException(403, "Your agency does not have a confirmed shift at this location today.")
+
+    # Dynamically find or create WorkerAssignment
+    wa = db.query(WorkerAssignment).filter(
+        WorkerAssignment.supplier_response_id == sr.id,
+        WorkerAssignment.worker_id == worker.id
+    ).first()
+    
+    if not wa:
+        wa = WorkerAssignment(
+            supplier_response_id=sr.id,
+            worker_id=worker.id,
+            status="ASSIGNED"
+        )
+        db.add(wa)
+        db.flush()
     
     # Check Geofence
     if assignment_site.latitude is not None and assignment_site.longitude is not None:
@@ -80,7 +99,7 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
             raise HTTPException(400, f"Geolocation mismatch: You are {int(dist)}m away from {assignment_site.name} (allowed: {int(allowed_radius)}m). You must be physically at the location to check in.")
         
     # Duplicate attendance
-    att = db.query(Attendance).filter(Attendance.worker_assignment_id == req.assignment_id).first()
+    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()
     if att and att.check_in_time:
         raise HTTPException(400, "Already checked in for this shift.")
         
@@ -127,7 +146,7 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
 
     # Atomically create attendance
     if not att:
-        att = Attendance(worker_assignment_id=req.assignment_id)
+        att = Attendance(worker_assignment_id=wa.id)
         db.add(att)
         
     att.check_in_time = datetime.now(timezone.utc)
@@ -208,7 +227,7 @@ def check_out(req: CheckOutRequest, db: Session = Depends(get_db), current_user:
         if dist > allowed_radius:
             raise HTTPException(400, f"You are outside the permitted location area ({int(dist)}m away). You must be at the site to check out.")
 
-    att = db.query(Attendance).filter(Attendance.worker_assignment_id == req.assignment_id).first()
+    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()
     if not att or not att.check_in_time:
         raise HTTPException(400, "You have not checked in for this shift yet.")
         
