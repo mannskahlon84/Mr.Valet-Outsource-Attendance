@@ -266,6 +266,7 @@ export default function NewShiftRequest() {
 
             setSubmitStatus(`All ${shifts.length} shift request${shifts.length > 1 ? 's' : ''} dispatched successfully! Redirecting...`);
             setTimeout(() => {
+                router.refresh();
                 router.push('/operations/requests');
             }, 800);
         } catch (err: any) {

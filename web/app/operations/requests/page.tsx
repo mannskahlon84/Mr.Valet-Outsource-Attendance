@@ -24,7 +24,16 @@ export default function OperationsRequests() {
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { 
+        loadData(); 
+        const handleSync = () => loadData();
+        window.addEventListener('portal_data_updated', handleSync);
+        window.addEventListener('focus', handleSync);
+        return () => {
+            window.removeEventListener('portal_data_updated', handleSync);
+            window.removeEventListener('focus', handleSync);
+        };
+    }, []);
 
     const getSupplierNames = (r: any): string[] => {
         // 1. Direct comma-separated supplier_names string

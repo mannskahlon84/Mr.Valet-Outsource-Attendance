@@ -11,7 +11,7 @@ export default function OperationsDashboard() {
     const [attendanceReport, setAttendanceReport] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const loadData = () => {
         Promise.all([
             fetchApi('/requests/').catch(() => []),
             fetchApi('/sites/').catch(() => []),
@@ -21,6 +21,17 @@ export default function OperationsDashboard() {
             setSites(filterSitesForManager(s || []));
             setAttendanceReport(att);
         }).finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        loadData();
+        const handleSync = () => loadData();
+        window.addEventListener('portal_data_updated', handleSync);
+        window.addEventListener('focus', handleSync);
+        return () => {
+            window.removeEventListener('portal_data_updated', handleSync);
+            window.removeEventListener('focus', handleSync);
+        };
     }, []);
 
     const pendingBids = requests.filter(r => r.status === 'RESPONSES_PENDING' || r.status === 'SUBMITTED').length;
