@@ -23,19 +23,19 @@ export async function fetchApi(endpoint: string, options: any = {}, rawResponse 
     if (cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1) {
         cleanEndpoint = cleanEndpoint.slice(0, -1);
     }
+    const fetchOptions: RequestInit = {
+        cache: 'no-store',
+        ...options,
+        headers
+    };
+
     let res: Response;
     try {
-        res = await fetch(`${API_URL}${cleanEndpoint}`, {
-            ...options,
-            headers
-        });
+        res = await fetch(`${API_URL}${cleanEndpoint}`, fetchOptions);
     } catch (networkErr) {
         if (API_URL.startsWith('http')) {
             try {
-                res = await fetch(`/api/v1${cleanEndpoint}`, {
-                    ...options,
-                    headers
-                });
+                res = await fetch(`/api/v1${cleanEndpoint}`, fetchOptions);
             } catch (fallbackErr) {
                 throw networkErr;
             }

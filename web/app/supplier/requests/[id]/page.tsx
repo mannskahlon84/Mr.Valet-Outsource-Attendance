@@ -15,8 +15,8 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const [newMsg, setNewMsg] = useState('');
     const [loading, setLoading] = useState(true);
     const [submittingResp, setSubmittingResp] = useState(false);
-        const [sendingMsg, setSendingMsg] = useState(false);
-    const [activeTab, setActiveTab] = useState<'response' | 'chat'>('response');
+    const [sendingMsg, setSendingMsg] = useState(false);
+    const [activeTab, setActiveTab] = useState<'response' | 'assign' | 'chat'>('response');
 
     // Response form state
     const [confirmedQty, setConfirmedQty] = useState('');
