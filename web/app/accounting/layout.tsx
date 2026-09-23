@@ -9,8 +9,8 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
-        setName(localStorage.getItem('name') || 'Accounting Officer');
-        setRole(localStorage.getItem('role_display') || localStorage.getItem('role') || 'Accounting');
+        setName(sessionStorage.getItem('name') || 'Accounting Officer');
+        setRole(sessionStorage.getItem('role_display') || sessionStorage.getItem('role') || 'Accounting');
     }, []);
 
     const navItems = [

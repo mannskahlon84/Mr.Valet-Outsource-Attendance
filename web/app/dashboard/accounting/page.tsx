@@ -55,7 +55,7 @@ export default function Accounting() {
     const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
     const [year, setYear] = useState(new Date().getFullYear().toString());
 
-    useEffect(() => { setRole(localStorage.getItem('role') || ''); }, []);
+    useEffect(() => { setRole(sessionStorage.getItem('role') || ''); }, []);
 
     const loadData = async () => {
         setLoading(true);
@@ -106,7 +106,7 @@ export default function Accounting() {
     };
 
     const handleDownload = (invoiceId: number) => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         window.open(`${API_URL}/accounting/invoices/${invoiceId}/download?token=${token}`, '_blank');
     };
 

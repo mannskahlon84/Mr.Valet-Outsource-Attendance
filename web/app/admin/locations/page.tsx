@@ -17,7 +17,7 @@ export default function Locations() {
     const [qrSuccessMsg, setQrSuccessMsg] = useState('');
     
     const [role, setRole] = useState('');
-    useEffect(() => { setRole(localStorage.getItem('role') || ''); }, []);
+    useEffect(() => { setRole(sessionStorage.getItem('role') || ''); }, []);
     
     // Form state
     const [name, setName] = useState('');

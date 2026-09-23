@@ -9,14 +9,14 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
     const router = useRouter();
 
     useEffect(() => {
-        setName(localStorage.getItem('name') || 'Outsource Driver');
+        setName(sessionStorage.getItem('name') || 'Outsource Driver');
     }, []);
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('role_display');
-        localStorage.removeItem('name');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('role_display');
+        sessionStorage.removeItem('name');
         document.cookie = 'token=; Max-Age=0; path=/';
         document.cookie = 'role=; Max-Age=0; path=/';
         router.push('/login');

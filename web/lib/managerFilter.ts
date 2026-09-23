@@ -51,13 +51,13 @@ export const ALL_OPS_MANAGERS: ManagerInfo[] = [
 
 export function getActiveManagerKeys(): string[] | null {
     if (typeof window === 'undefined') return null;
-    const role = (localStorage.getItem('role') || '').toUpperCase();
+    const role = (sessionStorage.getItem('role') || '').toUpperCase();
     if (role === 'SUPER_ADMIN' || role === 'GENERAL_MANAGER' || role === 'ACCOUNTING') {
         return null; // Admin sees all
     }
 
-    const name = (localStorage.getItem('name') || '').toLowerCase();
-    const email = (localStorage.getItem('email') || '').toLowerCase();
+    const name = (sessionStorage.getItem('name') || '').toLowerCase();
+    const email = (sessionStorage.getItem('email') || '').toLowerCase();
     const text = `${name} ${email}`;
 
     for (const mgr of ALL_OPS_MANAGERS) {

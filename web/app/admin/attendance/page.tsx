@@ -12,8 +12,8 @@ export default function Attendance() {
 
     if (loading) return <div>Loading...</div>;
 
-    const exportExcel = () => { window.open(`${API_URL}/reports/attendance/export/excel?token=` + localStorage.getItem('token'), '_blank'); };
-    const exportPdf = () => { window.open(`${API_URL}/reports/attendance/export/pdf?token=` + localStorage.getItem('token'), '_blank'); };
+    const exportExcel = () => { window.open(`${API_URL}/reports/attendance/export/excel?token=` + sessionStorage.getItem('token'), '_blank'); };
+    const exportPdf = () => { window.open(`${API_URL}/reports/attendance/export/pdf?token=` + sessionStorage.getItem('token'), '_blank'); };
 
     return (
         <div>

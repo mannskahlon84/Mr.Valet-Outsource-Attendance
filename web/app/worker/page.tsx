@@ -182,11 +182,11 @@ export default function WorkerPortal() {
 
     // Load initial state and restore active shift if saved
     useEffect(() => {
-        const storedName = localStorage.getItem('name');
+        const storedName = sessionStorage.getItem('name');
         if (storedName) setWorkerName(storedName);
 
         // Check if there is an active shift session in localStorage
-        const savedSession = localStorage.getItem('active_worker_shift');
+        const savedSession = sessionStorage.getItem('active_worker_shift');
         if (savedSession) {
             try {
                 const parsed = JSON.parse(savedSession);
@@ -704,7 +704,7 @@ export default function WorkerPortal() {
 
     // Reset for another shift
     const handleStartNewShift = () => {
-        localStorage.removeItem('active_worker_shift');
+        sessionStorage.removeItem('active_worker_shift');
         setAttendanceStatus('NOT_CHECKED_IN');
         setDetectedSite(null);
         setShiftStartTime(null);

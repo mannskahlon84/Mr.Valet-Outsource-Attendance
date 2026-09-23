@@ -9,7 +9,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 
 export async function fetchApi(endpoint: string, options: any = {}, rawResponse = false) {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
     const headers: any = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -48,7 +48,7 @@ export async function fetchApi(endpoint: string, options: any = {}, rawResponse 
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
             document.cookie = 'token=; Max-Age=0; path=/';
             document.cookie = 'role=; Max-Age=0; path=/';
-            localStorage.clear();
+            sessionStorage.clear();
             window.location.href = '/login';
         }
         throw new Error('Session expired. Please sign in again.');

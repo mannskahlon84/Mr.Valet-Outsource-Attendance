@@ -11,8 +11,8 @@ export default function OperationsLayout({ children }: { children: React.ReactNo
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
-        setName(localStorage.getItem('name') || 'Operations Manager');
-        setRole(localStorage.getItem('role_display') || localStorage.getItem('role') || 'Operations Manager');
+        setName(sessionStorage.getItem('name') || 'Operations Manager');
+        setRole(sessionStorage.getItem('role_display') || sessionStorage.getItem('role') || 'Operations Manager');
     }, []);
 
     const navItems = [

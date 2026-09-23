@@ -210,6 +210,65 @@ def verify_registration_otp(verify_in: OtpVerify, db: Session = Depends(get_db),
     return worker
 
 
+@router.post("/dev/add_dummy_workers")
+def dev_add_dummy_workers(db: Session = Depends(get_db)):
+    import random
+    import string
+    import uuid
+    from app.core.security import get_password_hash
+    
+    def get_random_string(length):
+        letters = string.ascii_lowercase
+        return ''.join(random.choice(letters) for i in range(length))
+        
+    suppliers = db.query(Supplier).all()
+    added_count = 0
+    
+    for supplier in suppliers:
+        count = db.query(Worker).filter(Worker.supplier_id == supplier.id).count()
+        if count >= 20:
+            continue
+            
+        needed = 20 - count
+        for i in range(needed):
+            # generate unique id
+            qid_num = f"{random.randint(10000000000, 99999999999)}"
+            while db.query(Worker).filter(Worker.qid == qid_num).first():
+                qid_num = f"{random.randint(10000000000, 99999999999)}"
+                
+            w_num = f"555{random.randint(100000, 999999)}"
+            while db.query(Worker).filter(Worker.whatsapp_number == w_num).first():
+                w_num = f"555{random.randint(100000, 999999)}"
+                
+            worker = Worker(
+                internal_worker_id=f"WRK-{supplier.id}-{i}-{get_random_string(4)}",
+                supplier_id=supplier.id,
+                first_name="Dummy",
+                last_name=f"Worker {get_random_string(4)}",
+                phone=w_num,
+                qid=qid_num,
+                whatsapp_number=w_num,
+                status="active",
+                qr_token=f"QR_{uuid.uuid4().hex[:8].upper()}"
+            )
+            db.add(worker)
+            db.flush()
+            
+            user = User(
+                email=worker.qid,
+                password_hash=get_password_hash("password123"),
+                role=RoleEnum.OUTSOURCE_WORKER,
+                worker_id=worker.id
+            )
+            db.add(user)
+            added_count += 1
+            
+    db.commit()
+    return {"message": f"Successfully added {added_count} dummy workers."}
+
+
+
+
 @router.post("/", response_model=WorkerResponse)
 def create_worker(
     worker_in: WorkerCreate, 

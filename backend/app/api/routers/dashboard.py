@@ -26,27 +26,16 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
     avg_daily_login = total_checkins / unique_days if unique_days > 0 else 0
     
     # Top Managers Requesting
-    # Group ManpowerRequests by requested_by
+    # Group ManpowerRequests by ops_manager_id
     manager_reqs = db.query(User.name, func.count(ManpowerRequest.id).label('total')) \
-                     .join(ManpowerRequest, User.id == ManpowerRequest.requested_by) \
+                     .join(ManpowerRequest, User.id == ManpowerRequest.ops_manager_id) \
                      .group_by(User.name) \
                      .order_by(func.count(ManpowerRequest.id).desc()) \
                      .limit(5).all()
     top_managers = [{"name": m[0], "count": m[1]} for m in manager_reqs]
     
     # Top Locations (Most Attendance)
-    from app.models.all_models import WorkerAssignment
-    location_atts = db.query(Site.name, func.count(Attendance.id).label('total')) \
-                      .join(WorkerAssignment, Attendance.worker_assignment_id == WorkerAssignment.id) \
-                      .join(ManpowerRequest, WorkerAssignment.supplier_response_id == ManpowerRequest.id) \
-                      .join(Site, ManpowerRequest.site_id == Site.id) \
-                      .group_by(Site.name) \
-                      .order_by(func.count(Attendance.id).desc()) \
-                      .limit(5).all()
-    # Wait, supplier_response_id joins to SupplierResponse, then ManpowerRequest.
-    # Let me rewrite that query to be exact.
-    
-    from app.models.all_models import SupplierResponse
+    from app.models.all_models import WorkerAssignment, SupplierResponse
     location_atts = db.query(Site.name, func.count(Attendance.id).label('total')) \
                       .join(WorkerAssignment, Attendance.worker_assignment_id == WorkerAssignment.id) \
                       .join(SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id) \
@@ -69,7 +58,7 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
             "id": req.id,
             "site": site_name,
             "date": req.required_date.strftime("%Y-%m-%d"),
-            "quantity": req.quantity
+            "quantity": req.total_required_workers
         })
         
     return {

@@ -269,12 +269,148 @@ let MESSAGES_DATA: any[] = [
     }
 ];
 
-// Seed Workers
-let WORKERS_DATA: any[] = [
-    { id: 1, internal_worker_id: "WRK-001", first_name: "Ali", last_name: "Hassan", qid: "29501234567", whatsapp_number: "+97466001122", supplier_id: 6, status: "active", skill_category: "Valet Driver" },
-    { id: 2, internal_worker_id: "WRK-002", first_name: "Tariq", last_name: "Mahmood", qid: "29309876543", whatsapp_number: "+97466003344", supplier_id: 6, status: "active", skill_category: "Valet Driver" },
-    { id: 3, internal_worker_id: "WRK-003", first_name: "Bilal", last_name: "Ahmed", qid: "29105432198", whatsapp_number: "+97466005566", supplier_id: 7, status: "active", skill_category: "Valet Driver" }
-];
+// Seed Workers for all 7 Outsource Suppliers (12 drivers each for realistic quota testing)
+const generateSupplierWorkers = () => {
+    const rosters: Record<number, { first: string; last: string }[]> = {
+        7: [ // Hanees
+            { first: "Bilal", last: "Ahmed" },
+            { first: "Rashid", last: "Khan" },
+            { first: "Mohammad", last: "Farooq" },
+            { first: "Mustafa", last: "Kamal" },
+            { first: "Saeed", last: "Anwar" },
+            { first: "Nadeem", last: "Abbas" },
+            { first: "Zubair", last: "Shah" },
+            { first: "Hamza", last: "Tariq" },
+            { first: "Kashif", last: "Iqbal" },
+            { first: "Salman", last: "Rehman" },
+            { first: "Waqas", last: "Ali" },
+            { first: "Imran", last: "Siddiqui" }
+        ],
+        5: [ // Deepu
+            { first: "Rajesh", last: "Kumar" },
+            { first: "Suresh", last: "Nair" },
+            { first: "Manoj", last: "Pillai" },
+            { first: "Arun", last: "Prasad" },
+            { first: "Vineeth", last: "Mohan" },
+            { first: "Sajeev", last: "Menon" },
+            { first: "Rahul", last: "Sharma" },
+            { first: "Deepak", last: "Verma" },
+            { first: "Gopal", last: "Das" },
+            { first: "Biju", last: "Kurian" },
+            { first: "Ramesh", last: "Chandran" },
+            { first: "Akhil", last: "Babu" }
+        ],
+        6: [ // Kanan
+            { first: "Ali", last: "Hassan" },
+            { first: "Tariq", last: "Mahmood" },
+            { first: "Karthik", last: "Sundaram" },
+            { first: "Prakash", last: "Rao" },
+            { first: "Selvan", last: "Murugan" },
+            { first: "Vignesh", last: "Kannan" },
+            { first: "Muthu", last: "Kumar" },
+            { first: "Saravanan", last: "Natraj" },
+            { first: "Ganesh", last: "Rajan" },
+            { first: "Dinesh", last: "Balan" },
+            { first: "Senthil", last: "Nathan" },
+            { first: "Balamurugan", last: "Velu" }
+        ],
+        8: [ // Nizar
+            { first: "Yousef", last: "Al-Masri" },
+            { first: "Omar", last: "Haddad" },
+            { first: "Fadi", last: "Khoury" },
+            { first: "Bashir", last: "Saleh" },
+            { first: "Khaled", last: "Mansour" },
+            { first: "Nabil", last: "Darwish" },
+            { first: "Samer", last: "Hamdan" },
+            { first: "Ziad", last: "Khatib" },
+            { first: "Wael", last: "Najjar" },
+            { first: "Marwan", last: "Ghanem" },
+            { first: "Rami", last: "Bishara" },
+            { first: "Hassan", last: "Barakat" }
+        ],
+        9: [ // Dennis
+            { first: "Mark", last: "Santos" },
+            { first: "Angelo", last: "Reyes" },
+            { first: "Christian", last: "Cruz" },
+            { first: "Jerome", last: "Bautista" },
+            { first: "Paolo", last: "Mendoza" },
+            { first: "Gabriel", last: "Navarro" },
+            { first: "Rafael", last: "Garcia" },
+            { first: "Lester", last: "Ramos" },
+            { first: "Alvin", last: "Soriano" },
+            { first: "Dennis", last: "Aquino" },
+            { first: "Noel", last: "Castillo" },
+            { first: "Dominic", last: "Villanueva" }
+        ],
+        10: [ // Naboth
+            { first: "Samuel", last: "Okello" },
+            { first: "Joseph", last: "Kato" },
+            { first: "Emmanuel", last: "Ssebaggala" },
+            { first: "David", last: "Mugisha" },
+            { first: "Francis", last: "Ochieng" },
+            { first: "Geoffrey", last: "Kiprono" },
+            { first: "Brian", last: "Kariuki" },
+            { first: "Patrick", last: "Mwangi" },
+            { first: "Moses", last: "Wafula" },
+            { first: "Robert", last: "Mutua" },
+            { first: "Isaac", last: "Cheruiyot" },
+            { first: "Felix", last: "Omondi" }
+        ],
+        11: [ // Henry
+            { first: "Henry", last: "Mensah" },
+            { first: "Kwame", last: "Boateng" },
+            { first: "Kofi", last: "Appiah" },
+            { first: "Yaw", last: "Asante" },
+            { first: "Osei", last: "Tutu" },
+            { first: "Akwasi", last: "Agyemang" },
+            { first: "Godwin", last: "Amankwah" },
+            { first: "Richmond", last: "Opoku" },
+            { first: "Ernest", last: "Frimpong" },
+            { first: "Bright", last: "Kwarteng" },
+            { first: "Kelvin", last: "Adu" },
+            { first: "Gideon", last: "Owusu" }
+        ],
+        1: [ // Demo Agency
+            { first: "Demo", last: "Driver 01" },
+            { first: "Demo", last: "Driver 02" },
+            { first: "Demo", last: "Driver 03" },
+            { first: "Demo", last: "Driver 04" },
+            { first: "Demo", last: "Driver 05" },
+            { first: "Demo", last: "Driver 06" },
+            { first: "Demo", last: "Driver 07" },
+            { first: "Demo", last: "Driver 08" },
+            { first: "Demo", last: "Driver 09" },
+            { first: "Demo", last: "Driver 10" },
+            { first: "Demo", last: "Driver 11" },
+            { first: "Demo", last: "Driver 12" }
+        ]
+    };
+
+    let idCounter = 1;
+    const allWorkers: any[] = [];
+    for (const [supIdStr, names] of Object.entries(rosters)) {
+        const supId = parseInt(supIdStr);
+        names.forEach((n, idx) => {
+            const numStr = String(idx + 1).padStart(2, '0');
+            const qidBase = 29000000000 + supId * 1000000 + (idx + 1) * 7891;
+            const phoneBase = 55000000 + supId * 10000 + (idx + 1) * 111;
+            allWorkers.push({
+                id: idCounter++,
+                internal_worker_id: `WRK-${supId}-${numStr}`,
+                first_name: n.first,
+                last_name: n.last,
+                qid: String(qidBase).slice(0, 11),
+                whatsapp_number: `+974${phoneBase}`,
+                supplier_id: supId,
+                status: "active",
+                skill_category: "Valet Driver"
+            });
+        });
+    }
+    return allWorkers;
+};
+
+let WORKERS_DATA: any[] = generateSupplierWorkers();
 
 // Notifications
 let NOTIFICATIONS_DATA: any[] = [

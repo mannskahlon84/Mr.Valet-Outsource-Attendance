@@ -90,15 +90,15 @@ export default function Login() {
             }
             
             const data = await res.json();
-            localStorage.setItem('token', data.access_token);
+            sessionStorage.setItem('token', data.access_token);
             
             const me = await fetchApi('/auth/me');
             const normRole = normalizeRole(me.role);
-            localStorage.setItem('role', normRole);
-            localStorage.setItem('role_display', me.role);
-            localStorage.setItem('name', me.name || me.email || 'User');
-            localStorage.setItem('email', me.email || userToAuth || '');
-            localStorage.setItem('user_id', String(me.id || ''));
+            sessionStorage.setItem('role', normRole);
+            sessionStorage.setItem('role_display', me.role);
+            sessionStorage.setItem('name', me.name || me.email || 'User');
+            sessionStorage.setItem('email', me.email || userToAuth || '');
+            sessionStorage.setItem('user_id', String(me.id || ''));
             
             document.cookie = `role=${normRole}; path=/; max-age=86400; SameSite=Lax`;
             document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;

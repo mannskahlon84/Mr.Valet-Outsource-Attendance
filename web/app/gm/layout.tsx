@@ -9,8 +9,8 @@ export default function GMLayout({ children }: { children: React.ReactNode }) {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
-        setName(localStorage.getItem('name') || 'General Manager');
-        setRole(localStorage.getItem('role_display') || localStorage.getItem('role') || 'General Manager');
+        setName(sessionStorage.getItem('name') || 'General Manager');
+        setRole(sessionStorage.getItem('role_display') || sessionStorage.getItem('role') || 'General Manager');
     }, []);
 
     const navItems = [

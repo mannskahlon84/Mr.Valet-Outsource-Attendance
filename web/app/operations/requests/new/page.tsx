@@ -62,7 +62,7 @@ export default function NewShiftRequest() {
         tmrw.setDate(tmrw.getDate() + 1);
         setRequiredDate(tmrw.toISOString().split('T')[0]);
 
-        const savedName = localStorage.getItem('name') || '';
+        const savedName = sessionStorage.getItem('name') || '';
         setManagerName(savedName);
 
         Promise.all([

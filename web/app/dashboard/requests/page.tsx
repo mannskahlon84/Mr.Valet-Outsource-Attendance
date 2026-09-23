@@ -22,7 +22,7 @@ export default function Requests() {
     };
 
     useEffect(() => {
-        setRole(localStorage.getItem('role') || '');
+        setRole(sessionStorage.getItem('role') || '');
         loadData();
     }, []);
 

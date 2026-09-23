@@ -13,19 +13,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const pathname = usePathname();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             router.push('/login');
             return;
         }
-        setRole(localStorage.getItem('role') || '');
-        setName(localStorage.getItem('name') || '');
+        setRole(sessionStorage.getItem('role') || '');
+        setName(sessionStorage.getItem('name') || '');
     }, [router]);
 
     const logout = () => {
-                localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('name');
+                sessionStorage.removeItem('token');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('name');
         document.cookie = 'token=; Max-Age=0; path=/';
         document.cookie = 'role=; Max-Age=0; path=/';
         router.push('/login');

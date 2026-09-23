@@ -11,8 +11,8 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
-        setName(localStorage.getItem('name') || 'Supplier Agency Head');
-        setRole(localStorage.getItem('role_display') || localStorage.getItem('role') || 'Supplier Head');
+        setName(sessionStorage.getItem('name') || 'Supplier Agency Head');
+        setRole(sessionStorage.getItem('role_display') || sessionStorage.getItem('role') || 'Supplier Head');
     }, []);
 
     const navItems = [

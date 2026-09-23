@@ -9,8 +9,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
-        setName(localStorage.getItem('name') || 'Super Admin');
-        setRole(localStorage.getItem('role_display') || localStorage.getItem('role') || 'Super Admin');
+        setName(sessionStorage.getItem('name') || 'Super Admin');
+        setRole(sessionStorage.getItem('role_display') || sessionStorage.getItem('role') || 'Super Admin');
     }, []);
 
     const navItems = [

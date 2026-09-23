@@ -10,7 +10,7 @@ class WorkerBase(BaseModel):
     last_name: str
     phone: Optional[str] = None
     qid: str
-    whatsapp_number: str
+    whatsapp_number: Optional[str] = None
 
 class WorkerCreate(WorkerBase):
     password: str

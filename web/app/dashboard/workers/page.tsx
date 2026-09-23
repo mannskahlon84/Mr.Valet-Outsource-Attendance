@@ -12,7 +12,7 @@ export default function Workers() {
     const [submitting, setSubmitting] = useState(false);
     
     const [role, setRole] = useState('');
-    useEffect(() => { setRole(localStorage.getItem('role') || ''); }, []);
+    useEffect(() => { setRole(sessionStorage.getItem('role') || ''); }, []);
     
     // Form state
     const [internalId, setInternalId] = useState('');

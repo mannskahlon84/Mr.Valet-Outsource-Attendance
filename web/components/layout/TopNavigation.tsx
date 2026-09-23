@@ -33,10 +33,10 @@ export default function TopNavigation({
     const [switching, setSwitching] = useState(false);
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('role_display');
-        localStorage.removeItem('name');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('role_display');
+        sessionStorage.removeItem('name');
         document.cookie = 'token=; Max-Age=0; path=/';
         document.cookie = 'role=; Max-Age=0; path=/';
         router.push('/login');
@@ -65,14 +65,14 @@ export default function TopNavigation({
             }
             if (!res.ok) return;
             const data = await res.json();
-            localStorage.setItem('token', data.access_token);
+            sessionStorage.setItem('token', data.access_token);
             const me = await fetchApi('/auth/me');
             const normRole = normalizeRole(me.role);
-            localStorage.setItem('role', normRole);
-            localStorage.setItem('role_display', me.role);
-            localStorage.setItem('name', me.name || me.email || 'User');
-            localStorage.setItem('email', me.email || userToAuth || '');
-            localStorage.setItem('user_id', String(me.id || ''));
+            sessionStorage.setItem('role', normRole);
+            sessionStorage.setItem('role_display', me.role);
+            sessionStorage.setItem('name', me.name || me.email || 'User');
+            sessionStorage.setItem('email', me.email || userToAuth || '');
+            sessionStorage.setItem('user_id', String(me.id || ''));
             document.cookie = `role=${normRole}; path=/; max-age=86400; SameSite=Lax`;
             document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
             

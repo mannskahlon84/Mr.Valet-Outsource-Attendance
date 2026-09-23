@@ -9,7 +9,7 @@ export default function OperationsSites() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const name = localStorage.getItem('name') || '';
+        const name = sessionStorage.getItem('name') || '';
         setManagerName(name);
         fetchApi('/sites/')
             .then(data => {
