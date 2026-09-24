@@ -1,4 +1,5 @@
 "use client";
+import { logout } from '@/lib/api';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { fetchApi } from '../../lib/api';
@@ -22,15 +23,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setName(sessionStorage.getItem('name') || '');
     }, [router]);
 
-    const logout = () => {
-                sessionStorage.removeItem('token');
-        sessionStorage.removeItem('role');
-        sessionStorage.removeItem('name');
-        document.cookie = 'token=; Max-Age=0; path=/';
-        document.cookie = 'role=; Max-Age=0; path=/';
-        router.push('/login');
-        router.push('/login');
-    };
 
     if (!role) return null;
 

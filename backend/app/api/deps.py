@@ -8,6 +8,21 @@ from app.models.all_models import User
 from app.schemas.token import TokenPayload
 from app.models.all_models import RoleEnum
 
+def account_is_active(db: Session, user: User) -> bool:
+    """A login stays usable only while the user, and the worker or agency behind it, are active."""
+    from app.models.all_models import Worker, Supplier
+    if user.status == 'inactive':
+        return False
+    if user.role == RoleEnum.OUTSOURCE_WORKER and user.worker_id:
+        worker = db.query(Worker).filter(Worker.id == user.worker_id).first()
+        if not worker or worker.status != 'active':
+            return False
+    if user.role == RoleEnum.SUPPLIER_HEAD and user.supplier_id:
+        supplier = db.query(Supplier).filter(Supplier.id == user.supplier_id).first()
+        if not supplier or supplier.status != 'active':
+            return False
+    return True
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
@@ -24,7 +39,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     except JWTError:
         raise credentials_exception
     user = db.query(User).filter(User.id == int(token_data.sub)).first()
-    if user is None or user.status == 'inactive':
+    if user is None or not account_is_active(db, user):
         raise credentials_exception
     if token_data.token_version < user.refresh_token_version:
         raise HTTPException(status_code=401, detail="Session expired due to password reset")

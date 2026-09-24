@@ -1,24 +1,29 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, tryFetch } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { filterRequestsForManager } from '@/lib/managerFilter';
 
 export default function OperationsRequests() {
     const [requests, setRequests] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
 
     const loadData = () => {
+        let failure = '';
+        const onError = (m: string) => { failure = m; };
         Promise.all([
-            fetchApi('/requests/').catch(() => []),
-            fetchApi('/suppliers/').catch(() => [])
+            tryFetch('/requests/', onError),
+            tryFetch('/suppliers/')
         ])
             .then(([reqData, supData]) => {
-                setRequests(filterRequestsForManager(reqData || []));
+                // A failed refresh keeps the requests already on screen
+                if (Array.isArray(reqData)) setRequests(reqData);
                 if (Array.isArray(supData)) setSuppliers(supData);
+                setLoadError(failure);
             })
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -85,6 +90,7 @@ export default function OperationsRequests() {
 
     return (
         <div className="space-y-6">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Shift Requests</h1>

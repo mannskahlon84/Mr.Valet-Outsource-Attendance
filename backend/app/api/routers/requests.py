@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.db.session import get_db
 from app.models.all_models import ManpowerRequest, SupplierResponse, WorkerAssignment, Worker, Site, User, RoleEnum, Notification
 from app.schemas.request import ManpowerRequestCreate, SupplierResponseUpdate, WorkerAllocation
@@ -65,10 +66,31 @@ def create_request(req: ManpowerRequestCreate, db: Session = Depends(get_db), cu
     log_audit_event(db, current_user.id, current_user.role.value, "request_created", "manpower_requests", mr.id, None, {"status": "SUBMITTED"})
     return {"id": mr.id, "status": mr.status}
 
+def ensure_request_access(db: Session, user: User, mr: ManpowerRequest):
+    """Who may open a request. An ops manager keeps every request they created even if the
+    site later moves to another manager, and also sees requests at the sites they manage now."""
+    if user.role in [RoleEnum.SUPER_ADMIN, RoleEnum.GENERAL_MANAGER, RoleEnum.ACCOUNTING]:
+        return
+    if user.role == RoleEnum.OPS_MANAGER:
+        if mr.ops_manager_id == user.id:
+            return
+        site = db.query(Site).filter(Site.id == mr.site_id).first()
+        if site and site.manager_id == user.id:
+            return
+    elif user.role == RoleEnum.SUPPLIER_HEAD:
+        if db.query(SupplierResponse).filter(
+            SupplierResponse.manpower_request_id == mr.id,
+            SupplierResponse.supplier_id == user.supplier_id
+        ).first():
+            return
+    raise HTTPException(403, "Not authorized to view this request")
+
+
 @router.patch("/{request_id}/status")
 def update_request_status(request_id: int, status: str, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.OPS_MANAGER, RoleEnum.SUPER_ADMIN]))):
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == request_id).first()
     if not mr: raise HTTPException(404, "Request not found")
+    ensure_request_access(db, current_user, mr)
     
     valid_transitions = {
         "SUBMITTED": ["CANCELLED", "RESPONSES_PENDING"],
@@ -85,6 +107,20 @@ def update_request_status(request_id: int, status: str, db: Session = Depends(ge
     log_audit_event(db, current_user.id, current_user.role.value, "request_updated", "manpower_requests", mr.id, {"status": old_status}, {"status": status})
     return {"id": mr.id, "status": mr.status}
 
+SUPPLIER_RESPONSE_STATUSES = {"ACCEPTED", "PARTIAL", "REJECTED", "COUNTER_PROPOSED"}
+
+
+def ensure_supplier_can_respond(sr: SupplierResponse, mr: ManpowerRequest, update: SupplierResponseUpdate):
+    if mr.status == "CANCELLED":
+        raise HTTPException(400, "Request is cancelled")
+    if sr.status == "ACCEPTED_BY_OM":
+        raise HTTPException(400, "Operations has already finalized your proposal. Ask the operations manager to reopen it before changing anything.")
+    if update.status not in SUPPLIER_RESPONSE_STATUSES:
+        raise HTTPException(400, f"Status must be one of: {', '.join(sorted(SUPPLIER_RESPONSE_STATUSES))}")
+    if update.confirmed_quantity < 0:
+        raise HTTPException(400, "Invalid quantity")
+
+
 @router.get("/supplier-responses")
 def get_supplier_responses(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
     responses = db.query(SupplierResponse).filter(SupplierResponse.supplier_id == current_user.supplier_id).all()
@@ -98,11 +134,7 @@ def update_supplier_response(response_id: int, update: SupplierResponseUpdate, d
         raise HTTPException(403, "Not your response")
         
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
-    if mr.status == "CANCELLED":
-        raise HTTPException(400, "Request is cancelled")
-        
-    if update.confirmed_quantity < 0:
-        raise HTTPException(400, "Invalid quantity")
+    ensure_supplier_can_respond(sr, mr, update)
         
     # Calculate remaining required
     other_responses = db.query(SupplierResponse).filter(
@@ -130,8 +162,12 @@ def update_supplier_response(response_id: int, update: SupplierResponseUpdate, d
 @router.get("/")
 def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     q = db.query(ManpowerRequest)
+    if current_user.role == RoleEnum.OUTSOURCE_WORKER:
+        raise HTTPException(403, "Forbidden")
     if current_user.role == RoleEnum.OPS_MANAGER:
-        q = q.join(Site).filter(Site.manager_id == current_user.id)
+        q = q.outerjoin(Site, ManpowerRequest.site_id == Site.id).filter(
+            or_(Site.manager_id == current_user.id, ManpowerRequest.ops_manager_id == current_user.id)
+        )
     elif current_user.role == RoleEnum.SUPPLIER_HEAD:
         q = q.join(SupplierResponse).filter(SupplierResponse.supplier_id == current_user.supplier_id)
     items = q.order_by(ManpowerRequest.id.desc()).all()
@@ -245,17 +281,7 @@ def get_request_by_id(request_id: int, db: Session = Depends(get_db), current_us
     if not mr:
         raise HTTPException(404, "Request not found")
 
-    if current_user.role == RoleEnum.OPS_MANAGER:
-        site = db.query(Site).filter(Site.id == mr.site_id).first()
-        if site and site.manager_id != current_user.id:
-            raise HTTPException(403, "Not authorized to view this request")
-    elif current_user.role == RoleEnum.SUPPLIER_HEAD:
-        valid = db.query(SupplierResponse).filter(
-            SupplierResponse.manpower_request_id == request_id,
-            SupplierResponse.supplier_id == current_user.supplier_id
-        ).first()
-        if not valid:
-            raise HTTPException(403, "Not authorized to view this request")
+    ensure_request_access(db, current_user, mr)
 
     site = db.query(Site).filter(Site.id == mr.site_id).first()
     manager = db.query(User).filter(User.id == mr.ops_manager_id).first()
@@ -278,7 +304,13 @@ def get_request_by_id(request_id: int, db: Session = Depends(get_db), current_us
 
 @router.get("/{request_id}/responses")
 def get_request_responses(request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    responses = db.query(SupplierResponse).filter(SupplierResponse.manpower_request_id == request_id).all()
+    mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == request_id).first()
+    if not mr: raise HTTPException(404, "Request not found")
+    ensure_request_access(db, current_user, mr)
+    query = db.query(SupplierResponse).filter(SupplierResponse.manpower_request_id == request_id)
+    if current_user.role == RoleEnum.SUPPLIER_HEAD:
+        query = query.filter(SupplierResponse.supplier_id == current_user.supplier_id)
+    responses = query.all()
     res = []
     for r in responses:
         sup = db.query(Supplier).filter(Supplier.id == r.supplier_id).first()
@@ -303,13 +335,7 @@ def get_request_messages(request_id: int, db: Session = Depends(get_db), current
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == request_id).first()
     if not mr: raise HTTPException(404, "Request not found")
     
-    # Enforce supplier auth
-    if current_user.role == RoleEnum.SUPPLIER_HEAD:
-        valid = db.query(SupplierResponse).filter(
-            SupplierResponse.manpower_request_id == request_id, 
-            SupplierResponse.supplier_id == current_user.supplier_id
-        ).first()
-        if not valid: raise HTTPException(403, "Not authorized to view messages for this request")
+    ensure_request_access(db, current_user, mr)
         
     messages = db.query(RequestMessage).filter(RequestMessage.manpower_request_id == request_id).order_by(RequestMessage.timestamp.asc()).all()
     # Map sender names
@@ -331,13 +357,9 @@ def send_request_message(request_id: int, req: ChatMessageCreate, db: Session = 
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == request_id).first()
     if not mr: raise HTTPException(404, "Request not found")
     
-    # Enforce supplier auth
-    if current_user.role == RoleEnum.SUPPLIER_HEAD:
-        valid = db.query(SupplierResponse).filter(
-            SupplierResponse.manpower_request_id == request_id, 
-            SupplierResponse.supplier_id == current_user.supplier_id
-        ).first()
-        if not valid: raise HTTPException(403, "Not authorized to send messages for this request")
+    ensure_request_access(db, current_user, mr)
+    if current_user.role not in [RoleEnum.OPS_MANAGER, RoleEnum.SUPPLIER_HEAD, RoleEnum.SUPER_ADMIN]:
+        raise HTTPException(403, "Only operations and the agency can post in this chat")
         
     new_msg = RequestMessage(
         manpower_request_id=request_id,
@@ -381,9 +403,7 @@ def respond_to_request(request_id: int, update: SupplierResponseUpdate, db: Sess
     if not sr: raise HTTPException(404, "Response not found")
     
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
-    if mr.status == "CANCELLED": raise HTTPException(400, "Request is cancelled")
-    
-    if update.confirmed_quantity < 0: raise HTTPException(400, "Invalid quantity")
+    ensure_supplier_can_respond(sr, mr, update)
     
     old_state = {"status": sr.status, "confirmed": sr.confirmed_quantity}
     sr.status = update.status
@@ -441,8 +461,8 @@ def finalize_supplier_response(
     mr = db.query(ManpowerRequest).with_for_update().filter(ManpowerRequest.id == request_id).first()
     if not mr: raise HTTPException(404, "Request not found")
     
-    if current_user.role == RoleEnum.OPS_MANAGER and mr.ops_manager_id != current_user.id:
-        raise HTTPException(403, "Not authorized to finalize this request")
+    if current_user.role == RoleEnum.OPS_MANAGER:
+        ensure_request_access(db, current_user, mr)
 
     # Lock SupplierResponse
     sr = db.query(SupplierResponse).with_for_update().filter(SupplierResponse.id == response_id).first()
@@ -512,8 +532,9 @@ def finalize_supplier_response(
 
 
 @router.post("/check-shortfalls")
-def check_shortfalls(db: Session = Depends(get_db)):
+def check_shortfalls(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.OPS_MANAGER, RoleEnum.GENERAL_MANAGER]))):
     from datetime import datetime, timezone
+    from sqlalchemy import func
     from app.models.all_models import Attendance, WorkerAssignment
     today = datetime.now(timezone.utc).date()
     

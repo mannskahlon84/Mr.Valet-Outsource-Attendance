@@ -1,99 +1,42 @@
-import os
-import sys
-from fastapi.testclient import TestClient
+from app.models.all_models import Supplier, User, Worker, RoleEnum
+from app.core.security import get_password_hash
+from tests.test_phase1b import get_auth_token
 
-# Add backend to path so we can import app modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.main import app
-from app.db.session import SessionLocal
-from app.models.all_models import Worker
-
-client = TestClient(app)
-
-def test_device_binding_flow():
-    print("Testing device binding flow...")
-    db = SessionLocal()
-    
-    # 1. Reset worker's device ID to clean state
-    # We will use Demo Worker 1 (worker@example.com) for this test
-    # Or just a worker from DB
-    worker = db.query(Worker).first()
-    if not worker:
-        print("No workers found to test with.")
-        return
-        
-    print(f"Testing with worker: {worker.first_name} {worker.last_name} (QID: {worker.qid})")
-    
-    worker.device_id = None
+def test_device_binding_flow(client, db):
+    # Own supplier, worker and login in the test database (never the app's real database)
+    supplier = Supplier(name="Binding Agency", status="active", billing_rate=45)
+    db.add(supplier)
+    db.flush()
+    worker = Worker(internal_worker_id="W-BIND-1", supplier_id=supplier.id, first_name="Bind", last_name="Test",
+                    qid="29535699001", whatsapp_number="+97455099001", status="active")
+    db.add(worker)
+    db.flush()
+    db.add(User(email="29535699001", password_hash=get_password_hash("Bind#2026"),
+                role=RoleEnum.OUTSOURCE_WORKER, worker_id=worker.id, status="active"))
     db.commit()
-    
-    # We need the user login for this worker
-    from app.models.all_models import User
-    user = db.query(User).filter(User.worker_id == worker.id).first()
-    if not user:
-        print("Worker does not have a user account.")
-        return
-        
-    username = user.email
-    password = "devpass123"
-    
-    print(f"Logging in with username: {username}")
-    
-    # 2. First login (should bind device A)
-    device_a = "DEVICE-A-UUID-123"
-    res1 = client.post("/api/v1/auth/login", data={
-        "username": username,
-        "password": password,
-        "client_id": device_a
-    })
-    
-    assert res1.status_code == 200, f"Failed to login: {res1.text}"
-    print("✅ First login (Device A) successful. Device bound.")
-    
-    # 3. Second login (from Device A again)
-    res2 = client.post("/api/v1/auth/login", data={
-        "username": username,
-        "password": password,
-        "client_id": device_a
-    })
-    assert res2.status_code == 200, f"Failed to login with same device: {res2.text}"
-    print("✅ Second login (Device A) successful.")
-    
-    # 4. Third login (from Device B - Should Fail)
-    device_b = "DEVICE-B-UUID-999"
-    res3 = client.post("/api/v1/auth/login", data={
-        "username": username,
-        "password": password,
-        "client_id": device_b
-    })
-    assert res3.status_code == 403, f"Expected 403, got {res3.status_code}: {res3.text}"
-    assert "securely bound to another mobile device" in res3.text
-    print("✅ Login from new device (Device B) correctly blocked.")
-    
-    # 5. Super Admin resets the device binding
-    admin_user = db.query(User).filter(User.email == "admin@example.com").first()
-    # Mocking admin token
-    from app.core.security import create_access_token
-    admin_token = create_access_token(admin_user.id)
-    
-    res4 = client.post(
-        f"/api/v1/workers/{worker.id}/reset-device",
-        headers={"Authorization": f"Bearer {admin_token}"}
-    )
-    assert res4.status_code == 200, f"Failed to reset device: {res4.text}"
-    print("✅ Admin successfully reset the device binding.")
-    
-    # 6. Fourth login (from Device B - Should now Succeed)
-    res5 = client.post("/api/v1/auth/login", data={
-        "username": username,
-        "password": password,
-        "client_id": device_b
-    })
-    assert res5.status_code == 200, f"Failed to login with new device after reset: {res5.text}"
-    print("✅ Login from new device (Device B) successful after reset.")
-    
-    print("🎉 All device binding tests passed!")
 
-if __name__ == "__main__":
-    test_device_binding_flow()
+    def login(device):
+        return client.post("/api/v1/auth/login", data={"username": "29535699001", "password": "Bind#2026", "client_id": device})
+
+    # Missing device ID is refused
+    res = client.post("/api/v1/auth/login", data={"username": "29535699001", "password": "Bind#2026"})
+    assert res.status_code == 400
+
+    # First login binds device A; A keeps working
+    assert login("DEVICE-A").status_code == 200
+    db.refresh(worker)
+    assert worker.device_id == "DEVICE-A"
+    assert login("DEVICE-A").status_code == 200
+
+    # Device B is blocked
+    res = login("DEVICE-B")
+    assert res.status_code == 403
+    assert "securely bound to another mobile device" in res.text
+
+    # Super Admin resets the binding, then device B can log in and becomes the bound device
+    admin_headers = {"Authorization": f"Bearer {get_auth_token(client, db, 'admin@example.com', 'devpass123')}"}
+    res = client.post(f"/api/v1/workers/{worker.id}/reset-device", headers=admin_headers)
+    assert res.status_code == 200, res.text
+    assert login("DEVICE-B").status_code == 200
+    assert login("DEVICE-A").status_code == 403

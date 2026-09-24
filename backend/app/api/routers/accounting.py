@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
 from app.db.session import get_db
-from app.models.all_models import Supplier, User, RoleEnum, SupplierResponse, ManpowerRequest, Invoice
+from app.models.all_models import Supplier, User, RoleEnum, SupplierResponse, ManpowerRequest, Invoice, WorkerAssignment, Attendance
 from app.api.deps import get_current_user, require_role
 from app.services.audit import log_audit_event
 from datetime import datetime, date
@@ -15,6 +15,31 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
 router = APIRouter()
+
+# Suppliers are paid per completed shift: a driver who checked in AND checked out.
+# Scheduled or confirmed headcount is never billed, so no-shows cost nothing.
+BILLABLE_RESPONSE_STATUSES = ['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED']
+
+
+def completed_shifts_query(db: Session, supplier_id: int, *filters):
+    return db.query(Attendance).join(
+        WorkerAssignment, Attendance.worker_assignment_id == WorkerAssignment.id
+    ).join(
+        SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id
+    ).join(
+        ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id
+    ).filter(
+        SupplierResponse.supplier_id == supplier_id,
+        SupplierResponse.status.in_(BILLABLE_RESPONSE_STATUSES),
+        ManpowerRequest.status != "CANCELLED",
+        Attendance.check_in_time.isnot(None),
+        Attendance.check_out_time.isnot(None),
+        *filters
+    )
+
+
+def count_completed_shifts(db: Session, supplier_id: int, *filters) -> int:
+    return completed_shifts_query(db, supplier_id, *filters).count()
 
 class AccountingSummaryItem(BaseModel):
     supplier_id: int
@@ -46,8 +71,8 @@ def generate_invoice_pdf(invoice: Invoice, supplier: Supplier):
     
     c.line(50, 650, 550, 650)
     
-    c.drawString(50, 620, f"Confirmed Workers Supplied: {invoice.workers_supplied_quantity}")
-    c.drawString(50, 600, f"Agreed Rate Per Worker: QAR {invoice.rate_per_worker:,.2f}")
+    c.drawString(50, 620, f"Completed Shifts (checked in and out): {invoice.workers_supplied_quantity}")
+    c.drawString(50, 600, f"Agreed Rate Per Shift: QAR {invoice.rate_per_worker:,.2f}")
     
     c.setFont("Helvetica-Bold", 14)
     c.drawString(50, 560, f"Total Amount Payable: QAR {invoice.total_amount:,.2f}")
@@ -78,11 +103,8 @@ def get_accounting_summary(
     
     results = []
     for sup in suppliers:
-        # Sum confirmed quantity for responses in the target month/year
-        req_filters = [
-            SupplierResponse.supplier_id == sup.id,
-            SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED'])
-        ]
+        # Completed shifts in the target period
+        req_filters = []
         if day:
             req_filters.append(extract('day', ManpowerRequest.required_date) == day)
         if month:
@@ -90,7 +112,7 @@ def get_accounting_summary(
         if year:
             req_filters.append(extract('year', ManpowerRequest.required_date) == year)
             
-        total_workers = db.query(func.sum(SupplierResponse.confirmed_quantity)).join(ManpowerRequest).filter(*req_filters).scalar() or 0
+        total_workers = count_completed_shifts(db, sup.id, *req_filters)
         
         results.append(AccountingSummaryItem(
             supplier_id=sup.id,
@@ -123,15 +145,14 @@ def generate_invoice(
     if not sup:
         raise HTTPException(status_code=404, detail="Supplier not found")
         
-    total_workers = db.query(func.sum(SupplierResponse.confirmed_quantity)).join(ManpowerRequest).filter(
-        SupplierResponse.supplier_id == sup.id,
-        SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED']),
+    total_workers = count_completed_shifts(
+        db, sup.id,
         extract('month', ManpowerRequest.required_date) == invoice_in.month,
         extract('year', ManpowerRequest.required_date) == invoice_in.year
-    ).scalar() or 0
+    )
     
     if total_workers == 0:
-        raise HTTPException(status_code=400, detail="Cannot generate invoice: 0 workers supplied.")
+        raise HTTPException(status_code=400, detail="Cannot generate invoice: no completed shifts in this period.")
         
     invoice_num = f"INV-{invoice_in.year}{invoice_in.month:02d}-{sup.id}-{int(datetime.utcnow().timestamp())}"
     
@@ -157,7 +178,8 @@ def generate_invoice(
     
     log_audit_event(db, current_user.id, current_user.role.value, "invoice_generated", "invoices", new_inv.id, None, {"total_amount": new_inv.total_amount, "quantity": total_workers, "rate": new_inv.rate_per_worker})
     
-    return new_inv
+    db.refresh(new_inv)
+    return {"invoice": new_inv, "supplier_name": sup.name}
 
 @router.get("/invoices")
 def list_invoices(
@@ -171,7 +193,11 @@ def list_invoices(
     if current_user.role == RoleEnum.SUPPLIER_HEAD:
         query = query.filter(Invoice.supplier_id == current_user.supplier_id)
         
-    return [{"invoice": inv, "supplier_name": name} for inv, name in query.all()]
+    # Flat invoice fields for the list pages, plus the nested form the admin pages read
+    return [
+        {**{c.name: getattr(inv, c.name) for c in Invoice.__table__.columns}, "invoice": inv, "supplier_name": name}
+        for inv, name in query.order_by(Invoice.generated_at.desc()).all()
+    ]
 
 @router.post("/invoices/{invoice_id}/void")
 def void_invoice(
@@ -199,11 +225,16 @@ def download_invoice(
     inv = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not inv: raise HTTPException(status_code=404, detail="Invoice not found")
     
+    if current_user.role not in [RoleEnum.SUPER_ADMIN, RoleEnum.ACCOUNTING, RoleEnum.GENERAL_MANAGER, RoleEnum.SUPPLIER_HEAD]:
+        raise HTTPException(status_code=403, detail="Forbidden")
     if current_user.role == RoleEnum.SUPPLIER_HEAD and inv.supplier_id != current_user.supplier_id:
         raise HTTPException(status_code=403, detail="Forbidden")
         
     if not inv.document_path_pdf or not os.path.exists(inv.document_path_pdf):
-        raise HTTPException(status_code=404, detail="PDF document not found")
+        # The server's disk is wiped on redeploy; rebuild the PDF from the stored invoice
+        sup = db.query(Supplier).filter(Supplier.id == inv.supplier_id).first()
+        inv.document_path_pdf = generate_invoice_pdf(inv, sup)
+        db.commit()
         
     with open(inv.document_path_pdf, "rb") as f:
         pdf_bytes = f.read()
@@ -235,35 +266,38 @@ def download_custom_invoice(
     
     site_name = "All Locations"
     filters = [
-        SupplierResponse.supplier_id == sup.id,
-        SupplierResponse.status.in_(['CONFIRMED', 'ACCEPTED_BY_OM', 'ACCEPTED']),
-        ManpowerRequest.required_date >= req.start_date,
-        ManpowerRequest.required_date <= req.end_date
+        func.date(ManpowerRequest.required_date) >= req.start_date.isoformat(),
+        func.date(ManpowerRequest.required_date) <= req.end_date.isoformat()
     ]
     if req.site_id:
         filters.append(ManpowerRequest.site_id == req.site_id)
         site = db.query(Site).filter(Site.id == req.site_id).first()
         if site: site_name = site.name
         
-    total_workers = db.query(func.sum(SupplierResponse.confirmed_quantity)).join(ManpowerRequest).filter(*filters).scalar() or 0
-    if total_workers == 0: raise HTTPException(status_code=400, detail="No workers found for this criteria.")
+    shifts = completed_shifts_query(db, sup.id, *filters).all()
+    if not shifts: raise HTTPException(status_code=400, detail="No completed shifts found for this criteria.")
+    total_workers = len(shifts)
     
     effective_rate = req.custom_rate if req.custom_rate is not None else sup.billing_rate
     
     unit_map = {
         "PER_HOUR": "Per Hour",
-        "PER_DAY": "Per Day",
+        "PER_DAY": "Per Shift",
         "PER_EMPLOYEE": "Per Employee"
     }
-    unit_label = unit_map.get(req.rate_unit, "Per Hour")
+    unit_label = unit_map.get(req.rate_unit, "Per Shift")
 
     if req.rate_unit == "PER_HOUR":
-        total_hours = total_workers * 8
-        total_amount = total_hours * effective_rate
-        breakdown_text = f"Confirmed Shifts: {total_workers} | Total Billable Hours (8h/shift): {total_hours} hrs"
+        total_hours = round(sum((a.check_out_time - a.check_in_time).total_seconds() for a in shifts) / 3600.0, 2)
+        total_amount = round(total_hours * effective_rate, 2)
+        breakdown_text = f"Completed Shifts: {total_workers} | Verified Duty Hours: {total_hours} hrs"
+    elif req.rate_unit == "PER_EMPLOYEE":
+        employees = completed_shifts_query(db, sup.id, *filters).with_entities(WorkerAssignment.worker_id).distinct().count()
+        total_amount = employees * effective_rate
+        breakdown_text = f"Employees with completed shifts: {employees}"
     else:
         total_amount = total_workers * effective_rate
-        breakdown_text = f"Confirmed Workers Supplied: {total_workers} ({unit_label})"
+        breakdown_text = f"Completed Shifts (checked in and out): {total_workers}"
 
     invoice_num = f"CUST-INV-{req.supplier_id}-{int(datetime.utcnow().timestamp())}"
     
@@ -380,8 +414,8 @@ def get_daily_breakdown(
                 "status": att.status if att else "SCHEDULED"
             })
 
-        effective_hours = total_duty_hours if total_duty_hours > 0 else (total_scheduled * 8.0)
-        estimated_cost = round(effective_hours * (sup.billing_rate or 0.0), 2)
+        # Only completed shifts are payable
+        estimated_cost = round(ended_count * (sup.billing_rate or 0.0), 2)
 
         sup_head = db.query(User).filter(User.supplier_id == sup.id, User.role == RoleEnum.SUPPLIER_HEAD).first()
         head_name = sup_head.name if sup_head else (sup.contact_person or "Agency Head")

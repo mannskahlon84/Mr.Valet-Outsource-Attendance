@@ -1,6 +1,6 @@
 import os
 import math
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 try:
     from deepface import DeepFace
 except Exception:
@@ -10,28 +10,41 @@ import numpy as np
 # Configurable Verification Threshold
 FACE_VERIFICATION_THRESHOLD = float(os.getenv("FACE_VERIFICATION_THRESHOLD", "0.68"))
 
-def extract_face_embedding(img_path_or_bytes) -> List[float]:
-    if DeepFace is not None:
-        try:
-            representations = DeepFace.represent(
-                img_path=img_path_or_bytes,
-                model_name="ArcFace",
-                enforce_detection=False
-            )
-            if representations and len(representations) > 0 and "embedding" in representations[0]:
-                return representations[0]["embedding"]
-        except Exception:
-            pass
+FACE_ENGINE_AVAILABLE = DeepFace is not None
 
-    # Deterministic fallback vector for test environments or placeholder frames
-    import hashlib
-    h = hashlib.sha256(str(img_path_or_bytes)[:200].encode('utf-8')).digest()
-    seed = int.from_bytes(h[:4], 'big')
-    rng = np.random.default_rng(seed)
-    raw = rng.standard_normal(512)
-    norm = np.linalg.norm(raw)
-    normalized = (raw / norm).tolist() if norm > 0 else raw.tolist()
-    return normalized
+
+def _decode_photo(img) -> bytes:
+    """Return the raw image bytes of a base64/data-URL selfie, or raise ValueError if it isn't a photo."""
+    import base64, io
+    from PIL import Image
+    if not isinstance(img, str) or not img.strip():
+        raise ValueError("No selfie photo was received.")
+    data = img.split(",", 1)[1] if img.startswith("data:") else img
+    try:
+        raw = base64.b64decode(data, validate=False)
+        Image.open(io.BytesIO(raw)).verify()
+    except Exception:
+        raise ValueError("The selfie could not be read as a photo. Please retake it.")
+    return raw
+
+
+def extract_face_embedding(img_path_or_bytes) -> Optional[List[float]]:
+    """ArcFace embedding of the selfie, or None when no face engine is installed.
+
+    Without DeepFace there is no way to compare faces, so callers must treat None as
+    "photo captured, face not verified" instead of matching on a made-up vector.
+    """
+    if DeepFace is None:
+        _decode_photo(img_path_or_bytes)
+        return None
+    representations = DeepFace.represent(
+        img_path=img_path_or_bytes,
+        model_name="ArcFace",
+        enforce_detection=False
+    )
+    if representations and len(representations) > 0 and "embedding" in representations[0]:
+        return representations[0]["embedding"]
+    raise ValueError("No face detected in the selfie.")
 
 def verify_face_match(embedding1: List[float], embedding2: List[float]) -> Tuple[bool, float]:
     if len(embedding1) != 512 or len(embedding2) != 512:

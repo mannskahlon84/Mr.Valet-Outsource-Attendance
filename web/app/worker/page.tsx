@@ -4,91 +4,6 @@ import { fetchApi } from '@/lib/api';
 import jsQR from 'jsqr';
 
 // 82 Qatar Sites Catalog for Instant QR Decoding & GPS Geofence Matching
-const QATAR_SITES = [
-    { id: 1, name: "121 Tower", address: "West Bay, Doha, Qatar", lat: 25.321, lng: 51.529, radius: 250 },
-    { id: 2, name: "21 High Street Hotel", address: "21 High Street, Katara, Doha, Qatar", lat: 25.359, lng: 51.526, radius: 200 },
-    { id: 3, name: "35 West Bay Tower", address: "Diplomatic Area, West Bay, Doha, Qatar", lat: 25.3245, lng: 51.5312, radius: 250 },
-    { id: 4, name: "Adrenaline Gym", address: "Al Sadd, Doha, Qatar", lat: 25.282, lng: 51.515, radius: 200 },
-    { id: 5, name: "Al Ahli Hospital", address: "Al Ahli Hospital, Ahmed Bin Ali St, Qatar", lat: 25.304, lng: 51.503, radius: 250 },
-    { id: 6, name: "Al Maha Island", address: "Al Maha Island, Lusail, Qatar", lat: 25.4312, lng: 51.5328, radius: 250 },
-    { id: 7, name: "Al Najada Hotel", address: "Al Najada Doha Hotel by Tivoli, Qatar", lat: 25.286, lng: 51.534, radius: 200 },
-    { id: 8, name: "Al-Aziziya Hotel", address: "Al Aziziyah Boutique Hotel, Aspire Zone, Qatar", lat: 25.258, lng: 51.442, radius: 200 },
-    { id: 9, name: "Al-Rayyan Hotel", address: "AlRayyan Hotel Doha, Curio Collection, Mall of Qatar", lat: 25.321, lng: 51.341, radius: 200 },
-    { id: 10, name: "Andaz Doha Hotel", address: "Andaz Doha, West Bay, Qatar", lat: 25.328, lng: 51.534, radius: 200 },
-    { id: 11, name: "Banana Island", address: "Banana Island Resort Doha by Anantara, Qatar", lat: 25.297, lng: 51.642, radius: 250 },
-    { id: 12, name: "Banyan Tree Hotel", address: "Banyan Tree Doha At La Cigale Mushaireb, Qatar", lat: 25.282, lng: 51.521, radius: 200 },
-    { id: 13, name: "Beiruti Restaurant", address: "Al Sadd, Doha, Qatar", lat: 25.289, lng: 51.51, radius: 200 },
-    { id: 14, name: "Belhamber Restaurant", address: "Corniche, Doha, Qatar", lat: 25.292, lng: 51.539, radius: 200 },
-    { id: 15, name: "CAC TUS - Lusail", address: "Lusail Marina Promenade, Qatar", lat: 25.4215, lng: 51.531, radius: 200 },
-    { id: 16, name: "Centro Mall", address: "Centro Mall, Barwa Commercial Avenue, Qatar", lat: 25.263, lng: 51.512, radius: 250 },
-    { id: 17, name: "Century Marina Mall", address: "Lusail Marina, Qatar", lat: 25.419, lng: 51.528, radius: 250 },
-    { id: 18, name: "Cielo Hotel", address: "Lusail, Qatar", lat: 25.426, lng: 51.523, radius: 200 },
-    { id: 19, name: "City Center", address: "City Center Mall, West Bay, Doha, Qatar", lat: 25.3252, lng: 51.5306, radius: 250 },
-    { id: 20, name: "Dar Global", address: "West Bay, Doha, Qatar", lat: 25.323, lng: 51.531, radius: 200 },
-    { id: 21, name: "Doha Clinic", address: "Doha Clinic Hospital, Al Mirqab Al Jadeed, Qatar", lat: 25.278, lng: 51.508, radius: 200 },
-    { id: 22, name: "Doha Festival City", address: "Doha Festival City, Umm Salal Muhammed, Qatar", lat: 25.418, lng: 51.444, radius: 250 },
-    { id: 23, name: "Doha oasis", address: "Doha Oasis, Al Khulaifat, Doha, Qatar", lat: 25.2815, lng: 51.5215, radius: 200 },
-    { id: 24, name: "Dusit Hotel", address: "Dusit Doha Hotel, West Bay, Qatar", lat: 25.326, lng: 51.529, radius: 200 },
-    { id: 25, name: "Embassy Suites by Hilton", address: "Embassy Suites by Hilton Doha Old Town, Qatar", lat: 25.275, lng: 51.545, radius: 200 },
-    { id: 26, name: "Ezdan Palace", address: "Ezdan Palace Hotel, Al Shamal Rd, Qatar", lat: 25.361, lng: 51.468, radius: 200 },
-    { id: 27, name: "Fairmont Hotel", address: "Katara Towers, Lusail Marina, Qatar", lat: 25.3888, lng: 51.5315, radius: 200 },
-    { id: 28, name: "Gewan Island", address: "Gewan Island, The Pearl, Qatar", lat: 25.378, lng: 51.545, radius: 250 },
-    { id: 29, name: "Hilton the pearl residence", address: "Hilton Doha The Pearl Residences, Qatar", lat: 25.372, lng: 51.551, radius: 200 },
-    { id: 30, name: "Ibis and Adagio", address: "Ibis & Adagio Doha, Alwaab / B-Ring, Qatar", lat: 25.272, lng: 51.511, radius: 200 },
-    { id: 31, name: "Intercontinental Doha", address: "InterContinental Doha Beach & Spa, Qatar", lat: 25.352, lng: 51.533, radius: 200 },
-    { id: 32, name: "Katara hills", address: "Katara Hills LXR Hotels & Resorts, Qatar", lat: 25.362, lng: 51.524, radius: 200 },
-    { id: 33, name: "Katara Village", address: "Katara Cultural Village, Doha, Qatar", lat: 25.358, lng: 51.525, radius: 250 },
-    { id: 34, name: "Kempinski residence and suites", address: "Kempinski Residences & Suites, West Bay, Qatar", lat: 25.323, lng: 51.532, radius: 200 },
-    { id: 35, name: "Korean Medical Center", address: "Lusail Medical District, Qatar", lat: 25.428, lng: 51.524, radius: 200 },
-    { id: 36, name: "La Cigale Hotel", address: "La Cigale Hotel, Suhaim Bin Hamad St, Qatar", lat: 25.285, lng: 51.507, radius: 200 },
-    { id: 37, name: "Laffan Tower", address: "West Bay, Doha, Qatar", lat: 25.32, lng: 51.528, radius: 250 },
-    { id: 38, name: "Lagoona Mall", address: "Lagoona Mall, West Bay Lagoon, Qatar", lat: 25.377, lng: 51.521, radius: 250 },
-    { id: 39, name: "Little Sailor Restaurant", address: "Al Sadd, Doha, Qatar", lat: 25.279, lng: 51.514, radius: 200 },
-    { id: 40, name: "M Gallery hotel", address: "Alwadi Hotel Doha MGallery, Msheireb, Qatar", lat: 25.2875, lng: 51.529, radius: 200 },
-    { id: 41, name: "Medina Central", address: "Medina Centrale, The Pearl, Qatar", lat: 25.37, lng: 51.544, radius: 200 },
-    { id: 42, name: "Mall Of Qatar", address: "Mall of Qatar, Al Rayyan, Qatar", lat: 25.322, lng: 51.342, radius: 250 },
-    { id: 43, name: "Manarat Lusail Tower", address: "Lusail Marina, Qatar", lat: 25.4205, lng: 51.5295, radius: 250 },
-    { id: 44, name: "Mandarin Oriental Doha", address: "Mandarin Oriental, Msheireb Downtown, Qatar", lat: 25.287, lng: 51.527, radius: 200 },
-    { id: 45, name: "Marsa Malaz Kempinski", address: "Marsa Malaz Kempinski, The Pearl, Qatar", lat: 25.375, lng: 51.558, radius: 200 },
-    { id: 46, name: "Maysan LXR", address: "Maysan Doha, LXR Hotels & Resorts, Aspire, Qatar", lat: 25.249, lng: 51.438, radius: 200 },
-    { id: 47, name: "Messila Resort", address: "Al Messila, a Luxury Collection Resort & Spa, Qatar", lat: 25.295, lng: 51.472, radius: 250 },
-    { id: 48, name: "Millennium Hotel and resort - em sherif", address: "Millennium Hotel Doha, Jawaan St, Qatar", lat: 25.283, lng: 51.502, radius: 200 },
-    { id: 49, name: "Ministry Of Foreign Affairs (MOFA)", address: "Ministry of Foreign Affairs, Corniche, Qatar", lat: 25.305, lng: 51.528, radius: 200 },
-    { id: 50, name: "Msheireb Downtown", address: "Msheireb Downtown Doha, Qatar", lat: 25.2865, lng: 51.528, radius: 250 },
-    { id: 51, name: "Novo Cinema", address: "Novo Cinemas, Mall of Qatar / The Pearl, Qatar", lat: 25.323, lng: 51.343, radius: 200 },
-    { id: 52, name: "Old Doha Port", address: "Mina District, Old Doha Port, Qatar", lat: 25.295, lng: 51.547, radius: 200 },
-    { id: 53, name: "Ooredoo", address: "Ooredoo HQ, West Bay, Doha, Qatar", lat: 25.3235, lng: 51.534, radius: 200 },
-    { id: 54, name: "Orient Pearl", address: "Orient Pearl Restaurant, Corniche, Qatar", lat: 25.293, lng: 51.544, radius: 200 },
-    { id: 55, name: "Park Hyatt Doha", address: "Park Hyatt Doha, Msheireb Downtown, Qatar", lat: 25.288, lng: 51.526, radius: 200 },
-    { id: 56, name: "Porto Arabia - UDC", address: "Porto Arabia, The Pearl, Qatar", lat: 25.368, lng: 51.549, radius: 200 },
-    { id: 57, name: "Pullman Hotel", address: "Pullman Doha West Bay, Qatar", lat: 25.3225, lng: 51.53, radius: 200 },
-    { id: 58, name: "QQ", address: "Qanat Quartier, The Pearl, Qatar", lat: 25.374, lng: 51.542, radius: 200 },
-    { id: 59, name: "Raffles Hotel", address: "Katara Towers, Lusail Marina, Qatar", lat: 25.3888, lng: 51.5315, radius: 200 },
-    { id: 60, name: "Ritz Carlton hotel", address: "The Ritz-Carlton, Doha, Qatar", lat: 25.38, lng: 51.528, radius: 200 },
-    { id: 61, name: "Rixos Qetaifan", address: "Qetaifan Island North, Lusail, Qatar", lat: 25.445, lng: 51.542, radius: 200 },
-    { id: 62, name: "Rosewood Hotel", address: "Lusail Marina, Qatar", lat: 25.423, lng: 51.533, radius: 200 },
-    { id: 63, name: "Sharq Village", address: "Sharq Village & Spa, a Ritz-Carlton Hotel, Qatar", lat: 25.298, lng: 51.554, radius: 250 },
-    { id: 64, name: "Shoumoukh Tower", address: "Shoumoukh Towers, C-Ring Road, Doha, Qatar", lat: 25.277, lng: 51.501, radius: 250 },
-    { id: 65, name: "St Regis Doha", address: "The St. Regis Doha, Al Gassar Resort, Qatar", lat: 25.356, lng: 51.531, radius: 200 },
-    { id: 66, name: "St regis Marsa Arabia", address: "The St. Regis Marsa Arabia Island, The Pearl, Qatar", lat: 25.369, lng: 51.547, radius: 200 },
-    { id: 67, name: "Surgi Art Hospital", address: "Al Waab, Doha, Qatar", lat: 25.286, lng: 51.498, radius: 250 },
-    { id: 68, name: "Tawar Mall", address: "Tawar Mall, Al Markhiya St, Doha, Qatar", lat: 25.334, lng: 51.482, radius: 250 },
-    { id: 69, name: "The chedi katara Hotel", address: "The Chedi Katara Hotel & Resort, Qatar", lat: 25.364, lng: 51.527, radius: 200 },
-    { id: 70, name: "The Ned Doha", address: "The Ned Doha, Corniche, Qatar", lat: 25.299, lng: 51.532, radius: 200 },
-    { id: 71, name: "The Pearl Hospital", address: "The Pearl, Doha, Qatar", lat: 25.371, lng: 51.546, radius: 250 },
-    { id: 72, name: "The Plaza by Anantara", address: "The Plaza Doha by Anantara, Ras Abu Abboud, Qatar", lat: 25.294, lng: 51.551, radius: 200 },
-    { id: 73, name: "The torch Hotel", address: "The Torch Doha, Aspire Zone, Qatar", lat: 25.261, lng: 51.443, radius: 200 },
-    { id: 74, name: "The View Hospital", address: "The View Hospital, Al Qutaifiya, Qatar", lat: 25.378, lng: 51.519, radius: 250 },
-    { id: 75, name: "Tower 18", address: "Lusail Marina, Qatar", lat: 25.421, lng: 51.529, radius: 250 },
-    { id: 76, name: "Twin Tower Lusail", address: "Lusail Marina, Qatar", lat: 25.4195, lng: 51.5305, radius: 250 },
-    { id: 77, name: "UDC Tower", address: "UDC Tower, The Pearl, Qatar", lat: 25.367, lng: 51.543, radius: 250 },
-    { id: 78, name: "Villaggio Mall", address: "Villaggio Mall, Aspire Zone, Al Waab, Qatar", lat: 25.259, lng: 51.444, radius: 250 },
-    { id: 79, name: "Voco Hotel", address: "voco Doha West Bay Suites, Qatar", lat: 25.328, lng: 51.526, radius: 200 },
-    { id: 80, name: "Waldorf Astoria", address: "Waldorf Astoria Lusail, Qatar", lat: 25.441, lng: 51.538, radius: 200 },
-    { id: 81, name: "West Walk", address: "West Walk, Al Waab, Doha, Qatar", lat: 25.271, lng: 51.488, radius: 200 },
-    { id: 82, name: "Wyndham Hotel West Bay", address: "Maysaloun St, West Bay, Doha, Qatar", lat: 25.3255, lng: 51.5285, radius: 200 }
-];
-
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371000;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -120,9 +35,25 @@ function playSuccessChime() {
     }
 }
 
+/** A venue as returned by /attendance/resolve-qr (plus its QR text for development test venues) */
+type Venue = { id: number; name: string; address?: string; lat: number; lng: number; radius: number; qr_data?: string };
+
+const errorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message) || fallback;
+
+function formatDuty(hours: number | null): string {
+    if (hours === null) return '—';
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return h > 0 ? `${h} h ${m} min` : `${m} min`;
+}
+
 export default function WorkerPortal() {
-    const [workerName, setWorkerName] = useState('Ali Hassan');
-    const [workerId, setWorkerId] = useState('WRK-001');
+    const [workerName, setWorkerName] = useState('');
+    const [workerId, setWorkerId] = useState('');
+    // Development only: today's venues with their QR text, served by /attendance/test-venues
+    const [testVenues, setTestVenues] = useState<Venue[]>([]);
+    const [dutyHours, setDutyHours] = useState<number | null>(null);
+    const simulatedCoords = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
@@ -184,9 +115,14 @@ export default function WorkerPortal() {
     useEffect(() => {
         const storedName = sessionStorage.getItem('name');
         if (storedName) setWorkerName(storedName);
+        fetchApi('/auth/me').then(me => {
+            if (me?.name) setWorkerName(me.name);
+            if (me?.internal_worker_id) setWorkerId(me.internal_worker_id);
+        }).catch(() => {});
+        fetchApi('/attendance/test-venues').then(v => setTestVenues(Array.isArray(v) ? v : [])).catch(() => setTestVenues([]));
 
         // Check if there is an active shift session in localStorage
-        const savedSession = sessionStorage.getItem('active_worker_shift');
+        const savedSession = localStorage.getItem('active_worker_shift');
         if (savedSession) {
             try {
                 const parsed = JSON.parse(savedSession);
@@ -200,6 +136,7 @@ export default function WorkerPortal() {
                     setDetectedSite(parsed.site);
                     setShiftStartTime(parsed.startTime);
                     setShiftEndTime(parsed.endTime);
+                    setDutyHours(typeof parsed.dutyHours === 'number' ? parsed.dutyHours : null);
                 }
             } catch (e) {}
         }
@@ -222,9 +159,13 @@ export default function WorkerPortal() {
 
     // GPS Helper
     const getCoordinates = (): Promise<{ lat: number; lng: number; accuracy: number }> => {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            if (simulatedCoords.current) {
+                resolve(simulatedCoords.current);
+                return;
+            }
             if (!navigator.geolocation) {
-                resolve({ lat: 25.3854, lng: 51.5310, accuracy: 10.0 });
+                reject(new Error("This browser can't share your location. Open the portal in Chrome or Safari on your phone."));
                 return;
             }
             navigator.geolocation.getCurrentPosition(
@@ -235,37 +176,33 @@ export default function WorkerPortal() {
                         accuracy: pos.coords.accuracy || 15.0
                     });
                 },
-                (err) => {
-                    console.warn("GPS unavailable, using Doha default", err);
-                    resolve({ lat: 25.3854, lng: 51.5310, accuracy: 20.0 });
+                () => {
+                    reject(new Error("Location is off or blocked. Allow location access for this site, then try again."));
                 },
                 { timeout: 8000, enableHighAccuracy: true }
             );
         });
     };
 
-    // Helper: Identify venue from decoded QR text
-    const identifyVenueFromQr = (rawQr: string) => {
-        if (!rawQr || typeof rawQr !== 'string') return null;
-        const trimmed = rawQr.trim();
-        // 1. Match by MC:LOC:<id>
-        if (trimmed.startsWith("MC:LOC:")) {
-            const parts = trimmed.split(":");
-            if (parts.length >= 3) {
-                const siteId = parseInt(parts[2]);
-                const found = QATAR_SITES.find(s => s.id === siteId);
-                if (found) return found;
-            }
+    // Ask the backend which venue this poster belongs to; only the current, active poster is accepted
+    const resolveVenue = async (rawQr: string): Promise<{ site: Venue | null; error: string }> => {
+        try {
+            const site = await fetchApi('/attendance/resolve-qr', {
+                method: 'POST',
+                body: JSON.stringify({ qr_data: (rawQr || '').trim() })
+            });
+            return { site, error: '' };
+        } catch (err) {
+            return { site: null, error: errorMessage(err, 'Invalid QR code.') };
         }
-        // 2. Match by exact token or ID
-        const byId = QATAR_SITES.find(s => `MC:LOC:${s.id}:token${s.id}` === trimmed || String(s.id) === trimmed);
-        if (byId) return byId;
+    };
 
-        // 3. Match by venue name inside QR if explicit
-        const byName = QATAR_SITES.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
-        if (byName) return byName;
-
-        return null;
+    const locateWorker = async (): Promise<{ coords: { lat: number; lng: number; accuracy: number } | null; error: string }> => {
+        try {
+            return { coords: await getCoordinates(), error: '' };
+        } catch (err) {
+            return { coords: null, error: errorMessage(err, 'Location unavailable.') };
+        }
     };
 
     // =========================================================================
@@ -356,16 +293,22 @@ export default function WorkerPortal() {
     };
 
     const processCheckInQr = async (rawQr: string) => {
-        const site = identifyVenueFromQr(rawQr);
+        const { site, error: qrError } = await resolveVenue(rawQr);
         if (!site) {
-            setQrScanError("Invalid QR Code. This is not an authorized Mr. Valet venue QR code. Please scan the official poster.");
+            setQrScanError(qrError);
             setQrVerified(false);
             setDetectedSite(null);
             return;
         }
 
         // Verify device GPS coordinates
-        const coords = await getCoordinates();
+        const { coords, error: gpsError } = await locateWorker();
+        if (!coords) {
+            setQrScanError(gpsError);
+            setQrVerified(false);
+            setDetectedSite(null);
+            return;
+        }
         const dist = haversineDistance(coords.lat, coords.lng, site.lat, site.lng);
         setUserDistance(dist);
 
@@ -457,11 +400,10 @@ export default function WorkerPortal() {
             await fetchApi('/attendance/check-in', {
                 method: 'POST',
                 body: JSON.stringify({
-                    site_id: detectedSite.id,
                     latitude: coords.lat,
                     longitude: coords.lng,
                     accuracy: coords.accuracy,
-                    qr_data: scannedQrData || `MC:LOC:${detectedSite.id}`,
+                    qr_data: scannedQrData,
                     live_face_image: capturedSelfie
                 })
             });
@@ -575,9 +517,9 @@ export default function WorkerPortal() {
     };
 
     const processCheckoutQr = async (rawQr: string) => {
-        const site = identifyVenueFromQr(rawQr);
+        const { site, error: qrError } = await resolveVenue(rawQr);
         if (!site) {
-            setCheckoutQrError("Invalid QR code. Please scan the official Mr. Valet venue QR code poster.");
+            setCheckoutQrError(qrError);
             setCheckoutQrVerified(false);
             return;
         }
@@ -589,7 +531,12 @@ export default function WorkerPortal() {
         }
 
         // Verify device GPS coordinates
-        const coords = await getCoordinates();
+        const { coords, error: gpsError } = await locateWorker();
+        if (!coords) {
+            setCheckoutQrError(gpsError);
+            setCheckoutQrVerified(false);
+            return;
+        }
         const dist = haversineDistance(coords.lat, coords.lng, site.lat, site.lng);
         const allowedRadius = (site.radius || 100) + 50;
         if (dist > allowedRadius) {
@@ -670,18 +617,22 @@ export default function WorkerPortal() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            await fetchApi('/attendance/check-out', {
+            const record = await fetchApi('/attendance/check-out', {
                 method: 'POST',
                 body: JSON.stringify({
-                    site_id: detectedSite?.id,
                     latitude: coords.lat,
                     longitude: coords.lng,
                     accuracy: coords.accuracy,
-                    qr_data: checkoutQrData || `MC:LOC:${detectedSite?.id}`,
+                    qr_data: checkoutQrData,
                     live_face_image: checkoutSelfie
                 })
             });
 
+            // Hours as recorded by the server, the same figure billing uses
+            const hours = record?.check_in_time && record?.check_out_time
+                ? Math.max(0, (Date.parse(record.check_out_time) - Date.parse(record.check_in_time)) / 3600000)
+                : null;
+            setDutyHours(hours);
             setAttendanceStatus('CHECKED_OUT');
             setShiftEndTime(timeStr);
             setShowCheckoutStation(false);
@@ -691,7 +642,8 @@ export default function WorkerPortal() {
                 status: 'CHECKED_OUT',
                 site: detectedSite,
                 startTime: shiftStartTime,
-                endTime: timeStr
+                endTime: timeStr,
+                dutyHours: hours
             }));
 
             playSuccessChime();
@@ -857,11 +809,11 @@ export default function WorkerPortal() {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="bg-white p-2.5 rounded-xl border">
                                 <span className="text-gray-400 block text-[10px] uppercase font-bold">Venue</span>
-                                <strong className="text-gray-900 font-black">{detectedSite?.name || 'Fairmont Hotel'}</strong>
+                                <strong className="text-gray-900 font-black">{detectedSite?.name || 'your venue'}</strong>
                             </div>
                             <div className="bg-white p-2.5 rounded-xl border">
                                 <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Duty</span>
-                                <strong className="text-gray-900 font-black">9.0 Hours</strong>
+                                <strong className="text-gray-900 font-black">{formatDuty(dutyHours)}</strong>
                             </div>
                             <div className="bg-white p-2.5 rounded-xl border">
                                 <span className="text-gray-400 block text-[10px] uppercase font-bold">Shift Start</span>
@@ -989,21 +941,27 @@ export default function WorkerPortal() {
                                     </label>
                                 </div>
 
-                                {/* Quick Testing Shortcuts for Development / Testing on PC */}
-                                <div className="bg-gray-100/70 p-2 rounded-xl text-[11px] text-gray-600">
-                                    <div className="font-bold text-[10px] uppercase text-gray-500 mb-1">Quick Select Venue QR (Test Simulation)</div>
-                                    <div className="flex flex-wrap gap-1">
-                                        <button type="button" onClick={() => processCheckInQr("MC:LOC:27:FairmontHotel")} className="px-2 py-1 bg-white hover:bg-amber-50 border rounded text-[11px] font-bold text-gray-800">
-                                            Fairmont Hotel
-                                        </button>
-                                        <button type="button" onClick={() => processCheckInQr("MC:LOC:11:BananaIsland")} className="px-2 py-1 bg-white hover:bg-amber-50 border rounded text-[11px] font-bold text-gray-800">
-                                            Banana Island
-                                        </button>
-                                        <button type="button" onClick={() => processCheckInQr("MC:LOC:19:CityCenter")} className="px-2 py-1 bg-white hover:bg-amber-50 border rounded text-[11px] font-bold text-gray-800">
-                                            City Center
-                                        </button>
+                                {/* Development only: appears when the backend runs with ENVIRONMENT=development */}
+                                {testVenues.length > 0 && (
+                                    <div className="bg-gray-100/70 p-2 rounded-xl text-[11px] text-gray-600">
+                                        <div className="font-bold text-[10px] uppercase text-gray-500 mb-1">Test venues (development only)</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {testVenues.map(v => (
+                                                <button
+                                                    key={v.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        simulatedCoords.current = { lat: v.lat, lng: v.lng, accuracy: 10 };
+                                                        processCheckInQr(v.qr_data || '');
+                                                    }}
+                                                    className="px-2 py-1 bg-white hover:bg-amber-50 border rounded text-[11px] font-bold text-gray-800"
+                                                >
+                                                    {v.name}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
@@ -1231,14 +1189,21 @@ export default function WorkerPortal() {
                                             />
                                         </label>
                                     </div>
-                                    {/* Quick Simulation Button for Checkout */}
-                                    <button
-                                        type="button"
-                                        onClick={() => processCheckoutQr(scannedQrData || `MC:LOC:${detectedSite?.id}`)}
-                                        className="w-full py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold"
-                                    >
-                                        ⚡ Quick Verify {detectedSite?.name} QR (Simulate)
-                                    </button>
+                                    {/* Development only: re-use the test venue's QR text */}
+                                    {testVenues.some(v => v.id === detectedSite?.id) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const v = testVenues.find(t => t.id === detectedSite?.id);
+                                                if (!v?.qr_data) return;
+                                                simulatedCoords.current = { lat: v.lat, lng: v.lng, accuracy: 10 };
+                                                processCheckoutQr(v.qr_data);
+                                            }}
+                                            className="w-full py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold"
+                                        >
+                                            Test: verify {detectedSite?.name} QR (development only)
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -209,7 +209,7 @@ export default function AccountingSummary() {
                                                 {sup.total_duty_hours} hrs
                                             </td>
                                             <td className="px-5 py-4 text-right font-mono text-xs text-gray-600">
-                                                QAR {sup.billing_rate?.toFixed(2)}/hr
+                                                QAR {sup.billing_rate?.toFixed(2)}/shift
                                             </td>
                                             <td className="px-5 py-4 text-right font-black text-gray-900">
                                                 QAR {sup.daily_total_payable?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -261,7 +261,7 @@ export default function AccountingSummary() {
                                 <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                                     <tr>
                                         <th className="px-5 py-3 text-left">Supplier Agency</th>
-                                        <th className="px-5 py-3 text-left">Drivers Supplied</th>
+                                        <th className="px-5 py-3 text-left">Completed Shifts</th>
                                         <th className="px-5 py-3 text-left">Agreed Rate</th>
                                         <th className="px-5 py-3 text-left">Total Payables</th>
                                         <th className="px-5 py-3 text-right">Actions</th>
@@ -271,7 +271,7 @@ export default function AccountingSummary() {
                                     {summary.map((item) => (
                                         <tr key={item.supplier_id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-5 py-4 font-bold text-gray-900">{item.supplier_name}</td>
-                                            <td className="px-5 py-4 font-semibold text-gray-700">{item.workers_supplied} Drivers</td>
+                                            <td className="px-5 py-4 font-semibold text-gray-700">{item.workers_supplied} Shifts</td>
                                             <td className="px-5 py-4 text-gray-600 font-mono">QAR {item.billing_rate?.toFixed(2)}</td>
                                             <td className="px-5 py-4 font-black text-gray-900">
                                                 QAR {item.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}

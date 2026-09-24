@@ -1,25 +1,30 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, tryFetch } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { filterSitesForManager, filterRequestsForManager } from '@/lib/managerFilter';
 
 export default function OperationsDashboard() {
     const [requests, setRequests] = useState<any[]>([]);
     const [sites, setSites] = useState<any[]>([]);
     const [attendanceReport, setAttendanceReport] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
 
     const loadData = () => {
+        let failure = '';
+        const onError = (m: string) => { failure = m; };
         Promise.all([
-            fetchApi('/requests/').catch(() => []),
-            fetchApi('/sites/').catch(() => []),
-            fetchApi('/reports/attendance').catch(() => null)
+            tryFetch('/requests/', onError),
+            tryFetch('/sites/', onError),
+            tryFetch('/reports/attendance')
         ]).then(([reqs, s, att]) => {
-            setRequests(filterRequestsForManager(reqs || []));
-            setSites(filterSitesForManager(s || []));
-            setAttendanceReport(att);
+            // A failed refresh keeps what is already on screen
+            if (Array.isArray(reqs)) setRequests(reqs);
+            if (Array.isArray(s)) setSites(s);
+            if (att !== undefined) setAttendanceReport(att);
+            setLoadError(failure);
         }).finally(() => setLoading(false));
     };
 
@@ -43,6 +48,7 @@ export default function OperationsDashboard() {
 
     return (
         <div className="space-y-6">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Operations Control Center</h1>

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { fetchApi, broadcastPortalEvent } from '@/lib/api';
+import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -15,26 +16,35 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
     const [messages, setMessages] = useState<any[]>([]);
     const [newMsg, setNewMsg] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [sendingMsg, setSendingMsg] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'bids' | 'chat'>('bids');
 
     const loadData = async () => {
         try {
+            let failure = '';
+            const onError = (m: string) => { failure = m; };
             const [allReqs, allSups, allSites, msgs, reqResponses] = await Promise.all([
-                fetchApi('/requests/').catch(() => []),
-                fetchApi('/suppliers/').catch(() => []),
-                fetchApi('/sites/').catch(() => []),
-                fetchApi(`/requests/${requestId}/messages`).catch(() => []),
-                fetchApi(`/requests/${requestId}/responses`).catch(() => [])
+                tryFetch('/requests/', onError),
+                tryFetch('/suppliers/'),
+                tryFetch('/sites/'),
+                tryFetch(`/requests/${requestId}/messages`),
+                tryFetch(`/requests/${requestId}/responses`, onError)
             ]);
 
-            const current = (allReqs || []).find((r: any) => r.id.toString() === requestId);
-            setRequest(current);
-            setSuppliers(allSups || []);
-            setSites(allSites || []);
-            setMessages(msgs || []);
-            setResponses(reqResponses || []);
+            // Only a successful answer can change what is shown; a failed refresh keeps the request
+            if (Array.isArray(allReqs)) {
+                const current = allReqs.find((r: any) => r.id.toString() === requestId)
+                    ?? await tryFetch(`/requests/${requestId}`, onError);
+                if (current) setRequest(current);
+                else if (!failure) setRequest(undefined);
+            }
+            if (Array.isArray(allSups)) setSuppliers(allSups);
+            if (Array.isArray(allSites)) setSites(allSites);
+            if (Array.isArray(msgs)) setMessages(msgs);
+            if (Array.isArray(reqResponses)) setResponses(reqResponses);
+            setLoadError(failure);
         } catch (e) {
             console.error(e);
         } finally {
@@ -97,15 +107,21 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
     };
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading shift details...</div>;
-    if (!request) return <div className="p-8 text-center text-red-500">Request #{requestId} not found.</div>;
+    if (!request) return (
+        <div className="p-8 space-y-4 text-center">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
+            {!loadError && <div className="text-red-500">Request #{requestId} not found.</div>}
+        </div>
+    );
 
     const site = sites.find(s => s.id === request.site_id);
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <h1 className="text-2xl font-black text-gray-900">Shift Request #{request.id}</h1>
                         <StatusBadge status={request.status} />
                     </div>
@@ -113,7 +129,7 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                         {site?.name || 'Location'} • {request.required_date ? new Date(request.required_date).toLocaleDateString() : '-'}
                     </p>
                 </div>
-                <Link href="/operations/requests" className="text-sm text-gray-500 hover:text-gray-700 font-medium">
+                <Link href="/operations/requests" className="text-sm text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
                     ← Back to Requests
                 </Link>
             </div>
@@ -232,7 +248,7 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                                                 <span>Hours: <b className="font-mono">{resp.proposed_start_time} - {resp.proposed_end_time}</b></span>
                                             )}
                                             {sup?.billing_rate && (
-                                                <span>Billing: <b>QAR {sup.billing_rate}/hr</b></span>
+                                                <span>Billing: <b>QAR {sup.billing_rate}/shift</b></span>
                                             )}
                                         </div>
 

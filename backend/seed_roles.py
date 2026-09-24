@@ -15,19 +15,11 @@ def seed_roles():
         admin = session.query(User).filter(User.email == email).first()
         if not admin:
             session.add(User(email=email, password_hash=get_password_hash("devpass123"), role=RoleEnum.SUPER_ADMIN, name="Super Admin"))
-        else:
-            admin.password_hash = get_password_hash("devpass123")
-            admin.role = RoleEnum.SUPER_ADMIN
-            admin.status = "active"
             
     # 2. General Manager
     gm = session.query(User).filter(User.email == "gm@example.com").first()
     if not gm:
         session.add(User(email="gm@example.com", password_hash=get_password_hash("devpass123"), role=RoleEnum.GENERAL_MANAGER, name="General Manager"))
-    else:
-        gm.password_hash = get_password_hash("devpass123")
-        gm.role = RoleEnum.GENERAL_MANAGER
-        gm.status = "active"
         
     # 3. Ops Manager
     ops = session.query(User).filter(User.email == "ops@example.com").first()
@@ -36,15 +28,10 @@ def seed_roles():
         session.add(ops)
         session.commit()
         session.refresh(ops)
-    else:
-        ops.password_hash = get_password_hash("devpass123")
-        ops.role = RoleEnum.OPS_MANAGER
-        ops.status = "active"
-        session.commit()
         
-    # Ensure at least one site is assigned to this ops manager
+    # Give the demo ops manager a site only if that site has no manager yet
     site = session.query(Site).first()
-    if site:
+    if site and site.manager_id is None:
         site.manager_id = ops.id
         if not site.qr_token:
             site.qr_token = f"MC:LOC:{site.id}:{uuid.uuid4().hex}"
@@ -65,10 +52,6 @@ def seed_roles():
         session.add(supplier)
         session.commit()
         session.refresh(supplier)
-    else:
-        supplier.billing_rate = 45.0
-        supplier.status = "active"
-        session.commit()
         
     sup_head = session.query(User).filter(User.email == "supplier@example.com").first()
     if not sup_head:
@@ -80,11 +63,6 @@ def seed_roles():
             supplier_id=supplier.id,
             status="active"
         ))
-    else:
-        sup_head.password_hash = get_password_hash("devpass123")
-        sup_head.role = RoleEnum.SUPPLIER_HEAD
-        sup_head.supplier_id = supplier.id
-        sup_head.status = "active"
         
     # 5. Accounting Team User
     acct = session.query(User).filter(User.email == "accounting@example.com").first()
@@ -96,10 +74,6 @@ def seed_roles():
             name="Accounting Officer",
             status="active"
         ))
-    else:
-        acct.password_hash = get_password_hash("devpass123")
-        acct.role = RoleEnum.ACCOUNTING
-        acct.status = "active"
 
     # 6. Seed Sample Workers for Demo Agency
     worker_specs = [
@@ -137,11 +111,6 @@ def seed_roles():
             worker_id=first_worker.id,
             status="active"
         ))
-    else:
-        worker_user.password_hash = get_password_hash("devpass123")
-        worker_user.role = RoleEnum.OUTSOURCE_WORKER
-        worker_user.worker_id = first_worker.id
-        worker_user.status = "active"
         
     session.commit()
 

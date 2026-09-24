@@ -21,7 +21,7 @@ export default function AccountingInvoices() {
 
     const handleDownloadPdf = async (invoiceId: number, invoiceNum: string) => {
         try {
-            const res = await fetchApi(`/accounting/invoices/${invoiceId}/pdf`, {}, true);
+            const res = await fetchApi(`/accounting/invoices/${invoiceId}/download`, {}, true);
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');

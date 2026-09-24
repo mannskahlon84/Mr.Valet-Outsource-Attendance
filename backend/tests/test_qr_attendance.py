@@ -61,15 +61,24 @@ def test_qr_security_checks(client, db):
     assert res.status_code == 400
     assert "location QR" in res.json()["detail"]
     
+    # a2. Forged "MC:LOC:<site id>" text (not the printed token) -> rejected
+    res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.0, "longitude": 30.0, "accuracy": 10, "qr_data": f"MC:LOC:{site2['id']}", "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
+    assert res.status_code == 400
+    assert "location QR" in res.json()["detail"]
+
+    # a3. Junk QR with a site_id hint -> rejected
+    res = client.post("/api/v1/attendance/check-in", json={"site_id": site2["id"], "latitude": 30.0, "longitude": 30.0, "accuracy": 10, "qr_data": "FAKE_QR", "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
+    assert res.status_code == 400
+
     # b. Revoked QR -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.0, "longitude": 30.0, "accuracy": 10, "qr_data": qr_token_3, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
     assert res.status_code == 400
-    assert "location QR" in res.json()["detail"]
+    assert "no longer active" in res.json()["detail"]
     
     # c. QR from another location -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.0, "longitude": 30.0, "accuracy": 10, "qr_data": qr_token_1, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
     assert res.status_code == 403
-    assert "scheduled shift is at" in res.json()["detail"]
+    assert "confirmed shift at this location" in res.json()["detail"]
     
     # d. Correct QR + GPS outside geofence -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.01, "longitude": 30.01, "accuracy": 10, "qr_data": qr_token_2, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)

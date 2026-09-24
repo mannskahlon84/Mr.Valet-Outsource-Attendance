@@ -6,6 +6,7 @@ class CheckInRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
     site_id: Optional[int] = None
+    assignment_id: Optional[int] = None
     latitude: float
     longitude: float
     accuracy: float
@@ -17,6 +18,7 @@ class CheckOutRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
     site_id: Optional[int] = None
+    assignment_id: Optional[int] = None
     latitude: float
     longitude: float
     accuracy: float

@@ -12,9 +12,14 @@ from app.services.biometrics import extract_face_embedding, verify_face_match
 from app.services.liveness import verify_liveness
 from app.services.duplicate_identity import check_duplicate_identity
 from datetime import datetime, timezone
+from pydantic import BaseModel
+from app.core.config import settings
 import math
 
 router = APIRouter()
+
+# A shift is workable once the supplier accepted it or ops finalized it
+CONFIRMED_RESPONSE_STATUSES = ["ACCEPTED", "ACCEPTED_BY_OM"]
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     R = 6371000 # Earth radius in meters
@@ -26,6 +31,65 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+def resolve_site_from_qr(db: Session, qr_data: str) -> Site:
+    """The site whose current, active poster carries exactly this QR text."""
+    token = (qr_data or "").strip()
+    qr_site = db.query(Site).filter(Site.qr_token == token).first() if token else None
+    if not qr_site:
+        raise HTTPException(400, "Invalid location QR code. Please scan the QR code posted at your venue.")
+    if qr_site.status == "inactive" or qr_site.qr_status != "ACTIVE":
+        raise HTTPException(400, "This venue's QR code is no longer active. Ask your supervisor for the current poster.")
+    return qr_site
+
+
+def site_summary(site: Site) -> dict:
+    return {
+        "id": site.id,
+        "name": site.name,
+        "address": site.address,
+        "lat": site.latitude,
+        "lng": site.longitude,
+        "radius": site.geofence_radius_meters or 100.0,
+    }
+
+
+class QrLookup(BaseModel):
+    qr_data: str
+
+
+@router.post("/resolve-qr")
+def resolve_qr(req: QrLookup, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.OUTSOURCE_WORKER]))):
+    """Tells the worker app which venue a scanned poster belongs to, before check-in."""
+    return site_summary(resolve_site_from_qr(db, req.qr_data))
+
+
+@router.get("/test-venues")
+def test_venues(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.OUTSOURCE_WORKER]))):
+    """Development only: today's confirmed venues for this worker's agency, with their QR text,
+    so check-in can be tried without a printed poster. Disabled when ENVIRONMENT is not development."""
+    if settings.ENVIRONMENT != "development":
+        raise HTTPException(404, "Not found")
+    worker = db.query(Worker).filter(Worker.id == current_user.worker_id).first()
+    if not worker:
+        return []
+    today = datetime.now(timezone.utc).date()
+    rows = db.query(Site).join(ManpowerRequest, ManpowerRequest.site_id == Site.id).join(
+        SupplierResponse, SupplierResponse.manpower_request_id == ManpowerRequest.id
+    ).filter(
+        SupplierResponse.supplier_id == worker.supplier_id,
+        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES),
+        ManpowerRequest.status != "CANCELLED",
+        Site.qr_status == "ACTIVE",
+    ).all()
+    sites = {s.id: s for s in rows}.values()
+    venues = []
+    for s in sites:
+        has_today = any(m.required_date.date() == today for m in db.query(ManpowerRequest).filter(ManpowerRequest.site_id == s.id).all())
+        if has_today:
+            venues.append({**site_summary(s), "qr_data": s.qr_token})
+    return venues
+
+
 @router.post("/check-in", response_model=AttendanceResponse)
 def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.OUTSOURCE_WORKER]))):
     # Check GPS Accuracy
@@ -33,20 +97,8 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "accuracy", "val": req.accuracy})
         raise HTTPException(400, "Unable to verify your current location.")
         
-    # Check QR validity
-    qr_site = db.query(Site).filter(Site.qr_token == req.qr_data).first()
-    if not qr_site and req.qr_data.startswith("MC:LOC:"):
-        parts = req.qr_data.split(":")
-        if len(parts) >= 3 and parts[2].isdigit():
-            qr_site = db.query(Site).filter(Site.id == int(parts[2])).first()
-
-    if not qr_site and req.site_id:
-        qr_site = db.query(Site).filter(Site.id == req.site_id).first()
-
-    if not qr_site:
-        raise HTTPException(400, "Invalid location QR code. Please scan the QR code posted at your venue.")
-    if qr_site.status == "inactive" or qr_site.qr_status != "ACTIVE":
-        raise HTTPException(400, "Location or QR code is inactive.")
+    # Check QR validity: only the exact token printed on the venue's current poster counts
+    qr_site = resolve_site_from_qr(db, req.qr_data)
         
     assignment_site = qr_site
 
@@ -65,7 +117,7 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         sr = db.query(SupplierResponse).filter(
             SupplierResponse.manpower_request_id == req_mr.id,
             SupplierResponse.supplier_id == worker.supplier_id,
-            SupplierResponse.status == "ACCEPTED"
+            SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES)
         ).first()
         if sr:
             mr = req_mr
@@ -121,8 +173,10 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "face_extraction_failed"})
         raise HTTPException(400, f"Face detection failed: {str(e)}")
         
-    # 3. 1:1 Match against enrolled identity
-    if not worker.face_embedding:
+    # 3. 1:1 Match against enrolled identity (skipped when no face engine is installed)
+    if live_embedding is None:
+        pass
+    elif not worker.face_embedding:
         # Enrolls this face identity for this worker on initial check-in
         worker.face_embedding = json.dumps(live_embedding)
         db.add(worker)
@@ -139,7 +193,9 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
             raise HTTPException(400, "Face verification failed! This selfie does not match the registered employee. Proxy check-in is not permitted.")
         
     # 4. Duplicate Identity Check (Anti-Cheating across other workers today)
-    is_unique, msg = check_duplicate_identity(db, live_embedding, worker.id, qr_site.id)
+    is_unique = True
+    if live_embedding is not None:
+        is_unique, msg = check_duplicate_identity(db, live_embedding, worker.id, qr_site.id)
     if not is_unique:
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "duplicate_identity"})
         raise HTTPException(400, "Attendance has already been recorded for this identity today under another worker profile.")
@@ -154,14 +210,14 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
     att.check_in_lng = req.longitude
     att.check_in_accuracy = req.accuracy
     att.check_in_qr_id = qr_site.id
-    att.check_in_verification_method = "QR_GPS_FACE"
+    att.check_in_verification_method = "QR_GPS_FACE" if live_embedding is not None else "QR_GPS_SELFIE"
     att.device_info = req.device_info
     att.status = "CHECKED_IN"
-    att.check_in_face_embedding = json.dumps(live_embedding)
+    att.check_in_face_embedding = json.dumps(live_embedding) if live_embedding is not None else None
     
     # Record biometrics
-    att.face_verified = True
-    att.liveness_score = l_score
+    att.face_verified = live_embedding is not None
+    att.liveness_score = l_score if live_embedding is not None else None
     
     # Notify Supplier Head & Operations Manager
     w_name = f"{worker.first_name} {worker.last_name}"
@@ -196,7 +252,19 @@ def check_out(req: CheckOutRequest, db: Session = Depends(get_db), current_user:
     if req.accuracy > 100:
         raise HTTPException(400, "Unable to verify your current location.")
         
-    wa = db.query(WorkerAssignment).filter(WorkerAssignment.id == req.assignment_id).first()
+    if req.assignment_id is not None:
+        wa = db.query(WorkerAssignment).filter(WorkerAssignment.id == req.assignment_id).first()
+    else:
+        # Close the worker's open shift: checked in, not yet checked out
+        wa = db.query(WorkerAssignment).join(
+            Attendance, Attendance.worker_assignment_id == WorkerAssignment.id
+        ).filter(
+            WorkerAssignment.worker_id == current_user.worker_id,
+            Attendance.check_in_time.isnot(None),
+            Attendance.check_out_time.is_(None)
+        ).order_by(Attendance.check_in_time.desc()).first()
+        if not wa:
+            raise HTTPException(400, "You have not checked in for this shift yet.")
     if not wa or wa.worker_id != current_user.worker_id:
         raise HTTPException(403, "You are not assigned to this location.")
         
@@ -207,14 +275,7 @@ def check_out(req: CheckOutRequest, db: Session = Depends(get_db), current_user:
         raise HTTPException(400, "Location is inactive")
 
     # QR validity
-    qr_site = db.query(Site).filter(Site.qr_token == req.qr_data).first()
-    if not qr_site and req.qr_data.startswith("MC:LOC:"):
-        parts = req.qr_data.split(":")
-        if len(parts) >= 3 and parts[2].isdigit():
-            qr_site = db.query(Site).filter(Site.id == int(parts[2])).first()
-
-    if not qr_site or qr_site.qr_status != "ACTIVE":
-        raise HTTPException(400, "Invalid location QR code.")
+    qr_site = resolve_site_from_qr(db, req.qr_data)
         
     # Site match
     if qr_site.id != assignment_site.id:
@@ -261,7 +322,7 @@ def check_out(req: CheckOutRequest, db: Session = Depends(get_db), current_user:
         except Exception:
             pass
 
-    if reference_embedding:
+    if reference_embedding and live_embedding is not None:
         is_match, similarity = verify_face_match(live_embedding, reference_embedding)
         if not is_match:
             raise HTTPException(400, "Check-out face does not match the employee who clocked in today! Proxy check-out prohibited.")
@@ -271,7 +332,7 @@ def check_out(req: CheckOutRequest, db: Session = Depends(get_db), current_user:
     att.check_out_lng = req.longitude
     att.check_out_accuracy = req.accuracy
     att.check_out_qr_id = qr_site.id
-    att.check_out_verification_method = "QR_GPS_FACE"
+    att.check_out_verification_method = "QR_GPS_FACE" if live_embedding is not None else "QR_GPS_SELFIE"
     att.status = "CHECKED_OUT"
     
     # Notify Supplier Head & Operations Manager

@@ -61,7 +61,11 @@ def get_sites(
     query = db.query(Site)
     if current_user.role == RoleEnum.OPS_MANAGER:
         query = query.filter(Site.manager_id == current_user.id)
-    return query.order_by(Site.name.asc()).offset(skip).limit(limit).all()
+    sites = query.order_by(Site.name.asc()).offset(skip).limit(limit).all()
+    if current_user.role == RoleEnum.SUPER_ADMIN:
+        return sites
+    # Only Super Admin prints posters; anyone else holding the token could check workers in remotely
+    return [SiteResponse.model_validate(site).model_copy(update={"qr_token": None}) for site in sites]
 
 @router.patch("/{site_id}/status", response_model=SiteResponse)
 def change_site_status(site_id: int, status: str = Query(...), db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.OPS_MANAGER]))):

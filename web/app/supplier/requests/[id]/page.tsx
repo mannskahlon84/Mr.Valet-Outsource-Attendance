@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { fetchApi, broadcastPortalEvent } from '@/lib/api';
+import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function SupplierRequestDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -14,6 +15,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
             const [messages, setMessages] = useState<any[]>([]);
     const [newMsg, setNewMsg] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [submittingResp, setSubmittingResp] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
     const [activeTab, setActiveTab] = useState<'response' | 'assign' | 'chat'>('response');
@@ -28,24 +30,29 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
 
     const loadData = async () => {
         try {
+            let failure = '';
+            const onError = (m: string) => { failure = m; };
             const [allReqs, allSites, myResponses, myWorkers, msgs] = await Promise.all([
-                fetchApi('/requests/supplier').catch(() => fetchApi('/requests/').catch(() => [])),
-                fetchApi('/sites/').catch(() => []),
-                fetchApi('/requests/supplier-responses').catch(() => []),
-                fetchApi('/workers/').catch(() => []),
-                fetchApi(`/requests/${requestId}/messages`).catch(() => [])
+                tryFetch('/requests/supplier', onError),
+                tryFetch('/sites/'),
+                tryFetch('/requests/supplier-responses', onError),
+                tryFetch('/workers/'),
+                tryFetch(`/requests/${requestId}/messages`)
             ]);
+            setLoadError(failure);
+            // A failed refresh keeps everything already on screen (including the open request)
+            if (!Array.isArray(allReqs) || !Array.isArray(myResponses)) return;
 
-            let current = (allReqs || []).find((r: any) => r.id.toString() === requestId);
+            let current = allReqs.find((r: any) => r.id.toString() === requestId);
             if (!current) {
-                current = await fetchApi(`/requests/${requestId}`).catch(() => null);
+                current = await tryFetch(`/requests/${requestId}`, setLoadError);
             }
             setRequest(current);
-            setSites(allSites || []);
+            if (Array.isArray(allSites)) setSites(allSites);
             
-            setMessages(msgs || []);
+            if (Array.isArray(msgs)) setMessages(msgs);
 
-            const resp = (myResponses || []).find((r: any) => r.manpower_request_id?.toString() === requestId || r.request_id?.toString() === requestId);
+            const resp = myResponses.find((r: any) => r.manpower_request_id?.toString() === requestId || r.request_id?.toString() === requestId);
             setMyResponse(resp);
 
             const defaultQuota = resp?.requested_quantity || current?.requested_quantity || current?.total_required_workers || '1';
@@ -148,15 +155,21 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
 
     
     if (loading) return <div className="p-8 text-center text-gray-500">Loading request details...</div>;
-    if (!request) return <div className="p-8 text-center text-red-500">Shift request #{requestId} not found.</div>;
+    if (!request) return (
+        <div className="p-8 space-y-4 text-center">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
+            {!loadError && <div className="text-red-500">Shift request #{requestId} not found.</div>}
+        </div>
+    );
 
     const site = sites.find(s => s.id === request.site_id) || { name: request.site_name, address: request.site_address };
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <h1 className="text-2xl font-black text-gray-900">Shift Request #{request.id}</h1>
                         <StatusBadge status={myResponse?.status || request.status} />
                     </div>
@@ -164,7 +177,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         {site?.name || 'Location'} • {request.required_date ? new Date(request.required_date).toLocaleDateString() : '-'}
                     </p>
                 </div>
-                <Link href="/supplier/requests" className="text-sm text-gray-500 hover:text-gray-700 font-medium">
+                <Link href="/supplier/requests" className="text-sm text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
                     ← Back to Shift Requests
                 </Link>
             </div>

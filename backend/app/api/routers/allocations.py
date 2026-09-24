@@ -15,10 +15,20 @@ def allocate_workers(response_id: int, req: WorkerAllocation, db: Session = Depe
     if sr.supplier_id != current_user.supplier_id: raise HTTPException(403, "Not your response")
     
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
+    if mr.status == "CANCELLED":
+        raise HTTPException(400, "Request is cancelled")
+    if sr.status not in ["ACCEPTED", "ACCEPTED_BY_OM"]:
+        raise HTTPException(400, "Workers can only be assigned once the shift is confirmed.")
     
-    # Check total unique worker count against confirmed quantity
-    if len(set(req.worker_ids)) > sr.confirmed_quantity:
-        raise HTTPException(400, "Cannot allocate more workers than confirmed quantity")
+    # Everyone already on this response counts toward the confirmed quantity
+    already_assigned = {
+        wa.worker_id for wa in db.query(WorkerAssignment).filter(
+            WorkerAssignment.supplier_response_id == sr.id,
+            WorkerAssignment.status == "ASSIGNED"
+        ).all()
+    }
+    if len(already_assigned | set(req.worker_ids)) > sr.confirmed_quantity:
+        raise HTTPException(400, f"Cannot allocate more workers than confirmed quantity ({sr.confirmed_quantity}); {len(already_assigned)} already assigned.")
         
     try:
         # Prevent concurrent allocation: we process sequentially with basic overlap checks.

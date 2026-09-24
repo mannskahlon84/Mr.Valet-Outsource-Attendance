@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict, field_validator
+from datetime import datetime, timezone
 from typing import Optional, Any
 
 class NotificationResponse(BaseModel):
@@ -14,4 +14,10 @@ class NotificationResponse(BaseModel):
     entity_id: Optional[Any] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("created_at")
+    @classmethod
+    def stored_as_utc(cls, value: datetime) -> datetime:
+        # Rows are saved with naive UTC; say so, or browsers read them as local (Qatar) time
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 

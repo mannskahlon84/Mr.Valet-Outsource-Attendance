@@ -99,7 +99,6 @@ def get_today_assignment(db: Session = Depends(get_db), current_user: User = Dep
         "site_lat": site.latitude,
         "site_lng": site.longitude,
         "site_radius": site.geofence_radius_meters or 100.0,
-        "qr_token": site.qr_token,
         "attendance_status": att_status,
         "check_in_time": check_in_time,
         "check_out_time": check_out_time

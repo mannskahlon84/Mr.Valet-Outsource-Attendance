@@ -3,7 +3,8 @@ import io
 from app.models.all_models import Supplier, Worker, Site
 
 def get_auth_token(client, db, email="admin@example.com", password="password"):
-    res = client.post("/api/v1/auth/login", data={"username": email, "password": password})
+    # client_id is the device ID; workers need one to log in, other roles ignore it
+    res = client.post("/api/v1/auth/login", data={"username": email, "password": password, "client_id": "pytest-device"})
     if res.status_code != 200:
         from app.models.all_models import User, RoleEnum
         from app.core.security import get_password_hash
@@ -15,7 +16,8 @@ def get_auth_token(client, db, email="admin@example.com", password="password"):
             user = User(email=email, password_hash=get_password_hash(password), role=RoleEnum.SUPER_ADMIN, status="active")
             db.add(user)
         db.commit()
-        res = client.post("/api/v1/auth/login", data={"username": email, "password": password})
+        # client_id is the device ID; workers need one to log in, other roles ignore it
+    res = client.post("/api/v1/auth/login", data={"username": email, "password": password, "client_id": "pytest-device"})
     return res.json()["access_token"]
 
 

@@ -18,6 +18,10 @@ class Settings(BaseSettings):
             self.SECRET_KEY = self.JWT_SECRET_KEY
         if self.DATABASE_URL.startswith("postgres://"):
             self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if self.ENVIRONMENT == "production" and self.DATABASE_URL.startswith("sqlite"):
+            # A SQLite file on a hosted server is wiped on every restart/redeploy, taking all
+            # requests and attendance with it. Refuse to start instead of silently losing data.
+            raise ValueError("DATABASE_URL must point to PostgreSQL when ENVIRONMENT=production.")
         return self
 
     class Config:

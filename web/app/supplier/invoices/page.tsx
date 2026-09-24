@@ -15,7 +15,7 @@ export default function SupplierInvoices() {
 
     const handleDownloadPdf = async (invoiceId: number, invoiceNum: string) => {
         try {
-            const res = await fetchApi(`/accounting/invoices/${invoiceId}/pdf`, {}, true);
+            const res = await fetchApi(`/accounting/invoices/${invoiceId}/download`, {}, true);
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -96,7 +96,7 @@ export default function SupplierInvoices() {
                             <tr>
                                 <th className="px-5 py-3 text-left">Invoice #</th>
                                 <th className="px-5 py-3 text-left">Billing Month</th>
-                                <th className="px-5 py-3 text-left">Drivers Supplied</th>
+                                <th className="px-5 py-3 text-left">Completed Shifts</th>
                                 <th className="px-5 py-3 text-left">Rate</th>
                                 <th className="px-5 py-3 text-left">Total Payable</th>
                                 <th className="px-5 py-3 text-left">Status</th>

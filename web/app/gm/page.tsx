@@ -99,7 +99,7 @@ export default function GMDashboard() {
                                     <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
                                         <div className="bg-[#dbb457] h-full rounded-full" style={{ width: `${pct}%` }} />
                                     </div>
-                                    <div className="text-[11px] text-gray-400">{s.workers_supplied} drivers supplied • Rate: QAR {s.billing_rate}/hr</div>
+                                    <div className="text-[11px] text-gray-400">{s.workers_supplied} completed shifts • Rate: QAR {s.billing_rate}/shift</div>
                                 </div>
                             );
                         })}

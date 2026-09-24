@@ -29,7 +29,7 @@ export default function GMFinancials() {
 
     const handleDownloadPdf = async (invoiceId: number, invoiceNum: string) => {
         try {
-            const res = await fetchApi(`/accounting/invoices/${invoiceId}/pdf`, {}, true);
+            const res = await fetchApi(`/accounting/invoices/${invoiceId}/download`, {}, true);
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -177,7 +177,7 @@ export default function GMFinancials() {
                                                 </span>
                                             </td>
                                             <td className="px-5 py-4 text-center font-mono font-bold text-gray-900">{sup.total_duty_hours} hrs</td>
-                                            <td className="px-5 py-4 text-right font-mono text-xs text-gray-600">QAR {sup.billing_rate?.toFixed(2)}/hr</td>
+                                            <td className="px-5 py-4 text-right font-mono text-xs text-gray-600">QAR {sup.billing_rate?.toFixed(2)}/shift</td>
                                             <td className="px-5 py-4 text-right font-black text-gray-900">
                                                 QAR {sup.daily_total_payable?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>

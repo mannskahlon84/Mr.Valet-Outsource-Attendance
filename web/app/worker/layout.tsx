@@ -1,4 +1,5 @@
 "use client";
+import { logout } from '@/lib/api';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -12,15 +13,6 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
         setName(sessionStorage.getItem('name') || 'Outsource Driver');
     }, []);
 
-    const logout = () => {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('role');
-        sessionStorage.removeItem('role_display');
-        sessionStorage.removeItem('name');
-        document.cookie = 'token=; Max-Age=0; path=/';
-        document.cookie = 'role=; Max-Age=0; path=/';
-        router.push('/login');
-    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">

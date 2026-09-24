@@ -53,10 +53,10 @@ export default function GMSuppliers() {
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-2 text-xs">
                                 <div className="flex justify-between">
                                     <span className="text-gray-500">Contract Rate:</span>
-                                    <span className="font-bold text-gray-900">QAR {s.billing_rate?.toFixed(2)}/hr</span>
+                                    <span className="font-bold text-gray-900">QAR {s.billing_rate?.toFixed(2)}/shift</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-gray-500">Drivers Supplied (MTD):</span>
+                                    <span className="text-gray-500">Completed Shifts (MTD):</span>
                                     <span className="font-bold text-gray-900">{suppliedCount} Drivers</span>
                                 </div>
                                 <div className="flex justify-between">

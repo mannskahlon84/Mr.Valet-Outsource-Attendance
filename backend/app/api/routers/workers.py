@@ -80,7 +80,7 @@ class QidValidationRequest(BaseModel):
     qid: str
 
 @router.post("/validate-qid")
-def validate_qid_endpoint(req: QidValidationRequest, db: Session = Depends(get_db)):
+def validate_qid_endpoint(req: QidValidationRequest, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.SUPPLIER_HEAD]))):
     """
     Real-time endpoint for frontend forms to check QID validity, extract nationality/age,
     and verify whether it is already registered under another supplier.
@@ -104,7 +104,6 @@ def validate_qid_endpoint(req: QidValidationRequest, db: Session = Depends(get_d
             "error_message": f"This employee is already registered under supplier '{sup_name}'. Only Super Admin can delete or release this employee.",
             "already_registered": True,
             "existing_supplier": sup_name,
-            "worker_name": f"{existing.first_name} {existing.last_name}",
             "birth_year": result.get("birth_year"),
             "age": result.get("age"),
             "nationality": result.get("nationality")
@@ -211,7 +210,10 @@ def verify_registration_otp(verify_in: OtpVerify, db: Session = Depends(get_db),
 
 
 @router.post("/dev/add_dummy_workers")
-def dev_add_dummy_workers(db: Session = Depends(get_db)):
+def dev_add_dummy_workers(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN]))):
+    from app.core.config import settings
+    if settings.ENVIRONMENT != "development":
+        raise HTTPException(404, "Not found")
     import random
     import string
     import uuid

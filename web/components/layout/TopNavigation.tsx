@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 import { useState } from 'react';
-import { API_URL, fetchApi } from '@/lib/api';
+import { API_URL, fetchApi, logout } from '@/lib/api';
 
 function normalizeRole(role?: string): string {
     if (!role) return '';
@@ -32,15 +32,6 @@ export default function TopNavigation({
     const [showSwitcher, setShowSwitcher] = useState(false);
     const [switching, setSwitching] = useState(false);
 
-    const logout = () => {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('role');
-        sessionStorage.removeItem('role_display');
-        sessionStorage.removeItem('name');
-        document.cookie = 'token=; Max-Age=0; path=/';
-        document.cookie = 'role=; Max-Age=0; path=/';
-        router.push('/login');
-    };
 
     const switchUser = async (userToAuth: string, passToAuth: string = 'devpass123') => {
         setSwitching(true);

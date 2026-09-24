@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
-import { filterSitesForManager } from '@/lib/managerFilter';
 
 interface RouteAllocation {
     supplier_id: string;
@@ -69,7 +68,7 @@ export default function NewShiftRequest() {
             fetchApi('/sites/').catch(() => []),
             fetchApi('/suppliers/').catch(() => [])
         ]).then(([s, sup]) => {
-            const mySites = filterSitesForManager(s || []);
+            const mySites = s || [];
             setSites(mySites);
             setSuppliers(sup || []);
             if (mySites && mySites.length > 0) setSiteId(mySites[0].id.toString());
@@ -289,7 +288,7 @@ export default function NewShiftRequest() {
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Dispatch Manpower Request</h1>
                     <p className="text-sm text-gray-500">
@@ -298,7 +297,7 @@ export default function NewShiftRequest() {
                 </div>
                 <Link 
                     href="/operations/requests" 
-                    className="text-sm text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="self-start whitespace-nowrap text-sm text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                 >
                     ← Back to Requests
                 </Link>

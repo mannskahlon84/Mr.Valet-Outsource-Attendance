@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL } from '@/lib/api';
+import { fetchApi, API_URL, downloadFile } from '@/lib/api';
 
 export default function AccountingAudit() {
     const [report, setReport] = useState<any>(null);
@@ -26,7 +26,7 @@ export default function AccountingAudit() {
                     <p className="text-sm text-gray-500">Cross-reference biometric check-in timestamps with contractor billing records</p>
                 </div>
                 <button 
-                    onClick={() => window.open(`${API_URL}/reports/attendance/export/excel?token=` + sessionStorage.getItem('token'), '_blank')}
+                    onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`)}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
                 >
                     Export Audit Spreadsheet

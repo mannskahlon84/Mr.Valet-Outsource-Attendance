@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, tryFetch } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function SupplierDashboard() {
@@ -11,20 +12,25 @@ export default function SupplierDashboard() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [liveAttendance, setLiveAttendance] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
 
     const loadData = useCallback(() => {
+        let failure = '';
+        const onError = (m: string) => { failure = m; };
         Promise.all([
-            fetchApi('/requests/supplier').catch(() => fetchApi('/requests/').catch(() => [])),
-            fetchApi('/workers/').catch(() => []),
-            fetchApi('/notifications/').catch(() => []),
-            fetchApi('/accounting/invoices').catch(() => []),
-            fetchApi('/attendance/supplier-live').catch(() => [])
+            tryFetch('/requests/supplier', onError),
+            tryFetch('/workers/', onError),
+            tryFetch('/notifications/'),
+            tryFetch('/accounting/invoices'),
+            tryFetch('/attendance/supplier-live')
         ]).then(([reqs, wrks, notifs, invs, live]) => {
-            setRequests(reqs || []);
-            setWorkers(wrks || []);
-            setNotifications(notifs || []);
-            setInvoices(invs || []);
-            setLiveAttendance(live || []);
+            // A failed refresh keeps what is already on screen
+            if (Array.isArray(reqs)) setRequests(reqs);
+            if (Array.isArray(wrks)) setWorkers(wrks);
+            if (Array.isArray(notifs)) setNotifications(notifs);
+            if (Array.isArray(invs)) setInvoices(invs);
+            if (Array.isArray(live)) setLiveAttendance(live);
+            setLoadError(failure);
         }).finally(() => setLoading(false));
     }, []);
 
@@ -54,6 +60,7 @@ export default function SupplierDashboard() {
 
     return (
         <div className="space-y-6">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Agency Dispatch Portal</h1>

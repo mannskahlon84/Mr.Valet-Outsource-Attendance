@@ -1,17 +1,24 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, tryFetch } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function SupplierRequests() {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
 
     const loadData = useCallback(() => {
-        fetchApi('/requests/supplier')
-            .catch(() => fetchApi('/requests/').catch(() => []))
-            .then(data => setRequests(data || []))
+        tryFetch('/requests/supplier', setLoadError)
+            .then(data => {
+                // A failed refresh keeps the requests already on screen
+                if (Array.isArray(data)) {
+                    setRequests(data);
+                    setLoadError('');
+                }
+            })
             .finally(() => setLoading(false));
     }, []);
 
@@ -33,6 +40,7 @@ export default function SupplierRequests() {
 
     return (
         <div className="space-y-6">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Incoming Shift Requests</h1>

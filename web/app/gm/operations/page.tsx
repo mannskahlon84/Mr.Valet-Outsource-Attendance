@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL } from '@/lib/api';
+import { fetchApi, API_URL, downloadFile, tryFetch } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function GMOperations() {
@@ -10,20 +11,27 @@ export default function GMOperations() {
     const [attendance, setAttendance] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'locations' | 'requests'>('locations');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
 
-    useEffect(() => {
+    const loadData = () => {
+        let failure = '';
+        const onError = (m: string) => { failure = m; };
         Promise.all([
-            fetchApi('/requests/').catch(() => []),
-            fetchApi('/sites/').catch(() => []),
-            fetchApi('/attendance/location-shifts').catch(() => []),
-            fetchApi('/reports/attendance').catch(() => null)
+            tryFetch('/requests/', onError),
+            tryFetch('/sites/', onError),
+            tryFetch('/attendance/location-shifts', onError),
+            tryFetch('/reports/attendance')
         ]).then(([reqs, sit, locs, att]) => {
-            setRequests(reqs || []);
-            setSites(sit || []);
-            setLocationShifts(locs || []);
-            setAttendance(att);
+            // A failed refresh keeps what is already on screen
+            if (Array.isArray(reqs)) setRequests(reqs);
+            if (Array.isArray(sit)) setSites(sit);
+            if (Array.isArray(locs)) setLocationShifts(locs);
+            if (att !== undefined) setAttendance(att);
+            setLoadError(failure);
         }).finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { loadData(); }, []);
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading operations coverage...</div>;
 
@@ -33,13 +41,14 @@ export default function GMOperations() {
 
     return (
         <div className="space-y-6">
+            <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Operational Coverage & Shifts</h1>
                     <p className="text-sm text-gray-500">Company-wide valet dispatch requests and active location coverage</p>
                 </div>
                 <button 
-                    onClick={() => window.open(`${API_URL}/reports/attendance/export/excel?token=` + sessionStorage.getItem('token'), '_blank')}
+                    onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`)}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
                 >
                     Export Attendance Excel

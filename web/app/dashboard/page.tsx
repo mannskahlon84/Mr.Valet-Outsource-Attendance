@@ -55,10 +55,10 @@ export default function Dashboard() {
                     {stats.top_locations.length > 0 ? (
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats.top_locations} layout="vertical" margin={{ left: 20, right: 20 }}>
+                                <BarChart data={stats.top_locations} layout="vertical" margin={{ left: 0, right: 16 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                     <XAxis type="number" />
-                                    <YAxis dataKey="name" type="category" width={100} />
+                                    <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 12 }} tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 17) + '…' : v)} />
                                     <Tooltip />
                                     <Bar dataKey="count" fill="#dbb457" radius={[0, 4, 4, 0]} />
                                 </BarChart>

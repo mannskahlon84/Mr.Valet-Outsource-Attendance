@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi } from '@/lib/api';
+import { fetchApi, tryFetch } from '@/lib/api';
+import LoadErrorBar from '@/components/ui/LoadErrorBar';
 
 export default function Requests() {
     const [requests, setRequests] = useState([]);
     const [sites, setSites] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [role, setRole] = useState('');
 
@@ -16,7 +18,10 @@ export default function Requests() {
     }]);
                     
     const loadData = () => {
-        fetchApi('/requests/').then(setRequests).finally(() => setLoading(false));
+        // A failed refresh keeps the requests already on screen
+        tryFetch<never[]>('/requests/', setLoadError).then(data => {
+            if (Array.isArray(data)) { setRequests(data); setLoadError(''); }
+        }).finally(() => setLoading(false));
         fetchApi('/sites/').then(setSites).catch(() => {});
         fetchApi('/suppliers/').then(setSuppliers).catch(() => {});
     };
@@ -62,6 +67,7 @@ export default function Requests() {
 
     return (
         <div>
+            <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold text-gray-800">Manpower Requests</h1>
                 {role !== "General Manager" && role !== "Supplier Head" && (

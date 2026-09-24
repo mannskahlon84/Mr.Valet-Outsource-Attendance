@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL } from '@/lib/api';
-import { filterLocationShiftsForManager } from '@/lib/managerFilter';
+import { fetchApi, API_URL, downloadFile } from '@/lib/api';
 
 export default function OperationsAttendance() {
     const [report, setReport] = useState<any>(null);
@@ -19,7 +18,7 @@ export default function OperationsAttendance() {
         ]).then(([rep, exc, locs]) => {
             setReport(rep);
             setExceptions(exc || []);
-            setLocationShifts(filterLocationShiftsForManager(locs || []));
+            setLocationShifts(locs || []);
         }).finally(() => setLoading(false));
     };
 
@@ -69,13 +68,13 @@ export default function OperationsAttendance() {
                         Live Sync
                     </span>
                     <button 
-                        onClick={() => window.open(`${API_URL}/reports/attendance/export/excel?token=` + sessionStorage.getItem('token'), '_blank')}
+                        onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`)}
                         className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors text-center"
                     >
                         Export Excel
                     </button>
                     <button 
-                        onClick={() => window.open(`${API_URL}/reports/attendance/export/pdf?token=` + sessionStorage.getItem('token'), '_blank')}
+                        onClick={() => downloadFile('/reports/attendance/export/pdf', `attendance-${new Date().toISOString().slice(0, 10)}.pdf`)}
                         className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors text-center"
                     >
                         Export PDF

@@ -14,7 +14,7 @@ export default function CustomInvoicing() {
     const [supplierId, setSupplierId] = useState('');
     const [siteId, setSiteId] = useState('');
     const [priceRate, setPriceRate] = useState('45.00');
-    const [rateUnit, setRateUnit] = useState('PER_HOUR');
+    const [rateUnit, setRateUnit] = useState('PER_DAY');
 
     useEffect(() => {
         // Default to current month range
@@ -151,9 +151,9 @@ export default function CustomInvoicing() {
                             required
                             className="w-full border border-gray-300 bg-white p-2 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
                         >
-                            <option value="PER_HOUR">Per Hour (QAR / hr)</option>
-                            <option value="PER_DAY">Per Day (QAR / day)</option>
-                            <option value="PER_EMPLOYEE">Per Employee (QAR / employee)</option>
+                            <option value="PER_HOUR">Per Hour worked (QAR / hr)</option>
+                            <option value="PER_DAY">Per Completed Shift (QAR / shift)</option>
+                            <option value="PER_EMPLOYEE">Per Employee who worked (QAR / employee)</option>
                         </select>
                         <span className="text-[10px] text-gray-400 mt-0.5 block">Calculation basis for this invoice</span>
                     </div>

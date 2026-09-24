@@ -8,6 +8,51 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL
         : (process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:8000/api/v1'));
 
 
+/**
+ * Loads data for a page without ever blanking it: on failure it returns undefined and reports
+ * why, so the page keeps what it already shows instead of replacing it with an empty list.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function tryFetch<T = any>(endpoint: string, onError?: (message: string) => void): Promise<T | undefined> {
+    try {
+        return await fetchApi(endpoint);
+    } catch (err) {
+        onError?.((err instanceof Error && err.message) || 'Could not load the latest data.');
+        return undefined;
+    }
+}
+
+/** Downloads a file from an authenticated endpoint (the token goes in the header, never the URL). */
+export async function downloadFile(endpoint: string, filename: string) {
+    try {
+        const res = await fetchApi(endpoint, {}, true);
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        alert((err instanceof Error && err.message) || 'Download failed. Please try again.');
+    }
+}
+
+/** Revokes the session on the server, then clears it from this browser. */
+export async function logout() {
+    try {
+        await fetchApi('/auth/logout', { method: 'POST' });
+    } catch (e) {
+        // Already expired or offline: still clear the local session
+    }
+    sessionStorage.clear();
+    document.cookie = 'token=; Max-Age=0; path=/';
+    document.cookie = 'role=; Max-Age=0; path=/';
+    window.location.href = '/login';
+}
+
 export async function fetchApi(endpoint: string, options: any = {}, rawResponse = false) {
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
     const headers: any = {

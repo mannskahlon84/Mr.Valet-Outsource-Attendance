@@ -40,6 +40,8 @@ export default function NotificationBell() {
     const [activeToast, setActiveToast] = useState<NotificationItem | null>(null);
     const [permStatus, setPermStatus] = useState<string>('default');
     const [loading, setLoading] = useState(false);
+    // Unread alerts addressed to this user (the list may also show others' alerts to management)
+    const [unreadCount, setUnreadCount] = useState(0);
     const knownIds = useRef<Set<number>>(new Set());
     const initialFetchDone = useRef<boolean>(false);
 
@@ -52,7 +54,11 @@ export default function NotificationBell() {
 
     const fetchNotifications = async (isPoll = false) => {
         try {
-            const data: NotificationItem[] = await fetchApi('/notifications/');
+            const [data, unread] = await Promise.all([
+                fetchApi('/notifications/') as Promise<NotificationItem[]>,
+                fetchApi('/notifications/unread-count').catch(() => null),
+            ]);
+            if (unread && typeof unread.unread === 'number') setUnreadCount(unread.unread);
             if (Array.isArray(data)) {
                 setNotifications(data);
 
@@ -133,6 +139,7 @@ export default function NotificationBell() {
         try {
             await fetchApi(`/notifications/${id}/read`, { method: 'PATCH' });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+            setUnreadCount(c => Math.max(0, c - 1));
         } catch (e) {}
     };
 
@@ -140,7 +147,7 @@ export default function NotificationBell() {
         try {
             setLoading(true);
             await fetchApi('/notifications/mark-all-read', { method: 'POST' });
-            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            await fetchNotifications(false);
         } catch (e) {} finally {
             setLoading(false);
         }
@@ -178,6 +185,7 @@ export default function NotificationBell() {
                 };
                 setActiveToast(testItem);
                 setNotifications(prev => [testItem, ...prev]);
+                setUnreadCount(c => c + 1);
                 if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                     new Notification(res.title || "In-App Push Test", {
                         body: res.message,
@@ -192,7 +200,6 @@ export default function NotificationBell() {
         }
     };
 
-    const unreadCount = notifications.filter(n => !n.is_read).length;
 
     const timeAgo = (dateStr: string) => {
         try {

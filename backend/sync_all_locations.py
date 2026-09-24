@@ -118,21 +118,10 @@ for name, email in managers_info.items():
         db.add(u)
         db.commit()
         db.refresh(u)
-    else:
-        u.name = name
-        u.email = email
-        u.password_hash = get_password_hash("devpass123")
-        u.role = RoleEnum.OPS_MANAGER
-        u.status = "active"
-        db.commit()
     managers_map[name] = u.id
 
 # Also ensure ops@example.com is an ops manager with a couple of test sites
 ops_demo = db.query(User).filter(User.email == "ops@example.com").first()
-if ops_demo:
-    ops_demo.status = "active"
-    ops_demo.password_hash = get_password_hash("devpass123")
-    db.commit()
 
 from geocode_all_qatar_sites import KNOWN_COORDINATES
 
@@ -155,12 +144,13 @@ for loc, mgr_name in locations_data:
         )
         db.add(site)
     else:
-        site.manager_id = mgr_id
-        site.status = "active"
-        site.address = address
-        site.latitude = lat
-        site.longitude = lng
-        site.geofence_radius_meters = 200.0
+        # Existing sites keep whatever an admin set (manager, status, GPS); only fill gaps
+        if site.manager_id is None:
+            site.manager_id = mgr_id
+        if site.latitude is None or site.longitude is None:
+            site.latitude, site.longitude = lat, lng
+        if not site.address:
+            site.address = address
         if not site.qr_token:
             site.qr_token = f"MC:LOC:{site.id}:{uuid.uuid4().hex[:12]}"
             site.qr_status = "ACTIVE"

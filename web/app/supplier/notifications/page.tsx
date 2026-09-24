@@ -13,7 +13,12 @@ export default function SupplierNotifications() {
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => {
+        loadData();
+        // The header bell announces new alerts; refresh this list when it does
+        window.addEventListener('portal_data_updated', loadData);
+        return () => window.removeEventListener('portal_data_updated', loadData);
+    }, []);
 
     const markAsRead = async (id: number) => {
         try {

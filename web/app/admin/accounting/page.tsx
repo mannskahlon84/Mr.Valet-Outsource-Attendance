@@ -1,7 +1,7 @@
 
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL } from '@/lib/api';
+import { fetchApi, API_URL, downloadFile } from '@/lib/api';
 
 export default function Accounting() {
     const [summary, setSummary] = useState<any[]>([]);
@@ -56,6 +56,7 @@ export default function Accounting() {
     const [year, setYear] = useState(new Date().getFullYear().toString());
 
     useEffect(() => { setRole(sessionStorage.getItem('role') || ''); }, []);
+    const canManageInvoices = role === 'SUPER_ADMIN' || role === 'ACCOUNTING';
 
     const loadData = async () => {
         setLoading(true);
@@ -106,8 +107,7 @@ export default function Accounting() {
     };
 
     const handleDownload = (invoiceId: number) => {
-        const token = sessionStorage.getItem('token');
-        window.open(`${API_URL}/accounting/invoices/${invoiceId}/download?token=${token}`, '_blank');
+        downloadFile(`/accounting/invoices/${invoiceId}/download`, `invoice-${invoiceId}.pdf`);
     };
 
     return (
@@ -163,10 +163,10 @@ export default function Accounting() {
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Workers Supplied</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completed Shifts</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Payable</th>
-                                        {(role === "Super Admin" || role === "ACCOUNTING") && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>}
+                                        {canManageInvoices && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -176,7 +176,7 @@ export default function Accounting() {
                                             <td className="px-6 py-4 whitespace-nowrap text-gray-500">{s.workers_supplied}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-gray-500">QAR {s.billing_rate}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-bold">QAR {s.total_amount.toLocaleString()}</td>
-                                            {(role === "Super Admin" || role === "ACCOUNTING") && (
+                                            {canManageInvoices && (
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     <button onClick={() => handleGenerateInvoice(s.supplier_id)} className="text-[#dbb457] hover:underline">Generate Invoice</button>
                                                 </td>
@@ -258,7 +258,7 @@ export default function Accounting() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
                                                     <button onClick={() => handleDownload(inv.id)} className="text-[#dbb457] hover:underline">Download PDF</button>
-                                                    {(role === "Super Admin" || role === "ACCOUNTING") && inv.status === "GENERATED" && (
+                                                    {canManageInvoices && inv.status === "GENERATED" && (
                                                         <button onClick={() => handleVoidInvoice(inv.id)} className="text-red-600 hover:underline">Void</button>
                                                     )}
                                                 </td>

@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
-import { filterSitesForManager } from '@/lib/managerFilter';
 
 export default function OperationsSites() {
     const [sites, setSites] = useState<any[]>([]);
@@ -13,7 +12,7 @@ export default function OperationsSites() {
         setManagerName(name);
         fetchApi('/sites/')
             .then(data => {
-                const filtered = filterSitesForManager(data || []);
+                const filtered = data || [];
                 setSites(filtered);
             })
             .finally(() => setLoading(false));

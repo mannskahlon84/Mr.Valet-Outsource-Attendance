@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL } from '../../../lib/api';
+import { fetchApi, API_URL, downloadFile } from '../../../lib/api';
 
 export default function Attendance() {
     const [report, setReport] = useState<any>(null);
@@ -12,8 +12,8 @@ export default function Attendance() {
 
     if (loading) return <div>Loading...</div>;
 
-    const exportExcel = () => { window.open(`${API_URL}/reports/attendance/export/excel?token=` + sessionStorage.getItem('token'), '_blank'); };
-    const exportPdf = () => { window.open(`${API_URL}/reports/attendance/export/pdf?token=` + sessionStorage.getItem('token'), '_blank'); };
+    const exportExcel = () => { downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`); };
+    const exportPdf = () => { downloadFile('/reports/attendance/export/pdf', `attendance-${new Date().toISOString().slice(0, 10)}.pdf`); };
 
     return (
         <div>
