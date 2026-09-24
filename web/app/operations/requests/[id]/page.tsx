@@ -20,6 +20,9 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
     const [sendingMsg, setSendingMsg] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'bids' | 'chat'>('bids');
+    // Cancelling asks for confirmation on the page itself
+    const [confirmCancel, setConfirmCancel] = useState(false);
+    const [cancelMsg, setCancelMsg] = useState('');
 
     const loadData = async () => {
         try {
@@ -116,6 +119,22 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
 
     const site = sites.find(s => s.id === request.site_id);
 
+    const handleCancelRequest = async () => {
+        setActionLoading(true);
+        setCancelMsg('');
+        try {
+            const res = await fetchApi(`/requests/${requestId}/status?status=CANCELLED`, { method: 'PATCH' });
+            setConfirmCancel(false);
+            setCancelMsg(`Request cancelled. ${res?.released_assignments ? `${res.released_assignments} assigned driver(s) released. ` : ''}The agencies have been notified.`);
+            broadcastPortalEvent('request_cancelled', { request_id: requestId });
+            await loadData();
+        } catch (err) {
+            setCancelMsg((err instanceof Error && err.message) || 'Could not cancel the request.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto space-y-6">
             <LoadErrorBar message={loadError} onRetry={loadData} />
@@ -133,6 +152,37 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                     ← Back to Requests
                 </Link>
             </div>
+
+            {request.status !== 'CANCELLED' && (
+                <div className="flex flex-wrap items-center gap-2">
+                    {!confirmCancel ? (
+                        <button
+                            type="button"
+                            onClick={() => setConfirmCancel(true)}
+                            className="min-h-[40px] px-4 rounded-lg border border-red-200 text-red-700 bg-white hover:bg-red-50 text-sm font-bold"
+                        >
+                            Cancel Request
+                        </button>
+                    ) : (
+                        <div className="w-full rounded-xl border border-red-200 bg-red-50 p-4 flex flex-wrap items-center gap-3">
+                            <span className="text-sm text-red-900 flex-1 min-w-[200px]">
+                                Cancel request #{request.id}? Assigned drivers are released and every agency is notified. This can&apos;t be undone.
+                            </span>
+                            <button type="button" disabled={actionLoading} onClick={handleCancelRequest}
+                                className="min-h-[40px] px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-50">
+                                {actionLoading ? 'Cancelling…' : 'Yes, cancel request'}
+                            </button>
+                            <button type="button" disabled={actionLoading} onClick={() => setConfirmCancel(false)}
+                                className="min-h-[40px] px-4 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700">
+                                Keep request
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+            {cancelMsg && (
+                <div role="status" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800">{cancelMsg}</div>
+            )}
 
             {/* Shift Overview Banner */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-4">

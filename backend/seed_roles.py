@@ -1,4 +1,5 @@
 from app.db.session import engine
+from app.db.init_db import ensure_tables
 from sqlalchemy.orm import sessionmaker
 from app.models.all_models import User, RoleEnum, Supplier, Worker, Site, ManpowerRequest, SupplierResponse, WorkerAssignment, Attendance
 from app.core.security import get_password_hash
@@ -6,6 +7,7 @@ from datetime import datetime, timezone
 import uuid
 
 def seed_roles():
+    ensure_tables()
     Session = sessionmaker(bind=engine)
     session = Session()
     
@@ -99,6 +101,19 @@ def seed_roles():
             session.refresh(w)
         created_workers.append(w)
         
+    # Every seeded worker needs a login (username = QID); create-only
+    for w in created_workers[1:]:
+        if not session.query(User).filter(User.worker_id == w.id).first() and not session.query(User).filter(User.email == w.qid).first():
+            session.add(User(
+                email=w.qid,
+                password_hash=get_password_hash("devpass123"),
+                role=RoleEnum.OUTSOURCE_WORKER,
+                name=f"{w.first_name} {w.last_name}",
+                worker_id=w.id,
+                supplier_id=w.supplier_id,
+                status="active"
+            ))
+
     # 7. Outsource Worker User Account
     first_worker = created_workers[0]
     worker_user = session.query(User).filter(User.email == "worker@example.com").first()

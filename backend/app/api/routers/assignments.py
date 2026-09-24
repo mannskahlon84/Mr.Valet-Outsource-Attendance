@@ -62,17 +62,11 @@ def dev_create_assignment(req: AssignmentDevCreate, db: Session = Depends(get_db
 
 @router.get("/today", response_model=AssignmentResponse)
 def get_today_assignment(db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.OUTSOURCE_WORKER]))):
-    # Fetch today's assignment for worker
-    wa = db.query(WorkerAssignment).join(SupplierResponse).join(ManpowerRequest).join(Site).filter(
-        WorkerAssignment.worker_id == current_user.worker_id,
-        WorkerAssignment.status == "ASSIGNED"
-    ).first()
-    
+    # Today's shift (Qatar date, including an overnight shift that started yesterday)
+    from app.api.routers.attendance import find_current_assignment
+    wa, sr, mr = find_current_assignment(db, current_user.worker_id)
     if not wa:
-        raise HTTPException(404, "No assignment found")
-        
-    sr = db.query(SupplierResponse).filter(SupplierResponse.id == wa.supplier_response_id).first()
-    mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
+        raise HTTPException(404, "No assignment found for today")
     site = db.query(Site).filter(Site.id == mr.site_id).first()
 
     att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()

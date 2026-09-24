@@ -9,6 +9,8 @@ export default function Requests() {
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
+    const [cancelling, setCancelling] = useState<number | null>(null);
+    const [cancelMsg, setCancelMsg] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [role, setRole] = useState('');
 
@@ -17,6 +19,18 @@ export default function Requests() {
         siteId: '', reqDate: '', startTime: '08:00', endTime: '17:00', totalWorkers: '10', notes: '', supplierId: ''
     }]);
                     
+    const cancelRequest = async (id: number) => {
+        try {
+            const res = await fetchApi(`/requests/${id}/status?status=CANCELLED`, { method: 'PATCH' });
+            setCancelMsg(`REQ-${id} cancelled. ${res?.released_assignments ? `${res.released_assignments} driver(s) released. ` : ''}Agencies notified.`);
+            loadData();
+        } catch (err) {
+            setCancelMsg((err instanceof Error && err.message) || 'Could not cancel the request.');
+        } finally {
+            setCancelling(null);
+        }
+    };
+
     const loadData = () => {
         // A failed refresh keeps the requests already on screen
         tryFetch<never[]>('/requests/', setLoadError).then(data => {
@@ -68,6 +82,7 @@ export default function Requests() {
     return (
         <div>
             <LoadErrorBar message={loadError} onRetry={loadData} />
+            {cancelMsg && <div role="status" className="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800">{cancelMsg}</div>}
             <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold text-gray-800">Manpower Requests</h1>
                 {role !== "General Manager" && role !== "Supplier Head" && (
@@ -149,13 +164,14 @@ export default function Requests() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Required</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {requests.map((r: any) => (
                             <tr key={r.id}>
                                 <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">REQ-{r.id}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">Site #{r.site_id}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.site_name || `Site #${r.site_id}`}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">{new Date(r.required_date).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.total_required_workers}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -163,10 +179,20 @@ export default function Requests() {
                                         {r.status}
                                     </span>
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    {r.status !== 'CANCELLED' && (cancelling === r.id ? (
+                                        <span className="inline-flex flex-wrap gap-2">
+                                            <button type="button" onClick={() => cancelRequest(r.id)} className="min-h-[36px] px-3 rounded bg-red-600 text-white text-xs font-bold">Yes, cancel</button>
+                                            <button type="button" onClick={() => setCancelling(null)} className="min-h-[36px] px-3 rounded border text-xs font-bold text-gray-700">Keep</button>
+                                        </span>
+                                    ) : (
+                                        <button type="button" onClick={() => setCancelling(r.id)} className="min-h-[36px] px-3 rounded border border-red-200 text-red-700 text-xs font-bold hover:bg-red-50">Cancel</button>
+                                    ))}
+                                </td>
                             </tr>
                         ))}
                         {requests.length === 0 && (
-                            <tr><td colSpan={5} className="px-6 py-4 text-center text-gray-500">No requests found.</td></tr>
+                            <tr><td colSpan={6} className="px-6 py-4 text-center text-gray-500">No requests found.</td></tr>
                         )}
                     </tbody>
                 </table>

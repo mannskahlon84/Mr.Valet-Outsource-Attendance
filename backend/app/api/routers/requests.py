@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.db.session import get_db
 from app.models.all_models import ManpowerRequest, SupplierResponse, WorkerAssignment, Worker, Site, User, RoleEnum, Notification
-from app.schemas.request import ManpowerRequestCreate, SupplierResponseUpdate, WorkerAllocation
+from app.schemas.request import ManpowerRequestCreate, SupplierResponseUpdate, WorkerAllocation, ShiftSpec
+from app.models.all_models import Supplier
+from typing import Optional
 from app.api.deps import get_current_user, require_role
 from app.services.audit import log_audit_event
 from datetime import datetime
@@ -18,53 +20,80 @@ def create_request(req: ManpowerRequestCreate, db: Session = Depends(get_db), cu
     if current_user.role == RoleEnum.OPS_MANAGER and site.manager_id != current_user.id:
         raise HTTPException(403, "Not authorized to request manpower for this site")
 
-    # Validate quantities
-    total_routed = sum(r.requested_quantity for r in req.routes)
-    if total_routed > req.total_required_workers:
-        raise HTTPException(400, "Routed quantity exceeds total required")
-        
+    if req.shifts:
+        shifts = [ShiftSpec(**{**sh.model_dump(), "skill_category": sh.skill_category or req.skill_category}) for sh in req.shifts]
+    else:
+        if not req.start_time or not req.end_time or req.total_required_workers is None:
+            raise HTTPException(400, "start_time, end_time and total_required_workers are required")
+        shifts = [ShiftSpec(start_time=req.start_time, end_time=req.end_time, total_required_workers=req.total_required_workers,
+                            routes=req.routes, notes=req.notes, skill_category=req.skill_category)]
+    for n, sh in enumerate(shifts, start=1):
+        validate_shift(db, sh, n if len(shifts) > 1 else None)
+
+    created = [create_one_request(db, current_user, site, req.required_date, sh) for sh in shifts]
+    db.commit()
+    for mr in created:
+        log_audit_event(db, current_user.id, current_user.role.value, "request_created", "manpower_requests", mr.id, None, {"status": "SUBMITTED"})
+    if req.shifts:
+        return {"requests": [{"id": mr.id, "status": mr.status} for mr in created]}
+    return {"id": created[0].id, "status": created[0].status}
+
+
+def validate_shift(db: Session, sh: ShiftSpec, number: Optional[int]):
+    label = f"Shift {number}: " if number else ""
+    if sh.total_required_workers is None or sh.total_required_workers < 1:
+        raise HTTPException(400, f"{label}at least 1 driver is required")
+    if not sh.start_time or not sh.end_time or sh.start_time == sh.end_time:
+        raise HTTPException(400, f"{label}start and end time are required and must differ")
+    if not sh.routes:
+        # A request routed to no agency would never reach anyone
+        raise HTTPException(400, f"{label}choose at least one agency to send this request to")
+    seen = set()
+    for route in sh.routes:
+        if route.requested_quantity < 1:
+            raise HTTPException(400, f"{label}each agency must be asked for at least 1 driver")
+        if route.supplier_id in seen:
+            raise HTTPException(400, f"{label}the same agency is listed twice")
+        seen.add(route.supplier_id)
+        if not db.query(Supplier).filter(Supplier.id == route.supplier_id, Supplier.status == "active").first():
+            raise HTTPException(400, f"{label}agency #{route.supplier_id} does not exist or is inactive")
+    if sum(r.requested_quantity for r in sh.routes) > sh.total_required_workers:
+        raise HTTPException(400, f"{label}routed quantity exceeds total required")
+
+
+def create_one_request(db: Session, current_user: User, site: Site, required_date, sh: ShiftSpec) -> ManpowerRequest:
     mr = ManpowerRequest(
         ops_manager_id=current_user.id,
-        site_id=req.site_id,
-        required_date=datetime.combine(req.required_date, datetime.min.time()),
-        start_time=req.start_time,
-        end_time=req.end_time,
-        total_required_workers=req.total_required_workers,
-        skill_category=req.skill_category,
-        notes=req.notes,
+        site_id=site.id,
+        required_date=datetime.combine(required_date, datetime.min.time()),
+        start_time=sh.start_time,
+        end_time=sh.end_time,
+        total_required_workers=sh.total_required_workers,
+        skill_category=sh.skill_category,
+        notes=sh.notes,
         status="SUBMITTED"
     )
     db.add(mr)
     db.flush()
-    
-    for route in req.routes:
-        sr = SupplierResponse(
+    manager_display = current_user.name or "Operations Manager"
+    req_date_str = required_date.strftime('%d %b %Y') if hasattr(required_date, 'strftime') else str(required_date)
+    for route in sh.routes:
+        db.add(SupplierResponse(
             manpower_request_id=mr.id,
             supplier_id=route.supplier_id,
             requested_quantity=route.requested_quantity,
             status="PENDING"
-        )
-        db.add(sr)
-        
-        db.flush()
-        
-        # Requirement 1 & 3: Supplier Notification
-        manager_display = current_user.name or "Operations Manager"
-        site_display = site.name if site else f"Location #{req.site_id}"
-        req_date_str = req.required_date.strftime('%d %b %Y') if hasattr(req.required_date, 'strftime') else str(req.required_date)
-        notif = Notification(
+        ))
+        db.add(Notification(
             supplier_id=route.supplier_id,
-            title=f"📋 New Shift Request #{mr.id} - {site_display}",
-            message=f"Ops Manager {manager_display} requested {route.requested_quantity} drivers for {site_display} on {req_date_str} ({req.start_time} - {req.end_time}).",
+            title=f"📋 New Shift Request #{mr.id} - {site.name}",
+            message=f"Ops Manager {manager_display} requested {route.requested_quantity} drivers for {site.name} on {req_date_str} ({sh.start_time} - {sh.end_time}).",
             entity_type="MANPOWER_REQUEST",
             entity_id=mr.id
-        )
-        db.add(notif)
-        
-    db.commit()
-    db.refresh(mr)
-    log_audit_event(db, current_user.id, current_user.role.value, "request_created", "manpower_requests", mr.id, None, {"status": "SUBMITTED"})
-    return {"id": mr.id, "status": mr.status}
+        ))
+    db.flush()
+    return mr
+
 
 def ensure_request_access(db: Session, user: User, mr: ManpowerRequest):
     """Who may open a request. An ops manager keeps every request they created even if the
@@ -92,10 +121,13 @@ def update_request_status(request_id: int, status: str, db: Session = Depends(ge
     if not mr: raise HTTPException(404, "Request not found")
     ensure_request_access(db, current_user, mr)
     
+    if status == "CANCELLED":
+        return cancel_request(db, current_user, mr)
+
     valid_transitions = {
-        "SUBMITTED": ["CANCELLED", "RESPONSES_PENDING"],
-        "RESPONSES_PENDING": ["PARTIALLY_FULFILLED", "FULFILLED", "CANCELLED"],
-        "PARTIALLY_FULFILLED": ["FULFILLED", "CANCELLED"]
+        "SUBMITTED": ["RESPONSES_PENDING"],
+        "RESPONSES_PENDING": ["PARTIALLY_FULFILLED", "FULFILLED"],
+        "PARTIALLY_FULFILLED": ["FULFILLED"]
     }
     
     if status not in valid_transitions.get(mr.status, []):
@@ -106,6 +138,60 @@ def update_request_status(request_id: int, status: str, db: Session = Depends(ge
     db.commit()
     log_audit_event(db, current_user.id, current_user.role.value, "request_updated", "manpower_requests", mr.id, {"status": old_status}, {"status": status})
     return {"id": mr.id, "status": mr.status}
+
+
+def cancel_request(db: Session, current_user: User, mr: ManpowerRequest):
+    """Cancel at any stage until a driver has clocked in; release drivers and tell everyone involved."""
+    from app.models.all_models import Attendance
+    if mr.status == "CANCELLED":
+        raise HTTPException(400, "Request is already cancelled")
+    responses = db.query(SupplierResponse).filter(SupplierResponse.manpower_request_id == mr.id).all()
+    response_ids = [r.id for r in responses]
+    assignments = db.query(WorkerAssignment).filter(
+        WorkerAssignment.supplier_response_id.in_(response_ids), WorkerAssignment.status == "ASSIGNED"
+    ).all() if response_ids else []
+    started = db.query(Attendance).filter(
+        Attendance.worker_assignment_id.in_([a.id for a in assignments]), Attendance.check_in_time.isnot(None)
+    ).first() if assignments else None
+    if started:
+        raise HTTPException(400, "A driver has already clocked in for this shift, so it can no longer be cancelled.")
+
+    site = db.query(Site).filter(Site.id == mr.site_id).first()
+    site_name = site.name if site else f"Location #{mr.site_id}"
+    when = f"{mr.required_date.strftime('%d %b %Y') if mr.required_date else ''} ({mr.start_time} - {mr.end_time})"
+    by = current_user.name or "Operations"
+
+    old_status = mr.status
+    mr.status = "CANCELLED"
+    for r in responses:
+        db.add(Notification(
+            supplier_id=r.supplier_id,
+            title=f"🚫 Request #{mr.id} Cancelled - {site_name}",
+            message=f"{by} cancelled the shift at {site_name} on {when}. Any drivers you assigned are released.",
+            entity_type="MANPOWER_REQUEST",
+            entity_id=mr.id
+        ))
+    for a in assignments:
+        a.status = "CANCELLED"
+        db.add(Notification(
+            worker_id=a.worker_id,
+            title="🚫 Shift Cancelled",
+            message=f"Your shift at {site_name} on {when} has been cancelled. Please do not go to the venue.",
+            entity_type="SHIFT_ASSIGNMENT",
+            entity_id=a.id
+        ))
+    if mr.ops_manager_id and mr.ops_manager_id != current_user.id:
+        db.add(Notification(
+            user_id=mr.ops_manager_id,
+            title=f"🚫 Request #{mr.id} Cancelled",
+            message=f"{by} cancelled your request for {site_name} on {when}.",
+            entity_type="MANPOWER_REQUEST",
+            entity_id=mr.id
+        ))
+    db.commit()
+    log_audit_event(db, current_user.id, current_user.role.value, "request_cancelled", "manpower_requests", mr.id,
+                    {"status": old_status}, {"status": "CANCELLED", "released_assignments": len(assignments)})
+    return {"id": mr.id, "status": mr.status, "released_assignments": len(assignments)}
 
 SUPPLIER_RESPONSE_STATUSES = {"ACCEPTED", "PARTIAL", "REJECTED", "COUNTER_PROPOSED"}
 

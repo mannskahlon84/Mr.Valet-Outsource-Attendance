@@ -4,10 +4,12 @@ import uuid
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.db.session import engine
+from app.db.init_db import ensure_tables
 from sqlalchemy.orm import sessionmaker
 from app.models.all_models import Site, User, RoleEnum
 from app.core.security import get_password_hash
 
+ensure_tables()
 Session = sessionmaker(bind=engine)
 db = Session()
 

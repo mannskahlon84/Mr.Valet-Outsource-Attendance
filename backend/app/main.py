@@ -8,6 +8,27 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
+class SlashlessRoutes:
+    """Serve "/api/v1/requests" as "/api/v1/requests/" in place, instead of a 307 redirect.
+    Behind an HTTPS proxy that redirect can point at http:// and be blocked by the browser."""
+
+    def __init__(self, asgi_app):
+        self.asgi_app = asgi_app
+        self.slash_paths = None
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            if self.slash_paths is None:
+                # Full paths from the OpenAPI spec (routers are nested, so app.routes doesn't list them)
+                self.slash_paths = {p for p in app.openapi().get("paths", {}) if p.endswith("/") and p != "/"}
+            path = scope["path"]
+            if not path.endswith("/") and path + "/" in self.slash_paths:
+                scope = dict(scope, path=path + "/", raw_path=(path + "/").encode())
+        await self.asgi_app(scope, receive, send)
+
+
+app.add_middleware(SlashlessRoutes)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

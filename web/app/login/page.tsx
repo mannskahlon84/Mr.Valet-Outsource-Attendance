@@ -18,13 +18,13 @@ function normalizeRole(role?: string): string {
 }
 
 const SUPPLIERS = [
-    { name: "Hanees", agencyId: 7, email: "hanees@supplier.mrvalet.local", shortUser: "hanees", phone: "+974 5501 0003" },
-    { name: "Deepu", agencyId: 5, email: "deepu@supplier.mrvalet.local", shortUser: "deepu", phone: "+974 5501 0001" },
-    { name: "Kanan", agencyId: 6, email: "kanan@supplier.mrvalet.local", shortUser: "kanan", phone: "+974 5501 0002" },
-    { name: "Nizar", agencyId: 8, email: "nizar@supplier.mrvalet.local", shortUser: "nizar", phone: "+974 5501 0004" },
-    { name: "Dennis", agencyId: 9, email: "dennis@supplier.mrvalet.local", shortUser: "dennis", phone: "+974 5501 0005" },
-    { name: "Naboth", agencyId: 10, email: "naboth@supplier.mrvalet.local", shortUser: "naboth", phone: "+974 5501 0006" },
-    { name: "Henry", agencyId: 11, email: "henry@supplier.mrvalet.local", shortUser: "henry", phone: "+974 5501 0007" }
+    { name: "Hanees", email: "hanees@supplier.mrvalet.local", shortUser: "hanees", phone: "+974 5501 0003" },
+    { name: "Deepu", email: "deepu@supplier.mrvalet.local", shortUser: "deepu", phone: "+974 5501 0001" },
+    { name: "Kanan", email: "kanan@supplier.mrvalet.local", shortUser: "kanan", phone: "+974 5501 0002" },
+    { name: "Nizar", email: "nizar@supplier.mrvalet.local", shortUser: "nizar", phone: "+974 5501 0004" },
+    { name: "Dennis", email: "dennis@supplier.mrvalet.local", shortUser: "dennis", phone: "+974 5501 0005" },
+    { name: "Naboth", email: "naboth@supplier.mrvalet.local", shortUser: "naboth", phone: "+974 5501 0006" },
+    { name: "Henry", email: "henry@supplier.mrvalet.local", shortUser: "henry", phone: "+974 5501 0007" }
 ];
 
 const OPS_MANAGERS = [
@@ -214,7 +214,6 @@ export default function Login() {
                                                     <div>
                                                         <div className="font-bold text-sm text-white flex items-center gap-1.5">
                                                             <span>{sup.name}</span>
-                                                            <span className="text-[10px] bg-blue-900/60 text-blue-300 px-1.5 py-0.2 rounded font-mono">Agency #{sup.agencyId}</span>
                                                         </div>
                                                         <div className="text-[11px] text-gray-400 font-mono mt-0.5">{sup.shortUser}</div>
                                                     </div>

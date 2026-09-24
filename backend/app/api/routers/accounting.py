@@ -7,6 +7,7 @@ from app.models.all_models import Supplier, User, RoleEnum, SupplierResponse, Ma
 from app.api.deps import get_current_user, require_role
 from app.services.audit import log_audit_event
 from datetime import datetime, date
+from app.core.timeutil import qatar_today
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -340,9 +341,9 @@ def get_daily_breakdown(
         try:
             filter_date = datetime.strptime(target_date, "%Y-%m-%d").date()
         except Exception:
-            filter_date = datetime.utcnow().date()
+            filter_date = qatar_today()
     else:
-        filter_date = datetime.utcnow().date()
+        filter_date = qatar_today()
 
     # Supplier filter
     sup_query = db.query(Supplier)

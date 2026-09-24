@@ -14,6 +14,7 @@ from app.services.duplicate_identity import check_duplicate_identity
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from app.core.config import settings
+from app.core.timeutil import qatar_today, shift_is_current
 import math
 
 router = APIRouter()
@@ -40,6 +41,31 @@ def resolve_site_from_qr(db: Session, qr_data: str) -> Site:
     if qr_site.status == "inactive" or qr_site.qr_status != "ACTIVE":
         raise HTTPException(400, "This venue's QR code is no longer active. Ask your supervisor for the current poster.")
     return qr_site
+
+
+def find_current_assignment(db: Session, worker_id: int, site_id: int = None):
+    """(assignment, supplier response, request) for the worker's current confirmed shift, or Nones."""
+    today = qatar_today()
+    q = db.query(WorkerAssignment, SupplierResponse, ManpowerRequest).join(
+        SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id
+    ).join(
+        ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id
+    ).filter(
+        WorkerAssignment.worker_id == worker_id,
+        WorkerAssignment.status == "ASSIGNED",
+        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES),
+        ManpowerRequest.status != "CANCELLED",
+    )
+    if site_id is not None:
+        q = q.filter(ManpowerRequest.site_id == site_id)
+    candidates = [row for row in q.all() if shift_is_current(row[2].required_date, row[2].start_time, row[2].end_time, today)]
+    if not candidates:
+        return None, None, None
+    # Prefer a shift not yet finished, then the most recent one
+    def rank(row):
+        att = db.query(Attendance).filter(Attendance.worker_assignment_id == row[0].id).first()
+        return (1 if att and att.check_out_time else 0, -row[2].required_date.timestamp())
+    return sorted(candidates, key=rank)[0]
 
 
 def site_summary(site: Site) -> dict:
@@ -72,21 +98,22 @@ def test_venues(db: Session = Depends(get_db), current_user: User = Depends(requ
     worker = db.query(Worker).filter(Worker.id == current_user.worker_id).first()
     if not worker:
         return []
-    today = datetime.now(timezone.utc).date()
-    rows = db.query(Site).join(ManpowerRequest, ManpowerRequest.site_id == Site.id).join(
-        SupplierResponse, SupplierResponse.manpower_request_id == ManpowerRequest.id
-    ).filter(
-        SupplierResponse.supplier_id == worker.supplier_id,
-        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES),
-        ManpowerRequest.status != "CANCELLED",
-        Site.qr_status == "ACTIVE",
-    ).all()
-    sites = {s.id: s for s in rows}.values()
     venues = []
-    for s in sites:
-        has_today = any(m.required_date.date() == today for m in db.query(ManpowerRequest).filter(ManpowerRequest.site_id == s.id).all())
-        if has_today:
-            venues.append({**site_summary(s), "qr_data": s.qr_token})
+    rows = db.query(WorkerAssignment, SupplierResponse, ManpowerRequest).join(
+        SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id
+    ).join(ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id).filter(
+        WorkerAssignment.worker_id == worker.id, WorkerAssignment.status == "ASSIGNED",
+        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES), ManpowerRequest.status != "CANCELLED",
+    ).all()
+    today = qatar_today()
+    seen = set()
+    for _, _, m in rows:
+        if m.site_id in seen or not shift_is_current(m.required_date, m.start_time, m.end_time, today):
+            continue
+        site = db.query(Site).filter(Site.id == m.site_id, Site.qr_status == "ACTIVE").first()
+        if site:
+            seen.add(site.id)
+            venues.append({**site_summary(site), "qr_data": site.qr_token})
     return venues
 
 
@@ -106,41 +133,11 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
     if not worker:
         raise HTTPException(400, "Worker profile missing.")
 
-    # Find active ManpowerRequest and SupplierResponse
-    today = datetime.now(timezone.utc).date()
-    mrs = db.query(ManpowerRequest).filter(ManpowerRequest.site_id == assignment_site.id).all()
-    mrs = [m for m in mrs if m.required_date.date() == today and m.status != "CANCELLED"]
-    
-    sr = None
-    mr = None
-    for req_mr in mrs:
-        sr = db.query(SupplierResponse).filter(
-            SupplierResponse.manpower_request_id == req_mr.id,
-            SupplierResponse.supplier_id == worker.supplier_id,
-            SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES)
-        ).first()
-        if sr:
-            mr = req_mr
-            break
-            
-    if not sr:
-        log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "no_active_shift"})
-        raise HTTPException(403, "Your agency does not have a confirmed shift at this location today.")
-
-    # Dynamically find or create WorkerAssignment
-    wa = db.query(WorkerAssignment).filter(
-        WorkerAssignment.supplier_response_id == sr.id,
-        WorkerAssignment.worker_id == worker.id
-    ).first()
-    
+    # The worker's own assignment to a confirmed shift at this venue, today (Qatar time)
+    wa, sr, mr = find_current_assignment(db, worker.id, assignment_site.id)
     if not wa:
-        wa = WorkerAssignment(
-            supplier_response_id=sr.id,
-            worker_id=worker.id,
-            status="ASSIGNED"
-        )
-        db.add(wa)
-        db.flush()
+        log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "not_assigned"})
+        raise HTTPException(403, "You are not assigned to a shift at this location today. Ask your agency to assign you to the shift.")
     
     # Check Geofence
     if assignment_site.latitude is not None and assignment_site.longitude is not None:
@@ -384,9 +381,9 @@ def get_location_shifts(
         try:
             filter_date = datetime.strptime(target_date, "%Y-%m-%d").date()
         except Exception:
-            filter_date = datetime.now(timezone.utc).date()
+            filter_date = qatar_today()
     else:
-        filter_date = datetime.now(timezone.utc).date()
+        filter_date = qatar_today()
 
     site_query = db.query(Site)
     if current_user.role == RoleEnum.OPS_MANAGER:
@@ -452,9 +449,9 @@ def get_supplier_live_attendance(
         try:
             filter_date = datetime.strptime(target_date, "%Y-%m-%d").date()
         except Exception:
-            filter_date = datetime.now(timezone.utc).date()
+            filter_date = qatar_today()
     else:
-        filter_date = datetime.now(timezone.utc).date()
+        filter_date = qatar_today()
 
     records = db.query(WorkerAssignment, Attendance, Worker, ManpowerRequest, Site)\
         .join(SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id)\
@@ -496,3 +493,138 @@ def get_supplier_live_attendance(
         })
 
     return results
+
+
+# ---------------------------------------------------------------------------
+# Attendance exceptions: a worker reports a check-in/out problem, ops decides
+# ---------------------------------------------------------------------------
+from app.models.all_models import AttendanceException
+from typing import Literal
+
+
+class ExceptionCreate(BaseModel):
+    site_id: Optional[int] = None
+    exception_type: str = "CLOCK_IN_FAILED"
+    reason: str
+
+
+class ExceptionDecision(BaseModel):
+    status: Literal["APPROVED", "REJECTED"]
+
+
+def exception_view(db: Session, exc: AttendanceException) -> dict:
+    wa = db.query(WorkerAssignment).filter(WorkerAssignment.id == exc.worker_assignment_id).first() if exc.worker_assignment_id else None
+    worker = db.query(Worker).filter(Worker.id == wa.worker_id).first() if wa else None
+    if not worker:
+        requester = db.query(User).filter(User.id == exc.requested_by).first()
+        worker = db.query(Worker).filter(Worker.id == requester.worker_id).first() if requester and requester.worker_id else None
+    sr = db.query(SupplierResponse).filter(SupplierResponse.id == wa.supplier_response_id).first() if wa else None
+    mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first() if sr else None
+    site = db.query(Site).filter(Site.id == mr.site_id).first() if mr else None
+    return {
+        "id": exc.id,
+        "exception_type": exc.exception_type,
+        "reason": exc.reason,
+        "status": exc.status,
+        "created_at": exc.created_at.replace(tzinfo=timezone.utc).isoformat() if exc.created_at else None,
+        "resolved_at": exc.resolved_at.replace(tzinfo=timezone.utc).isoformat() if exc.resolved_at else None,
+        "worker_name": f"{worker.first_name} {worker.last_name}" if worker else None,
+        "internal_worker_id": worker.internal_worker_id if worker else None,
+        "site_id": site.id if site else None,
+        "site_name": site.name if site else None,
+        "request_id": mr.id if mr else None,
+    }
+
+
+def ops_can_see_request(user: User, mr: Optional[ManpowerRequest], site: Optional[Site]) -> bool:
+    return bool(mr and (mr.ops_manager_id == user.id or (site and site.manager_id == user.id)))
+
+
+@router.post("/exceptions")
+def create_exception(req: ExceptionCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.OUTSOURCE_WORKER]))):
+    reason = (req.reason or "").strip()
+    if len(reason) < 5:
+        raise HTTPException(400, "Please describe the problem (at least a few words).")
+    wa, sr, mr = find_current_assignment(db, current_user.worker_id, req.site_id)
+    if not wa and req.site_id is not None:
+        wa, sr, mr = find_current_assignment(db, current_user.worker_id)
+    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first() if wa else None
+    exc = AttendanceException(
+        worker_assignment_id=wa.id if wa else None,
+        attendance_id=att.id if att else None,
+        exception_type=(req.exception_type or "CLOCK_IN_FAILED")[:50],
+        reason=reason,
+        requested_by=current_user.id,
+        status="PENDING_APPROVAL",
+    )
+    db.add(exc)
+    db.flush()
+    worker = db.query(Worker).filter(Worker.id == current_user.worker_id).first()
+    w_name = f"{worker.first_name} {worker.last_name}" if worker else (current_user.name or "A driver")
+    site = db.query(Site).filter(Site.id == mr.site_id).first() if mr else None
+    where = f" at {site.name}" if site else ""
+    if mr and mr.ops_manager_id:
+        db.add(Notification(user_id=mr.ops_manager_id, title=f"⚠️ Attendance Exception{where}",
+                            message=f"{w_name} reported: {reason[:180]}", entity_type="ATTENDANCE_EXCEPTION", entity_id=exc.id))
+    if worker and worker.supplier_id:
+        db.add(Notification(supplier_id=worker.supplier_id, title=f"⚠️ Driver Reported a Problem{where}",
+                            message=f"{w_name}: {reason[:180]}", entity_type="ATTENDANCE_EXCEPTION", entity_id=exc.id))
+    db.commit()
+    log_audit_event(db, current_user.id, current_user.role.value, "attendance_exception_created", "attendance_exceptions", exc.id, None, {"type": exc.exception_type})
+    return exception_view(db, exc)
+
+
+@router.get("/exceptions")
+def list_exceptions(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rows = db.query(AttendanceException).order_by(AttendanceException.created_at.desc()).limit(500).all()
+    views = [exception_view(db, e) for e in rows]
+    if current_user.role in [RoleEnum.SUPER_ADMIN, RoleEnum.GENERAL_MANAGER]:
+        return views
+    if current_user.role == RoleEnum.OUTSOURCE_WORKER:
+        return [v for v, e in zip(views, rows) if e.requested_by == current_user.id]
+    if current_user.role == RoleEnum.OPS_MANAGER:
+        out = []
+        for v in views:
+            mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == v["request_id"]).first() if v["request_id"] else None
+            site = db.query(Site).filter(Site.id == v["site_id"]).first() if v["site_id"] else None
+            if ops_can_see_request(current_user, mr, site):
+                out.append(v)
+        return out
+    if current_user.role == RoleEnum.SUPPLIER_HEAD:
+        mine = {w.id for w in db.query(Worker).filter(Worker.supplier_id == current_user.supplier_id).all()}
+        out = []
+        for v, e in zip(views, rows):
+            requester = db.query(User).filter(User.id == e.requested_by).first()
+            if requester and requester.worker_id in mine:
+                out.append(v)
+        return out
+    raise HTTPException(403, "Forbidden")
+
+
+@router.patch("/exceptions/{exception_id}")
+def decide_exception(exception_id: int, decision: ExceptionDecision, db: Session = Depends(get_db),
+                     current_user: User = Depends(require_role([RoleEnum.OPS_MANAGER, RoleEnum.SUPER_ADMIN]))):
+    exc = db.query(AttendanceException).filter(AttendanceException.id == exception_id).first()
+    if not exc:
+        raise HTTPException(404, "Exception not found")
+    view = exception_view(db, exc)
+    if current_user.role == RoleEnum.OPS_MANAGER:
+        mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == view["request_id"]).first() if view["request_id"] else None
+        site = db.query(Site).filter(Site.id == view["site_id"]).first() if view["site_id"] else None
+        if not ops_can_see_request(current_user, mr, site):
+            raise HTTPException(403, "Not authorized to decide this exception")
+    if exc.status != "PENDING_APPROVAL":
+        raise HTTPException(400, f"This exception was already {exc.status.lower()}.")
+    exc.status = decision.status
+    exc.approved_by = current_user.id
+    exc.resolved_at = datetime.utcnow()
+    requester = db.query(User).filter(User.id == exc.requested_by).first()
+    if requester and requester.worker_id:
+        db.add(Notification(worker_id=requester.worker_id,
+                            title=f"Attendance exception {decision.status.lower()}",
+                            message=f"Your report \"{(exc.reason or '')[:120]}\" was {decision.status.lower()} by {current_user.name or 'Operations'}.",
+                            entity_type="ATTENDANCE_EXCEPTION", entity_id=exc.id))
+    db.commit()
+    log_audit_event(db, current_user.id, current_user.role.value, "attendance_exception_decided", "attendance_exceptions", exc.id,
+                    {"status": "PENDING_APPROVAL"}, {"status": exc.status})
+    return exception_view(db, exc)

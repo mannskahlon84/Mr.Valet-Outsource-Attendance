@@ -71,7 +71,12 @@ def test_bulk_import(client, db):
     sup = client.post("/api/v1/suppliers/", json={"name": "Bulk Sup"}, headers=headers).json()
     s_id = sup["id"]
     
-    csv_content = f"internal_worker_id,supplier_id,first_name,last_name,phone\nB-1,{s_id},A,B,123\nB-1,{s_id},C,D,123\nB-2,9999,E,F,123"
+    csv_content = (
+        "internal_worker_id,supplier_id,first_name,last_name,qid,whatsapp_number\n"
+        f"B-1,{s_id},A,B,29535611001,+97455611001\n"
+        f"B-1,{s_id},C,D,29535611002,+97455611002\n"
+        "B-2,9999,E,F,29535611003,+97455611003"
+    )
     files = {"file": ("test.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")}
     
     # Preview
@@ -87,6 +92,10 @@ def test_bulk_import(client, db):
     assert res.status_code == 200
     assert res.json()["imported"] == 1
     assert res.json()["skipped"] == 2
+
+    # Imported workers can sign in with their QID
+    res = client.post("/api/v1/auth/login", data={"username": "29535611001", "password": "devpass123", "client_id": "bulk-device"})
+    assert res.status_code == 200, res.text
 
 def test_sites_crud(client, db):
     token = get_auth_token(client, db, "admin@example.com", "devpass123")

@@ -7,17 +7,28 @@ class SupplierRoute(BaseModel):
     supplier_id: int
     requested_quantity: int
 
+class ShiftSpec(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    start_time: str
+    end_time: str
+    total_required_workers: int
+    routes: List[SupplierRoute]
+    notes: Optional[str] = None
+    skill_category: Optional[str] = None
+
 class ManpowerRequestCreate(BaseModel):
     model_config = ConfigDict(extra='ignore')
     site_id: int
     required_date: date
-    start_time: str
-    end_time: str
-    total_required_workers: int
+    # One shift inline, or several in `shifts` (each becomes its own request)
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    total_required_workers: Optional[int] = None
     skill_category: Optional[str] = None
     notes: Optional[str] = None
     supplier_names: Optional[str] = None
-    routes: List[SupplierRoute]
+    routes: List[SupplierRoute] = []
+    shifts: Optional[List[ShiftSpec]] = None
 
 class SupplierResponseUpdate(BaseModel):
     model_config = ConfigDict(extra='ignore')

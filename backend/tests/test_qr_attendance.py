@@ -41,7 +41,8 @@ def test_qr_security_checks(client, db):
     db.commit()
     
     # Give the worker an assignment at Site 2
-    mr = ManpowerRequest(ops_manager_id=1, site_id=site2["id"], required_date=datetime.now(timezone.utc), start_time="09:00", end_time="17:00", total_required_workers=1, status="SUBMITTED")
+    from app.core.timeutil import qatar_today
+    mr = ManpowerRequest(ops_manager_id=1, site_id=site2["id"], required_date=datetime.combine(qatar_today(), datetime.min.time()), start_time="09:00", end_time="17:00", total_required_workers=1, status="SUBMITTED")
     db.add(mr)
     db.flush()
     sr = SupplierResponse(manpower_request_id=mr.id, supplier_id=sup["id"], requested_quantity=1, confirmed_quantity=1, status="ACCEPTED")
@@ -78,7 +79,7 @@ def test_qr_security_checks(client, db):
     # c. QR from another location -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.0, "longitude": 30.0, "accuracy": 10, "qr_data": qr_token_1, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
     assert res.status_code == 403
-    assert "confirmed shift at this location" in res.json()["detail"]
+    assert "not assigned to a shift at this location" in res.json()["detail"]
     
     # d. Correct QR + GPS outside geofence -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.01, "longitude": 30.01, "accuracy": 10, "qr_data": qr_token_2, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)

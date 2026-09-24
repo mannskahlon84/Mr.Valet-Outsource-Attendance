@@ -680,7 +680,7 @@ export default function WorkerPortal() {
             await fetchApi('/attendance/exceptions', {
                 method: 'POST',
                 body: JSON.stringify({
-                    site_id: detectedSite?.id || 1,
+                    site_id: detectedSite?.id ?? null,
                     exception_type: 'CLOCK_IN_FAILED',
                     reason: exceptionReason
                 })

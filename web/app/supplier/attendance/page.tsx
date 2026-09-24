@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
+/** One row of /attendance/supplier-live */
+type LiveRecord = { internal_worker_id: string; shift_window: string; check_in_time: string | null; status: string; [key: string]: unknown };
+type LiveWorker = LiveRecord & { internal_id: string; scheduled_shift: string; check_in_method: string };
+
 export default function SupplierAttendancePage() {
     const [liveData, setLiveData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -10,9 +14,28 @@ export default function SupplierAttendancePage() {
 
     const loadLiveData = async () => {
         try {
-            const data = await fetchApi('/attendance/supplier-live');
-            setLiveData(data);
+            const [records, roster] = await Promise.all([
+                fetchApi('/attendance/supplier-live'),
+                fetchApi('/workers/')
+            ]);
+            // The API lists today's assigned shifts; shape them for this page and count the full roster
+            const statusMap: Record<string, string> = { ON_SHIFT: 'ON_SHIFT', SHIFT_ENDED: 'COMPLETED', SCHEDULED: 'NOT_STARTED' };
+            const workers: LiveWorker[] = (Array.isArray(records) ? (records as LiveRecord[]) : []).map(r => ({
+                ...r,
+                internal_id: r.internal_worker_id,
+                scheduled_shift: r.shift_window,
+                check_in_method: r.check_in_time ? 'QR + GPS + Selfie' : '—',
+                status: statusMap[r.status] || r.status,
+            }));
+            setLiveData({
+                workers,
+                total_roster_count: Array.isArray(roster) ? roster.length : 0,
+                active_on_shift_count: workers.filter(w => w.status === 'ON_SHIFT').length,
+                ended_shift_count: workers.filter(w => w.status === 'COMPLETED').length,
+                not_checked_in_count: workers.filter(w => w.status === 'NOT_STARTED').length,
+            });
         } catch (e) {
+            // Keep the last data on screen if a refresh fails
             console.error("Failed to load supplier live attendance", e);
         } finally {
             setLoading(false);

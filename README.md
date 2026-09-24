@@ -63,13 +63,19 @@ A full-stack, enterprise-grade manpower dispatch, shift allocation, attendance t
 ### 1. Backend Setup
 ```bash
 cd backend
-python -m venv venv
-.\venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate          # Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
+
+# Demo data (safe to re-run: only adds what is missing, never changes existing records)
 python seed_roles.py
+python seed_suppliers.py
 python sync_all_locations.py
+
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+Without `DATABASE_URL` the backend uses a local SQLite file (`backend/test.db`). In production set
+`ENVIRONMENT=production` and a PostgreSQL `DATABASE_URL`; the backend refuses to start on SQLite in production.
 
 ### 2. Frontend Setup
 ```bash

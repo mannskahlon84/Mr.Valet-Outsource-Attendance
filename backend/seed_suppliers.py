@@ -1,5 +1,6 @@
 import uuid
 from app.db.session import SessionLocal
+from app.db.init_db import ensure_tables
 from app.models.all_models import Supplier, User, RoleEnum
 from app.core.security import get_password_hash
 
@@ -78,4 +79,5 @@ def seed_suppliers():
         db.close()
 
 if __name__ == "__main__":
+    ensure_tables()
     seed_suppliers()

@@ -35,6 +35,31 @@ def generate_internal_worker_id(db: Session) -> str:
     next_num = max(max_num + 1, 1)
     return f"WRK-{next_num:03d}"
 
+# Deleted workers who have past shifts are kept (for billing history) under this status
+ARCHIVED = "archived"
+
+# Same default the supplier's Enroll Driver form pre-fills; replaced when passwords are issued at launch
+DEFAULT_WORKER_PASSWORD = "devpass123"
+
+
+def ensure_worker_login(db: Session, worker: Worker, password: str) -> User:
+    """Every worker needs a login to check in: username is their QID."""
+    login = db.query(User).filter(User.worker_id == worker.id).first()
+    if login:
+        return login
+    login = User(
+        email=worker.qid,
+        name=f"{worker.first_name} {worker.last_name}".strip(),
+        password_hash=get_password_hash(password),
+        role=RoleEnum.OUTSOURCE_WORKER,
+        worker_id=worker.id,
+        supplier_id=worker.supplier_id,
+        status="active",
+    )
+    db.add(login)
+    return login
+
+
 def check_worker_registration_constraints(db: Session, qid: str, first_name: str, last_name: str, whatsapp_number: str):
     """
     Enforces strict Qatar MOI QID validation and cross-supplier duplicate prevention.
@@ -308,15 +333,8 @@ def create_worker(
     db.add(worker)
     db.flush()
     
-    # Create corresponding User using QID as the login username
-    from app.core.security import get_password_hash
-    user = User(
-        email=worker.qid,  # The worker will use their QID to log into the mobile app
-        password_hash=get_password_hash(password),
-        role=RoleEnum.OUTSOURCE_WORKER,
-        worker_id=worker.id
-    )
-    db.add(user)
+    # The worker signs in with their QID
+    ensure_worker_login(db, worker, password)
     
     db.commit()
     db.refresh(worker)
@@ -326,13 +344,13 @@ def create_worker(
 @router.get("/", response_model=List[WorkerResponse])
 def get_workers(
     skip: int = Query(0, ge=0), 
-    limit: int = Query(50, le=100), 
+    limit: int = Query(1000, le=5000), 
     supplier_id: int = None,
     status: str = None,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Worker)
+    query = db.query(Worker).filter(Worker.status != ARCHIVED)
     
     if current_user.role == RoleEnum.SUPPLIER_HEAD:
         query = query.filter(Worker.supplier_id == current_user.supplier_id)
@@ -416,9 +434,16 @@ async def bulk_import_preview(file: UploadFile = File(...), db: Session = Depend
         s_id = row.get("supplier_id", "").strip()
         fname = row.get("first_name", "").strip()
         lname = row.get("last_name", "").strip()
+        qid = (row.get("qid") or "").strip()
+        whatsapp = (row.get("whatsapp_number") or row.get("phone") or "").strip()
         
-        if not s_id or not fname or not lname:
-            errors.append("Missing required fields (supplier_id, first_name, last_name)")
+        if not s_id or not fname or not lname or not qid or not whatsapp:
+            errors.append("Missing required fields (supplier_id, first_name, last_name, qid, whatsapp_number)")
+        else:
+            try:
+                check_worker_registration_constraints(db=db, qid=qid, first_name=fname, last_name=lname, whatsapp_number=whatsapp)
+            except HTTPException as e:
+                errors.append(e.detail)
             
         if i_id:
             if i_id in seen_ids: errors.append(f"Duplicate internal_worker_id in file: {i_id}")
@@ -444,7 +469,7 @@ async def bulk_import_preview(file: UploadFile = File(...), db: Session = Depend
         else:
             valid_rows.append({"row": idx, "data": row})
             
-    return {"total": idx, "valid_count": len(valid_rows), "invalid_count": len(invalid_rows), "valid_rows": valid_rows, "invalid_rows": invalid_rows}
+    return {"total": len(valid_rows) + len(invalid_rows), "valid_count": len(valid_rows), "invalid_count": len(invalid_rows), "valid_rows": valid_rows, "invalid_rows": invalid_rows}
 
 @router.post("/bulk-import/commit")
 async def bulk_import_commit(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.SUPPLIER_HEAD]))):
@@ -452,39 +477,49 @@ async def bulk_import_commit(file: UploadFile = File(...), db: Session = Depends
     csv_reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
     imported = 0
     skipped = 0
+    problems = []
     seen_ids = set()
     
     try:
         for idx, row in enumerate(csv_reader, start=1):
-            i_id = row.get("internal_worker_id", "").strip()
-            s_id = row.get("supplier_id", "").strip()
-            fname = row.get("first_name", "").strip()
-            lname = row.get("last_name", "").strip()
+            def skip(reason):
+                problems.append({"row": idx, "reason": reason})
+
+            i_id = (row.get("internal_worker_id") or "").strip()
+            s_id = (row.get("supplier_id") or "").strip()
+            fname = (row.get("first_name") or "").strip()
+            lname = (row.get("last_name") or "").strip()
+            qid = (row.get("qid") or "").strip()
+            whatsapp = (row.get("whatsapp_number") or row.get("phone") or "").strip()
+            password = (row.get("password") or "").strip() or DEFAULT_WORKER_PASSWORD
             
-            if not s_id or not fname or not lname:
-                skipped += 1
+            if current_user.role == RoleEnum.SUPPLIER_HEAD and not s_id:
+                s_id = str(current_user.supplier_id)
+            if not s_id or not fname or not lname or not qid or not whatsapp:
+                skip("supplier_id, first_name, last_name, qid and whatsapp_number are required")
                 continue
             
-            final_i_id = i_id
-            if not final_i_id: final_i_id = generate_internal_worker_id(db)
-                
-            if final_i_id in seen_ids:
-                skipped += 1
+            final_i_id = i_id or generate_internal_worker_id(db)
+            if final_i_id in seen_ids or db.query(Worker).filter(Worker.internal_worker_id == final_i_id).first():
+                skip(f"worker ID {final_i_id} already exists")
                 continue
             seen_ids.add(final_i_id)
-            
-            if db.query(Worker).filter(Worker.internal_worker_id == final_i_id).first():
-                skipped += 1
-                continue
                 
-            s_id_int = int(s_id)
+            try:
+                s_id_int = int(s_id)
+            except ValueError:
+                skip("supplier_id must be a number")
+                continue
             if current_user.role == RoleEnum.SUPPLIER_HEAD and s_id_int != current_user.supplier_id:
-                skipped += 1
+                skip("you can only import workers for your own agency")
                 continue
-                
-            supplier = db.query(Supplier).filter(Supplier.id == s_id_int, Supplier.status == "active").first()
-            if not supplier:
-                skipped += 1
+            if not db.query(Supplier).filter(Supplier.id == s_id_int, Supplier.status == "active").first():
+                skip("supplier not found or inactive")
+                continue
+            try:
+                check_worker_registration_constraints(db=db, qid=qid, first_name=fname, last_name=lname, whatsapp_number=whatsapp)
+            except HTTPException as e:
+                skip(e.detail)
                 continue
             
             worker = Worker(
@@ -492,15 +527,21 @@ async def bulk_import_commit(file: UploadFile = File(...), db: Session = Depends
                 supplier_id=s_id_int,
                 first_name=fname,
                 last_name=lname,
-                phone=row.get("phone", "").strip(),
-                external_employee_id=row.get("external_employee_id", "").strip() or None
+                qid=validate_qatar_id(qid).get("cleaned_qid", qid),
+                whatsapp_number=whatsapp,
+                phone=(row.get("phone") or whatsapp).strip(),
+                external_employee_id=(row.get("external_employee_id") or "").strip() or None,
+                status="active"
             )
             db.add(worker)
+            db.flush()
+            ensure_worker_login(db, worker, password)
             imported += 1
             
+        skipped = len(problems)
         db.commit()
         log_audit_event(db, current_user.id, current_user.role.value, "workers_bulk_imported", "workers", 0, None, {"imported": imported})
-        return {"imported": imported, "skipped": skipped}
+        return {"imported": imported, "skipped": skipped, "problems": problems}
     except Exception as e:
         db.rollback()
         raise e
@@ -514,25 +555,53 @@ class WorkerUpdate(BaseModel):
     whatsapp_number: Optional[str] = None
     supplier_id: Optional[int] = None
     status: Optional[str] = None
+    password: Optional[str] = None
 
 @router.put("/{worker_id}")
 def update_worker(worker_id: int, worker_in: WorkerUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN]))):
-    worker = db.query(Worker).filter(Worker.id == worker_id).first()
+    worker = db.query(Worker).filter(Worker.id == worker_id, Worker.status != ARCHIVED).first()
     if not worker: raise HTTPException(status_code=404, detail="Worker not found")
+    login = db.query(User).filter(User.worker_id == worker.id).first()
     
     old_state = { "first_name": worker.first_name, "last_name": worker.last_name, "qid": worker.qid, "whatsapp_number": worker.whatsapp_number, "supplier_id": worker.supplier_id, "status": worker.status }
     
-    if worker_in.first_name is not None: worker.first_name = worker_in.first_name
-    if worker_in.last_name is not None: worker.last_name = worker_in.last_name
-    if worker_in.qid is not None: worker.qid = worker_in.qid
-    if worker_in.whatsapp_number is not None: worker.whatsapp_number = worker_in.whatsapp_number
-    if worker_in.supplier_id is not None: worker.supplier_id = worker_in.supplier_id
-    if worker_in.status is not None: worker.status = worker_in.status
+    if worker_in.qid is not None and worker_in.qid.strip() != (worker.qid or ""):
+        qid_res = validate_qatar_id(worker_in.qid.strip())
+        if not qid_res["is_valid"]:
+            raise HTTPException(status_code=400, detail=f"Invalid Qatar ID (QID): {qid_res['error_message']}")
+        new_qid = qid_res.get("cleaned_qid", worker_in.qid.strip())
+        if db.query(Worker).filter(Worker.qid == new_qid, Worker.id != worker.id).first():
+            raise HTTPException(status_code=400, detail=f"QID {new_qid} is already registered to another employee.")
+        # Workers sign in with their QID, so the login name follows the QID
+        if login and (login.email or "") == (worker.qid or ""):
+            if db.query(User).filter(User.email == new_qid, User.id != login.id).first():
+                raise HTTPException(status_code=400, detail=f"QID {new_qid} is already used as another login.")
+            login.email = new_qid
+        worker.qid = new_qid
+    if worker_in.whatsapp_number is not None and worker_in.whatsapp_number.strip() != (worker.whatsapp_number or ""):
+        number = worker_in.whatsapp_number.strip()
+        if db.query(Worker).filter(Worker.whatsapp_number == number, Worker.id != worker.id).first():
+            raise HTTPException(status_code=400, detail=f"WhatsApp number {number} is already registered to another employee.")
+        worker.whatsapp_number = number
+    if worker_in.status is not None:
+        if worker_in.status not in ["active", "inactive"]:
+            raise HTTPException(status_code=400, detail="Status must be 'active' or 'inactive'.")
+        worker.status = worker_in.status
+    if worker_in.supplier_id is not None and worker_in.supplier_id != worker.supplier_id:
+        if not db.query(Supplier).filter(Supplier.id == worker_in.supplier_id).first():
+            raise HTTPException(status_code=400, detail="Supplier not found.")
+        worker.supplier_id = worker_in.supplier_id
+    if worker_in.first_name is not None: worker.first_name = worker_in.first_name.strip()
+    if worker_in.last_name is not None: worker.last_name = worker_in.last_name.strip()
+    if worker_in.password is not None and worker_in.password.strip():
+        if login:
+            login.password_hash = get_password_hash(worker_in.password.strip())
+        else:
+            ensure_worker_login(db, worker, worker_in.password.strip())
     
     db.commit()
     db.refresh(worker)
     
-    from app.services.audit import log_audit_event
     new_state = { "first_name": worker.first_name, "last_name": worker.last_name, "qid": worker.qid, "whatsapp_number": worker.whatsapp_number, "supplier_id": worker.supplier_id, "status": worker.status }
     log_audit_event(db, current_user.id, current_user.role.value, "worker_updated", "workers", worker.id, old_state, new_state)
     return {"id": worker.id}
@@ -582,22 +651,33 @@ def delete_worker(
         "supplier_id": worker.supplier_id
     }
 
-    # 1. Nullify worker_id on notifications to prevent FK violation
-    db.query(Notification).filter(Notification.worker_id == worker.id).update({Notification.worker_id: None})
+    assignment_ids = [a.id for a in db.query(WorkerAssignment).filter(WorkerAssignment.worker_id == worker.id).all()]
+    worked = bool(assignment_ids) and db.query(Attendance).filter(
+        Attendance.worker_assignment_id.in_(assignment_ids), Attendance.check_in_time.isnot(None)
+    ).first() is not None
 
-    # 2. Delete linked attendance and assignments
-    assignments = db.query(WorkerAssignment).filter(WorkerAssignment.worker_id == worker.id).all()
-    assignment_ids = [a.id for a in assignments]
-    if assignment_ids:
-        db.query(AttendanceException).filter(AttendanceException.assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
-        db.query(Attendance).filter(Attendance.assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
-        db.query(WorkerAssignment).filter(WorkerAssignment.worker_id == worker.id).delete(synchronize_session=False)
-
-    # 3. Delete linked user account if exists
+    # The login goes either way, so the QID can sign up again
     db.query(User).filter(User.worker_id == worker.id).delete(synchronize_session=False)
 
-    # 4. Delete worker
-    db.delete(worker)
+    if worked:
+        # Past shifts are billed and invoiced: keep them, archive the person and release their identifiers
+        worker.status = ARCHIVED
+        worker.qid = None
+        worker.whatsapp_number = None
+        worker.device_id = None
+        db.query(WorkerAssignment).filter(
+            WorkerAssignment.worker_id == worker.id,
+            WorkerAssignment.id.notin_(
+                db.query(Attendance.worker_assignment_id).filter(Attendance.check_in_time.isnot(None))
+            )
+        ).update({WorkerAssignment.status: "CANCELLED"}, synchronize_session=False)
+    else:
+        db.query(Notification).filter(Notification.worker_id == worker.id).update({Notification.worker_id: None})
+        if assignment_ids:
+            db.query(AttendanceException).filter(AttendanceException.worker_assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
+            db.query(Attendance).filter(Attendance.worker_assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
+            db.query(WorkerAssignment).filter(WorkerAssignment.worker_id == worker.id).delete(synchronize_session=False)
+        db.delete(worker)
     db.commit()
 
     log_audit_event(db, current_user.id, current_user.role.value, "worker_deleted", "workers", worker_id, old_state, None)

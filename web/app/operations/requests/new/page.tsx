@@ -222,6 +222,13 @@ export default function NewShiftRequest() {
             }
         }
 
+        // Every shift needs an agency before anything is sent, so no shift goes out alone
+        const unrouted = shifts.find(sh => !sh.routes.some(r => !isNaN(parseInt(r.supplier_id, 10)) && parseInt(r.requested_quantity, 10) > 0));
+        if (unrouted) {
+            setError(`${unrouted.name}: choose at least one agency and how many drivers to request from it.`);
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -230,13 +237,14 @@ export default function NewShiftRequest() {
                 const sh = shifts[i];
                 setSubmitStatus(`Dispatching shift ${i + 1} of ${shifts.length} (${sh.name})...`);
 
-                let validRoutes = sh.routes.map(r => ({
+                const validRoutes = sh.routes.map(r => ({
                     supplier_id: parseInt(r.supplier_id, 10),
                     requested_quantity: parseInt(r.requested_quantity, 10)
                 })).filter(r => !isNaN(r.supplier_id) && r.requested_quantity > 0);
 
-                if (validRoutes.length === 0 && suppliers.length > 0) {
-                    validRoutes = [{ supplier_id: suppliers[0].id, requested_quantity: parseInt(sh.totalWorkers, 10) || 5 }];
+                if (validRoutes.length === 0) {
+                    // Never guess an agency: the request would go to someone ops didn't choose
+                    throw new Error(`${sh.name}: choose at least one agency and how many drivers to request from it.`);
                 }
 
                 const routedNames = validRoutes.map(r => {
