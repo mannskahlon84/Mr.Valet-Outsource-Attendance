@@ -9,5 +9,5 @@ def health_check():
     return {
         "status": "ok",
         "environment": settings.ENVIRONMENT,
-        "database": settings.DATABASE_URL.split(":", 1)[0].replace("postgres", "postgresql").replace("postgresqlql", "postgresql"),
+        "database": "postgresql" if settings.DATABASE_URL.startswith("postgresql") else settings.DATABASE_URL.split(":", 1)[0],
     }

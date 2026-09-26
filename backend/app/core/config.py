@@ -16,8 +16,14 @@ class Settings(BaseSettings):
     def handle_render_env(self):
         if self.JWT_SECRET_KEY and self.SECRET_KEY == "supersecretkey":
             self.SECRET_KEY = self.JWT_SECRET_KEY
-        if self.DATABASE_URL.startswith("postgres://"):
-            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        # Hosts hand out postgres://, postgresql:// or postgresql+psycopg:// URLs; always use the
+        # driver this project installs (psycopg2-binary), whatever the URL asks for
+        url = self.DATABASE_URL.strip()
+        for prefix in ("postgresql+psycopg2://", "postgresql+psycopg://", "postgresql://", "postgres://"):
+            if url.startswith(prefix):
+                url = "postgresql+psycopg2://" + url[len(prefix):]
+                break
+        self.DATABASE_URL = url
         if self.ENVIRONMENT == "production" and self.DATABASE_URL.startswith("sqlite"):
             # A SQLite file on a hosted server is wiped on every restart/redeploy, taking all
             # requests and attendance with it. Refuse to start instead of silently losing data.

@@ -19,7 +19,7 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: PYTHON_VERSION
-        value: "3.10.13"
+        value: "3.12.7"
 
 databases:
   - name: manpower-db
