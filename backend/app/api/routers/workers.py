@@ -656,8 +656,16 @@ def delete_worker(
         Attendance.worker_assignment_id.in_(assignment_ids), Attendance.check_in_time.isnot(None)
     ).first() is not None
 
-    # The login goes either way, so the QID can sign up again
-    db.query(User).filter(User.worker_id == worker.id).delete(synchronize_session=False)
+    # Retire the login instead of deleting it: audit logs, messages and invoices still point at
+    # this user. Renaming frees the QID for a new registration; inactive blocks every sign-in.
+    import uuid as _uuid
+    for login in db.query(User).filter(User.worker_id == worker.id).all():
+        login.email = f"retired-{login.id}-{_uuid.uuid4().hex[:8]}@deleted.local"
+        login.status = "inactive"
+        login.password_hash = get_password_hash(_uuid.uuid4().hex)
+        login.refresh_token_version = (login.refresh_token_version or 1) + 1
+        login.worker_id = None
+    db.flush()
 
     if worked:
         # Past shifts are billed and invoiced: keep them, archive the person and release their identifiers

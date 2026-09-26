@@ -69,8 +69,13 @@ from app.db.base import Base
 from app.db.session import engine
 from app.models import all_models  # noqa
 
+import logging
+from app.db.init_db import seed_demo_data_if_empty
+
 try:
     Base.metadata.create_all(bind=engine)
-except Exception as e:
-    pass
+    seed_demo_data_if_empty()
+except Exception:
+    # Keep serving (e.g. while the database wakes up), but make the failure visible in the logs
+    logging.getLogger("uvicorn.error").exception("Database setup at startup failed")
 
