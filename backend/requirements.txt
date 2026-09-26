@@ -14,5 +14,15 @@ numpy>=1.26.0,<3.0.0
 requests>=2.31.0
 openpyxl>=3.1.2
 reportlab>=4.0.0
+Pillow>=10.0.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+
+# Lightweight real face-matching for attendance selfies (see app/services/biometrics.py).
+# dlib-bin ships a prebuilt wheel (manylinux x86_64, matches Render), so no C++ compiler or
+# long build step is needed on deploy, unlike installing "dlib" itself from source.
+dlib-bin>=20.0.0
+# Bundles the pretrained model weights as ordinary package data (~96MB download, no
+# separate model-download step at runtime). Its pkg_resources usage needs setuptools<81.
+face_recognition_models==0.3.0
+setuptools<81

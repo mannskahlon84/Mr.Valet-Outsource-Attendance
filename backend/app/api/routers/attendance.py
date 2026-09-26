@@ -190,12 +190,12 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
             raise HTTPException(400, "Face verification failed! This selfie does not match the registered employee. Proxy check-in is not permitted.")
         
     # 4. Duplicate Identity Check (Anti-Cheating across other workers today)
-    is_unique = True
+    is_unique, dup_msg = True, ""
     if live_embedding is not None:
-        is_unique, msg = check_duplicate_identity(db, live_embedding, worker.id, qr_site.id)
+        is_unique, dup_msg = check_duplicate_identity(db, live_embedding, worker.id, qr_site.id)
     if not is_unique:
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "duplicate_identity"})
-        raise HTTPException(400, "Attendance has already been recorded for this identity today under another worker profile.")
+        raise HTTPException(400, dup_msg or "Attendance has already been recorded for this identity today under another worker profile.")
 
     # Atomically create attendance
     if not att:

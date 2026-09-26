@@ -31,6 +31,26 @@ def test_liveness_mock():
     assert score < LIVENESS_ACCEPTANCE_THRESHOLD
 
 def test_dimensions_validation():
-    with pytest.raises(ValueError, match="Invalid embedding dimensions. ArcFace requires 512-d vectors."):
-        verify_face_match([0.1]*128, [0.1]*128)
+    # 512-d (ArcFace/DeepFace) and 128-d (dlib) are both valid embedding sizes; only a
+    # size *mismatch* between the two inputs, or an unsupported size, should raise.
+    with pytest.raises(ValueError, match="different face engines"):
+        verify_face_match([0.1] * 128, [0.1] * 512)
+    with pytest.raises(ValueError, match="Unsupported embedding size"):
+        verify_face_match([0.1] * 64, [0.1] * 64)
+
+
+def test_dlib_distance_match():
+    # 128-dimensional vector (dlib/face_recognition): compared by Euclidean distance
+    import numpy as np
+    vec1 = np.random.rand(128).tolist()
+    vec2 = vec1.copy()  # exact match
+    is_match, score = verify_face_match(vec1, vec2)
+    assert is_match is True
+    assert score >= 0.99
+
+    # Far-apart vectors should not match
+    vec3 = [0.0] * 128
+    vec4 = [5.0] * 128
+    is_match, score = verify_face_match(vec3, vec4)
+    assert is_match is False
 

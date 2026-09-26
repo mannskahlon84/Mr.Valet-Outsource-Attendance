@@ -66,7 +66,11 @@ def test_different_worker_same_face_rejected(db, test_data):
     live_face = generate_embedding(1)
     is_valid, msg = check_duplicate_identity(db, live_face, w3.id, site.id)
     assert is_valid is False
-    assert msg == "IDENTITY_ALREADY_RECORDED"
+    # The message names which worker the face is already checked in as, so ops/the site
+    # can tell the driver exactly what happened instead of a bare error code.
+    assert msg.startswith("IDENTITY_ALREADY_RECORDED")
+    assert w1.first_name in msg and w1.last_name in msg
+    assert w1.internal_worker_id in msg
     
 def test_failed_attempts_do_not_reserve(db, test_data):
     w1, w3, wa1, site = test_data["w1"], test_data["w3"], test_data["wa1"], test_data["site"]
