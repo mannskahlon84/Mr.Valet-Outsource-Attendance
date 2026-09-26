@@ -19,7 +19,10 @@ async function proxy(req: NextRequest, context: Context): Promise<Response> {
 
     const headers = new Headers();
     req.headers.forEach((val, key) => {
-        if (!['host', 'connection', 'content-length'].includes(key.toLowerCase())) {
+        // Never ask the backend to compress: fetch() auto-decompresses the body but keeps the
+        // original (compressed) Content-Length header, which then truncates the real response
+        // when forwarded verbatim below. Simplest fix is to not negotiate compression at all.
+        if (!['host', 'connection', 'content-length', 'accept-encoding'].includes(key.toLowerCase())) {
             headers.set(key, val);
         }
     });
@@ -41,7 +44,11 @@ async function proxy(req: NextRequest, context: Context): Promise<Response> {
         });
         const resHeaders = new Headers();
         res.headers.forEach((val, key) => {
-            if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
+            // content-length is dropped too: even with compression disabled above, an
+            // intermediary (Cloudflare in front of Render) can still compress the response,
+            // and fetch()'s reported length would again reflect the wire size, not the
+            // decompressed body length actually being forwarded. Let the runtime recompute it.
+            if (!['content-encoding', 'transfer-encoding', 'content-length'].includes(key.toLowerCase())) {
                 resHeaders.set(key, val);
             }
         });
