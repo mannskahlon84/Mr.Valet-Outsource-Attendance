@@ -1,5 +1,5 @@
 from app.db.session import engine
-from app.db.init_db import ensure_tables
+from app.db.bootstrap import ensure_tables
 from sqlalchemy.orm import sessionmaker
 from app.models.all_models import User, RoleEnum, Supplier, Worker, Site, ManpowerRequest, SupplierResponse, WorkerAssignment, Attendance
 from app.core.security import get_password_hash

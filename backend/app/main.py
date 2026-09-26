@@ -70,7 +70,7 @@ from app.db.session import engine
 from app.models import all_models  # noqa
 
 import logging
-from app.db.init_db import seed_demo_data_if_empty
+from app.db.bootstrap import seed_demo_data_if_empty
 
 try:
     Base.metadata.create_all(bind=engine)
