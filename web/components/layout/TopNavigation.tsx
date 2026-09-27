@@ -1,58 +1,72 @@
 "use client";
+import { LogOut, Menu } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { logout } from '@/lib/api';
 
-export default function TopNavigation({ 
-    name, 
-    role, 
-    title = "Portal", 
-    onToggleMobile 
-}: { 
-    name: string; 
-    role: string; 
+function initials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    return ((parts[0]?.[0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || 'MV';
+}
+
+export default function TopNavigation({
+    name,
+    role,
+    title = "Portal",
+    onToggleMobile
+}: {
+    name: string;
+    role: string;
     title?: string;
     onToggleMobile?: () => void;
 }) {
 
     return (
-        <header className="bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-3 md:px-6 py-2.5 md:py-3 sticky top-0 z-30">
-            <div className="flex items-center space-x-2 md:space-x-3">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#1a1a1a]/[0.06] bg-white/80 px-3 py-2.5 backdrop-blur-xl md:px-8 md:py-3.5">
+            <div className="flex min-w-0 items-center gap-2 md:gap-3">
                 {onToggleMobile && (
-                    <button 
-                        onClick={onToggleMobile} 
-                        className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none"
+                    <button
+                        onClick={onToggleMobile}
+                        className="md:hidden rounded-xl p-2 text-[#1a1a1a]/70 hover:bg-[#1a1a1a]/5"
                         aria-label="Open menu"
                     >
-                        <span className="text-xl font-bold leading-none">☰</span>
+                        <Menu className="h-5 w-5" />
                     </button>
                 )}
-                <div>
-                    <h2 className="text-base md:text-lg font-bold text-gray-900 leading-tight">
+                <div className="min-w-0">
+                    <h2 className="truncate text-base font-bold tracking-tight text-[#1a1a1a] md:text-lg">
                         {title}
                     </h2>
-                    <p className="text-[10px] md:text-xs text-gray-500 font-medium">
+                    <p className="hidden text-xs text-[#1a1a1a]/45 sm:block">
                         Mr. Valet Parking Operations
                     </p>
                 </div>
             </div>
-            <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="flex items-center gap-1.5 md:gap-3">
                 {/* In-App Push Notification Bell */}
                 <NotificationBell />
 
-                <div className="text-right hidden sm:block">
-                    <div className="text-xs md:text-sm font-bold text-gray-900 truncate max-w-[120px] md:max-w-[180px]">
-                        {name}
-                    </div>
-                    <div className="text-[10px] md:text-xs text-gray-500 font-medium truncate">
-                        {role}
+                <div className="hidden items-center gap-3 rounded-2xl py-1 pl-1 pr-3 sm:flex">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1a1a1a] text-xs font-bold text-[#dbb457]">
+                        {initials(name)}
+                    </span>
+                    <div className="text-left">
+                        <div className="max-w-[140px] truncate text-sm font-semibold leading-tight text-[#1a1a1a] md:max-w-[200px]">
+                            {name}
+                        </div>
+                        <div className="max-w-[140px] truncate text-[11px] text-[#1a1a1a]/50 md:max-w-[200px]">
+                            {role}
+                        </div>
                     </div>
                 </div>
 
-                <button 
-                    onClick={logout} 
-                    className="text-xs md:text-sm text-red-600 font-bold border border-red-200 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                <button
+                    onClick={logout}
+                    aria-label="Log out"
+                    title="Log out"
+                    className="flex items-center gap-1.5 rounded-xl border border-[#1a1a1a]/10 px-2.5 py-2 text-xs font-semibold text-[#1a1a1a]/70 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                 >
-                    Logout
+                    <LogOut className="h-4 w-4" />
+                    <span className="hidden md:inline">Log out</span>
                 </button>
             </div>
         </header>

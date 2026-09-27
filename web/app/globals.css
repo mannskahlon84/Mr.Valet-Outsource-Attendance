@@ -1,8 +1,79 @@
 @import "tailwindcss";
 
+/* Mr. Valet brand tokens (colours sampled from the logo) */
+@theme {
+  --color-brand-gold: #dbb457;
+  --color-brand-gold-dark: #a8842f;
+  --color-brand-ink: #1a1a1a;
+  --color-brand-cream: #f6f4ef;
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
 body {
-  background-color: #f3f4f6;
-  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #f6f4ef;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Motion ---------- */
+@keyframes mv-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mv-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mv-slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+@keyframes mv-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mv-shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+
+/* Page content rises in when a page opens */
+.mv-page { animation: mv-fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* Direct children appear one after another */
+.mv-stagger > * { animation: mv-fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.mv-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.mv-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.mv-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.mv-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.mv-stagger > *:nth-child(n + 6) { animation-delay: 300ms; }
+.mv-fade-in { animation: mv-fade-in 0.25s ease-out both; }
+.mv-drawer { animation: mv-slide-in-left 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.mv-pop { animation: mv-pop 0.18s ease-out both; }
+
+/* Cards that respond to the pointer */
+.mv-lift { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.mv-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -12px rgb(26 26 26 / 0.18); }
+
+/* Loading placeholders */
+.mv-skeleton {
+  background: linear-gradient(90deg, #ece9e1 0%, #f7f5f0 50%, #ece9e1 100%);
+  background-size: 800px 100%;
+  animation: mv-shimmer 1.3s linear infinite;
+  border-radius: 0.75rem;
+}
+
+/* Visible keyboard focus in brand gold */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #dbb457;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Phones: data tables become stacked cards (cells are labelled by ResponsiveTables) */

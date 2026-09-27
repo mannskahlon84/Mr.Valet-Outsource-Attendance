@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
+import PageTransition from '@/components/layout/PageTransition';
 import TopNavigation from '@/components/layout/TopNavigation';
 
 export default function AccountingLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +22,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
     ];
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-[#f6f4ef]">
             <Sidebar items={navItems} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavigation 
@@ -30,8 +31,8 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
                     title="Accounting & Finance Portal" 
                     onToggleMobile={() => setMobileOpen(prev => !prev)} 
                 />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
-                    {children}
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#f6f4ef] p-4 md:p-6 lg:p-8">
+                    <PageTransition>{children}</PageTransition>
                 </main>
             </div>
         </div>

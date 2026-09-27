@@ -2,11 +2,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { activeNavHref } from '@/lib/nav';
+import { navIcon } from '@/lib/navIcons';
 
 interface NavItem {
     label: string;
     href: string;
-    icon: string;
+    icon?: string;
 }
 
 export default function MobileBottomNav({ items }: { items: NavItem[] }) {
@@ -14,31 +15,24 @@ export default function MobileBottomNav({ items }: { items: NavItem[] }) {
     const activeHref = activeNavHref(pathname, items.map(i => i.href));
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg px-2 py-1.5 flex justify-around items-center safe-area-bottom">
+        <nav className="md:hidden fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl bg-[#1a1a1a]/95 px-1.5 py-1.5 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.45)] backdrop-blur-xl safe-area-bottom">
             {items.map((item, idx) => {
                 const isActive = item.href === activeHref;
+                const Icon = navIcon(item.href);
 
                 return (
                     <Link
                         key={idx}
                         href={item.href}
-                        className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[56px] ${
-                            isActive
-                                ? 'text-[#dbb457] font-bold'
-                                : 'text-gray-500 hover:text-gray-900 font-medium'
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`flex min-w-[56px] flex-col items-center justify-center rounded-xl px-2 py-1.5 transition-all duration-200 ${
+                            isActive ? 'bg-white/10 text-[#dbb457]' : 'text-white/55 hover:text-white'
                         }`}
                     >
-                        <span className={`text-xl transition-transform ${isActive ? 'scale-110' : ''}`}>
-                            {item.icon}
-                        </span>
-                        <span className={`text-[10px] tracking-tight mt-0.5 truncate max-w-[64px] ${
-                            isActive ? 'font-bold text-gray-900' : 'text-gray-500'
-                        }`}>
+                        <Icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} strokeWidth={1.9} />
+                        <span className={`mt-0.5 max-w-[64px] truncate text-[10px] tracking-tight ${isActive ? 'font-semibold text-white' : ''}`}>
                             {item.label}
                         </span>
-                        {isActive && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#dbb457] mt-0.5"></span>
-                        )}
                     </Link>
                 );
             })}

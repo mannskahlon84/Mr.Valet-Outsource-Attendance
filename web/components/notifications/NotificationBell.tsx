@@ -1,4 +1,5 @@
 "use client";
+import { Bell } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -213,12 +214,12 @@ export default function NotificationBell() {
             {/* Bell Icon Button */}
             <button
                 onClick={() => setIsOpen(prev => !prev)}
-                className="relative p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors focus:outline-none"
+                className="relative rounded-xl p-2.5 text-[#1a1a1a]/65 transition-colors hover:bg-[#1a1a1a]/5 hover:text-[#1a1a1a]"
                 aria-label="View notifications"
             >
-                <span className="text-xl">🔔</span>
+                <Bell className="h-5 w-5" strokeWidth={1.9} />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 bg-red-600 text-white font-black text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 shadow-md animate-pulse">
+                    <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dbb457] px-1 text-[10px] font-bold text-[#1a1a1a] ring-2 ring-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -228,11 +229,11 @@ export default function NotificationBell() {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-[calc(100vw-32px)] sm:w-96 max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="mv-pop absolute right-0 mt-2 w-[calc(100vw-32px)] sm:w-96 max-w-sm bg-white rounded-2xl shadow-2xl border border-[#1a1a1a]/[0.06] z-50 overflow-hidden flex flex-col max-h-[85vh]">
                         {/* Header */}
-                        <div className="p-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex items-center justify-between">
+                        <div className="p-4 bg-[#1a1a1a] text-white flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">🔔</span>
+                                <Bell className="h-4 w-4 text-[#dbb457]" strokeWidth={2} />
                                 <h3 className="font-bold text-sm">Notifications</h3>
                                 {unreadCount > 0 && (
                                     <span className="bg-[#dbb457] text-gray-950 font-black text-[10px] px-2 py-0.5 rounded-full">
