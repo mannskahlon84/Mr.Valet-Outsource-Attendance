@@ -5,12 +5,12 @@ def test_phase1d_workflow(client, db):
     from datetime import datetime, timezone, timedelta
     
     # 1. Setup Data
-    token_admin = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token_admin = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers_admin = {"Authorization": f"Bearer " + token_admin}
     
     
     # Create ops manager
-    ops = User(email="ops@example.com", password_hash=get_password_hash("pass"), role=RoleEnum.OPS_MANAGER)
+    ops = User(email="ops@example.com", password_hash=get_password_hash("Str0ngPass1"), role=RoleEnum.OPS_MANAGER)
     db.add(ops)
     db.commit()
 
@@ -21,20 +21,20 @@ def test_phase1d_workflow(client, db):
     sup_id = sup["id"]
     
     # Create supplier head
-    sup_head = User(email="suphead@example.com", password_hash=get_password_hash("pass"), role=RoleEnum.SUPPLIER_HEAD, supplier_id=sup_id)
+    sup_head = User(email="suphead@example.com", password_hash=get_password_hash("Str0ngPass1"), role=RoleEnum.SUPPLIER_HEAD, supplier_id=sup_id)
     db.add(sup_head)
     db.commit()
     
-    ops_token = get_auth_token(client, db, "ops@example.com", "pass")
+    ops_token = get_auth_token(client, db, "ops@example.com", "Str0ngPass1")
     headers_ops = {"Authorization": f"Bearer {ops_token}"}
     
-    sup_token = get_auth_token(client, db, "suphead@example.com", "pass")
+    sup_token = get_auth_token(client, db, "suphead@example.com", "Str0ngPass1")
     headers_sup = {"Authorization": f"Bearer {sup_token}"}
     
     # Create workers for this supplier
     workers = []
     for i in range(3):
-        w = client.post("/api/v1/workers/", json={"internal_worker_id": f"W-P1D-{i}", "qid": f"2956341100{i}", "password": "password123", "whatsapp_number": f"+9745502100{i}", "supplier_id": sup_id, "first_name": "W", "last_name": str(i)}, headers=headers_admin).json()
+        w = client.post("/api/v1/workers/", json={"internal_worker_id": f"W-P1D-{i}", "qid": f"2956341100{i}", "password": "Str0ngPass123", "whatsapp_number": f"+9745502100{i}", "supplier_id": sup_id, "first_name": "W", "last_name": str(i)}, headers=headers_admin).json()
         workers.append(w["id"])
         
     req_date = (datetime.now(timezone.utc) + timedelta(days=2)).date().isoformat()

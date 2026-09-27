@@ -9,7 +9,8 @@ from app.core.security import get_password_hash
 from app.db.base import Base
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    from app.db.bootstrap import ensure_tables
+    ensure_tables()
 
 def seed_data(db: Session):
     print("Seeding development data...")

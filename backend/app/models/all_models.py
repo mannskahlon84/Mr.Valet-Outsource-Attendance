@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, JSON, Enum, Text, Date
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, JSON, Enum, Text, Date, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -78,6 +78,7 @@ class Site(Base):
 
 class ManpowerRequest(Base):
     __tablename__ = "manpower_requests"
+    __table_args__ = (Index("ix_manpower_requests_site_date", "site_id", "required_date"),)
     id = Column(Integer, primary_key=True, index=True)
     ops_manager_id = Column(Integer, ForeignKey("users.id"))
     site_id = Column(Integer, ForeignKey("sites.id"))
@@ -93,8 +94,8 @@ class ManpowerRequest(Base):
 class SupplierResponse(Base):
     __tablename__ = "supplier_responses"
     id = Column(Integer, primary_key=True, index=True)
-    manpower_request_id = Column(Integer, ForeignKey("manpower_requests.id"))
-    supplier_id = Column(Integer, ForeignKey("suppliers.id"))
+    manpower_request_id = Column(Integer, ForeignKey("manpower_requests.id"), index=True)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), index=True)
     requested_quantity = Column(Integer, nullable=False)
     confirmed_quantity = Column(Integer, default=0)
     proposed_start_time = Column(String, nullable=True)
@@ -111,8 +112,8 @@ class SupplierResponse(Base):
 class WorkerAssignment(Base):
     __tablename__ = "worker_assignments"
     id = Column(Integer, primary_key=True, index=True)
-    supplier_response_id = Column(Integer, ForeignKey("supplier_responses.id"))
-    worker_id = Column(Integer, ForeignKey("workers.id"))
+    supplier_response_id = Column(Integer, ForeignKey("supplier_responses.id"), index=True)
+    worker_id = Column(Integer, ForeignKey("workers.id"), index=True)
     status = Column(String, default="ASSIGNED")
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -120,7 +121,7 @@ class Attendance(Base):
     __tablename__ = "attendance"
     id = Column(Integer, primary_key=True, index=True)
     worker_assignment_id = Column(Integer, ForeignKey("worker_assignments.id"), unique=True)
-    check_in_time = Column(DateTime, nullable=True)
+    check_in_time = Column(DateTime, nullable=True, index=True)
     check_in_lat = Column(Float, nullable=True)
     check_in_lng = Column(Float, nullable=True)
     check_in_accuracy = Column(Float, nullable=True)
@@ -245,3 +246,13 @@ class RequestMessage(Base):
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     message = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class LoginAttempt(Base):
+    """One sign-in try, kept to lock out password guessing (see auth.py)."""
+    __tablename__ = "login_attempts"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False, index=True)
+    ip_address = Column(String, nullable=True, index=True)
+    success = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)

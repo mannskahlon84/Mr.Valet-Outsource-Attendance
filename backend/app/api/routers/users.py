@@ -38,6 +38,8 @@ def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(re
 def create_user(user_in: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN]))):
     if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
+    from app.core.passwords import require_strong_password
+    require_strong_password(user_in.password)
     
     # Try mapping role string to enum
     role_enum = None
@@ -121,5 +123,10 @@ def admin_reset_password(user_id: int, db: Session = Depends(get_db), current_us
     )
     db.add(reset_req)
     db.commit()
-    print(f"\n{'='*50}\nADMIN GENERATED PASSWORD RESET LINK FOR {user.email}:\nhttp://localhost:3000/reset-password?token={raw_token}\n{'='*50}\n")
-    return {"message": "Reset link generated in console for dev purposes"}
+    from app.services.email import send_password_reset_email
+    from app.services.audit import log_audit_event
+    sent = send_password_reset_email(user.email, raw_token) if user.email and "@" in user.email else False
+    log_audit_event(db, current_user.id, current_user.role.value, "admin_password_reset", "users", user.id, None, {"email_sent": sent})
+    if not sent:
+        raise HTTPException(status_code=503, detail="The reset link could not be emailed. Check the email (SMTP) settings, or that this user has a valid email address.")
+    return {"message": f"A password reset link was emailed to {user.email}."}

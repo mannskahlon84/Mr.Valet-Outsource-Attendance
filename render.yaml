@@ -18,6 +18,20 @@ services:
         generateValue: true
       - key: ENVIRONMENT
         value: "production"
+      - key: AUTO_SEED
+        value: "false"
+      # The Vercel site's address, for password-reset links (set in the dashboard)
+      - key: FRONTEND_URL
+        sync: false
+      # Email for password resets (set in the dashboard)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
       - key: PYTHON_VERSION
         value: "3.12.7"
 

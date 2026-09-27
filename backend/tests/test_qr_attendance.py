@@ -7,7 +7,7 @@ import uuid
 
 def test_qr_security_checks(client, db):
     from tests.test_phase1b import get_auth_token
-    token_admin = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token_admin = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers_admin = {"Authorization": f"Bearer {token_admin}"}
     
     # 1. Create two sites
@@ -30,13 +30,13 @@ def test_qr_security_checks(client, db):
     
     # 2. Setup Worker and Assignment
     sup = client.post("/api/v1/suppliers/", json={"name": "QR Sup 1"}, headers=headers_admin).json()
-    worker_res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-QR-1", "supplier_id": sup["id"], "first_name": "A", "last_name": "B", "qid": "29563412001", "password": "password123", "whatsapp_number": "+97455032001"}, headers=headers_admin)
+    worker_res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-QR-1", "supplier_id": sup["id"], "first_name": "A", "last_name": "B", "qid": "29563412001", "password": "Str0ngPass123", "whatsapp_number": "+97455032001"}, headers=headers_admin)
     worker_id = worker_res.json()["id"]
     
     worker_db = db.query(Worker).filter(Worker.id == worker_id).first()
     worker_db.face_embedding = json.dumps([0.01]*512)
     db.commit()
-    w_user = User(email="workerqr@att.com", password_hash=get_password_hash("pass"), role=RoleEnum.OUTSOURCE_WORKER, worker_id=worker_id)
+    w_user = User(email="workerqr@att.com", password_hash=get_password_hash("Str0ngPass1"), role=RoleEnum.OUTSOURCE_WORKER, worker_id=worker_id)
     db.add(w_user)
     db.commit()
     
@@ -53,7 +53,7 @@ def test_qr_security_checks(client, db):
     db.commit()
     assign_id = wa.id
     
-    w_token = get_auth_token(client, db, "workerqr@att.com", "pass")
+    w_token = get_auth_token(client, db, "workerqr@att.com", "Str0ngPass1")
     w_headers = {"Authorization": f"Bearer {w_token}"}
     
     # TESTS

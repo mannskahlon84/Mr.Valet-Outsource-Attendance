@@ -6,7 +6,7 @@ from app.core.security import get_password_hash
 
 def test_reports_functionality(client, db):
     # Setup roles
-    token_admin = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token_admin = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers_admin = {"Authorization": f"Bearer {token_admin}"}
     
     # Check simple empty reports
@@ -20,7 +20,7 @@ def test_reports_functionality(client, db):
     sup = client.post("/api/v1/suppliers/", json={"name": "Rep Sup 1"}, headers=headers_admin).json()
     sup_id = sup["id"]
     
-    ops = User(email="rep_ops@example.com", password_hash=get_password_hash("pass"), role=RoleEnum.OPS_MANAGER)
+    ops = User(email="rep_ops@example.com", password_hash=get_password_hash("Str0ngPass1"), role=RoleEnum.OPS_MANAGER)
     db.add(ops)
     db.flush()
     ops_id = ops.id
@@ -29,7 +29,7 @@ def test_reports_functionality(client, db):
     s = db.query(Site).filter(Site.id == site_id).first()
     s.manager_id = ops_id
     
-    w1_res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-REP-1", "supplier_id": sup_id, "first_name": "Hist", "last_name": "Work", "qid": "29563414001", "password": "password123", "whatsapp_number": "+97455034001"}, headers=headers_admin)
+    w1_res = client.post("/api/v1/workers/", json={"internal_worker_id": "W-REP-1", "supplier_id": sup_id, "first_name": "Hist", "last_name": "Work", "qid": "29563414001", "password": "Str0ngPass123", "whatsapp_number": "+97455034001"}, headers=headers_admin)
     w1_id = w1_res.json()["id"]
     
     db.commit()
@@ -89,7 +89,7 @@ def test_reports_functionality(client, db):
     assert len(res.json()['records']) == 1
     
     # 3. RBAC checks - Ops Manager
-    token_ops = get_auth_token(client, db, "rep_ops@example.com", "pass")
+    token_ops = get_auth_token(client, db, "rep_ops@example.com", "Str0ngPass1")
     headers_ops = {"Authorization": f"Bearer {token_ops}"}
     res = client.get(f"/api/v1/reports/attendance", headers=headers_ops)
     assert res.status_code == 200

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchApi, API_URL } from '../../lib/api';
+import { useDemoMode } from '../../lib/demo';
 import { v4 as uuidv4 } from 'uuid';
 
 function normalizeRole(role?: string): string {
@@ -36,7 +37,10 @@ const OPS_MANAGERS = [
 ];
 
 export default function Login() {
-    const [viewMode, setViewMode] = useState<'quick' | 'manual'>('quick');
+    const demoMode = useDemoMode();
+    const [chosenMode, setViewMode] = useState<'quick' | 'manual' | null>(null);
+    // The live site only offers the normal sign-in form; demo shortcuts are for local testing
+    const viewMode = demoMode ? (chosenMode ?? 'quick') : 'manual';
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -145,6 +149,7 @@ export default function Login() {
                 </div>
 
                 {/* View Switcher Tabs */}
+                {demoMode && (
                 <div className="flex border-b border-slate-700 bg-slate-850">
                     <button 
                         type="button"
@@ -169,6 +174,7 @@ export default function Login() {
                         🔑 Manual Credentials Login
                     </button>
                 </div>
+                )}
 
                 {/* Error Banner */}
                 {error && (
@@ -334,9 +340,11 @@ export default function Login() {
                                     placeholder="e.g. hanees, deepu, or maen.klaib@mrvalet.com"
                                     className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#dbb457] focus:outline-none" 
                                 />
-                                <p className="text-[11px] text-gray-400 mt-1">
-                                    Tip: You can just type the supplier's first name: <strong className="text-white">hanees</strong>, <strong className="text-white">deepu</strong>, <strong className="text-white">kanan</strong>, etc.
-                                </p>
+                                {demoMode && (
+                                    <p className="text-[11px] text-gray-400 mt-1">
+                                        Tip: You can just type the supplier&apos;s first name: <strong className="text-white">hanees</strong>, <strong className="text-white">deepu</strong>, <strong className="text-white">kanan</strong>, etc.
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
@@ -350,9 +358,11 @@ export default function Login() {
                                     placeholder="••••••••"
                                     className="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#dbb457] focus:outline-none" 
                                 />
-                                <p className="text-[11px] text-gray-400 mt-1">
-                                    Default testing password is: <strong className="text-[#dbb457]">devpass123</strong>
-                                </p>
+                                {demoMode && (
+                                    <p className="text-[11px] text-gray-400 mt-1">
+                                        Default testing password is: <strong className="text-[#dbb457]">devpass123</strong>
+                                    </p>
+                                )}
                             </div>
                             <div className="flex justify-between items-center text-xs pt-1">
                                 <Link href="/forgot-password" className="text-[#dbb457] font-semibold hover:underline">

@@ -4,6 +4,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 
 import { useState } from 'react';
 import { API_URL, fetchApi, logout } from '@/lib/api';
+import { useDemoMode } from '@/lib/demo';
 
 function normalizeRole(role?: string): string {
     if (!role) return '';
@@ -31,6 +32,7 @@ export default function TopNavigation({
     const router = useRouter();
     const [showSwitcher, setShowSwitcher] = useState(false);
     const [switching, setSwitching] = useState(false);
+    const demoMode = useDemoMode();
 
 
     const switchUser = async (userToAuth: string, passToAuth: string = 'devpass123') => {
@@ -105,7 +107,8 @@ export default function TopNavigation({
                 {/* In-App Push Notification Bell */}
                 <NotificationBell />
 
-                {/* Quick Persona Switcher Dropdown */}
+                {/* Quick Persona Switcher Dropdown (local testing only) */}
+                {demoMode && (
                 <div className="relative">
                     <button
                         type="button"
@@ -257,6 +260,7 @@ export default function TopNavigation({
                         </div>
                     )}
                 </div>
+                )}
 
                 <div className="text-right hidden sm:block">
                     <div className="text-xs md:text-sm font-bold text-gray-900 truncate max-w-[120px] md:max-w-[180px]">

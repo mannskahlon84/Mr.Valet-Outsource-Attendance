@@ -5,4 +5,5 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-alembic.ini
+# Rotated-password exports (scripts/rotate_default_passwords.py) must never be committed
+*passwords*.csv
