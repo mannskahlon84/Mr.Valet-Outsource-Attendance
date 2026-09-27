@@ -67,7 +67,8 @@ export default function Login() {
                 const errText = await res.text();
                 let detail = errText;
                 try { detail = JSON.parse(errText).detail || errText; } catch { /* not JSON */ }
-                throw new Error(res.status === 400 ? 'Incorrect username or password.' : detail);
+                // Only the plain wrong-password answer is reworded; device, lockout and account messages are shown as sent
+                throw new Error(detail === 'Incorrect credentials' ? 'Incorrect username or password.' : detail);
             }
             
             const data = await res.json();

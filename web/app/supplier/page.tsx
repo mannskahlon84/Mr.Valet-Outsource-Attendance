@@ -1,4 +1,5 @@
 "use client";
+import RequestActionButton from '@/components/supplier/RequestActionButton';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch } from '@/lib/api';
@@ -231,12 +232,7 @@ export default function SupplierDashboard() {
                                         <StatusBadge status={r.supplier_response_status || r.status} />
                                     </td>
                                     <td className="px-5 py-4 text-right">
-                                        <Link 
-                                            href={`/supplier/requests/${r.id}`}
-                                            className="text-[#dbb457] hover:text-[#c29d45] font-bold text-xs border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-50 inline-block transition-colors shadow-sm"
-                                        >
-                                            Respond & Assign →
-                                        </Link>
+                                        <RequestActionButton request={r} />
                                     </td>
                                 </tr>
                             ))}

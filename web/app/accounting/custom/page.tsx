@@ -47,8 +47,14 @@ export default function CustomInvoicing() {
         }
     };
 
-    const handleDownloadCustom = async (e: React.FormEvent) => {
+    const [format, setFormat] = useState<'pdf' | 'excel'>('pdf');
+
+    const handleDownloadCustom = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        // Which download button submitted the form
+        const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+        const format: 'pdf' | 'excel' = submitter?.value === 'excel' ? 'excel' : 'pdf';
+        setFormat(format);
         if (!supplierId || !startDate || !endDate) {
             alert("Supplier, Start Date, and End Date are required.");
             return;
@@ -64,7 +70,8 @@ export default function CustomInvoicing() {
                     end_date: endDate,
                     site_id: siteId ? parseInt(siteId) : null,
                     custom_rate: parseFloat(priceRate) || null,
-                    rate_unit: rateUnit
+                    rate_unit: rateUnit,
+                    format
                 })
             }, true);
 
@@ -72,7 +79,7 @@ export default function CustomInvoicing() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `custom_invoice_${startDate}_to_${endDate}.pdf`;
+            a.download = `custom_invoice_${startDate}_to_${endDate}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -199,13 +206,22 @@ export default function CustomInvoicing() {
                 </div>
 
                 {/* Submit / Download Action */}
-                <div className="pt-3">
+                <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button 
                         type="submit" 
+                        value="pdf"
                         disabled={downloading}
                         className="w-full bg-[#dbb457] text-white p-3.5 rounded-xl hover:bg-[#c29d45] font-black text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                        {downloading ? 'Calculating & Generating PDF...' : '📄 Generate & Download Custom PDF Invoice'}
+                        {downloading && format === 'pdf' ? 'Generating PDF...' : '📄 Download PDF Invoice'}
+                    </button>
+                    <button 
+                        type="submit" 
+                        value="excel"
+                        disabled={downloading}
+                        className="w-full bg-emerald-600 text-white p-3.5 rounded-xl hover:bg-emerald-700 font-black text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        {downloading && format === 'excel' ? 'Generating Excel...' : '📊 Download Excel (shift by shift)'}
                     </button>
                 </div>
             </form>

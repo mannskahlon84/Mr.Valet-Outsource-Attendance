@@ -2,34 +2,47 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
+import ExportButtons from '@/components/ui/ExportButtons';
+
+// Accounting works in Qatar calendar days (a UTC date is wrong between midnight and 03:00 in Doha)
+const qatarToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Qatar' });
+const LIVE_REFRESH_MS = 20_000;
 
 export default function AccountingSummary() {
     const [summary, setSummary] = useState<any[]>([]);
     const [dailyData, setDailyData] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'daily' | 'monthly'>('daily');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(qatarToday);
     const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
     const [year, setYear] = useState(new Date().getFullYear().toString());
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
-    const loadData = () => {
-        setLoading(true);
+    const loadData = (background = false) => {
+        if (!background) setLoading(true);
         Promise.all([
             fetchApi(`/accounting/daily-breakdown?target_date=${selectedDate}`).catch(() => null),
             fetchApi(`/accounting/summary?month=${month}&year=${year}`).catch(() => [])
         ]).then(([daily, monthly]) => {
-            setDailyData(daily);
-            setSummary(monthly || []);
+            // A failed background refresh keeps the figures already on screen
+            if (daily) setDailyData(daily);
+            if (monthly) setSummary(monthly);
+            if (daily || monthly) setUpdatedAt(new Date());
         }).catch(console.error)
         .finally(() => setLoading(false));
     };
 
     useEffect(() => { 
         loadData(); 
-        const handleSync = () => loadData();
+        const handleSync = () => loadData(true);
         window.addEventListener('portal_data_updated', handleSync);
-        return () => window.removeEventListener('portal_data_updated', handleSync);
+        // Live: check-ins and check-outs appear without reloading the page
+        const timer = setInterval(() => loadData(true), LIVE_REFRESH_MS);
+        return () => {
+            window.removeEventListener('portal_data_updated', handleSync);
+            clearInterval(timer);
+        };
     }, [selectedDate, month, year]);
 
     const handleGenerateInvoice = async (supplierId: number, supplierName: string) => {
@@ -53,6 +66,7 @@ export default function AccountingSummary() {
         }
     };
 
+    const billedAgencies = summary.filter(s => (s.workers_supplied || 0) > 0).length;
     const totalPayable = summary.reduce((acc, curr) => acc + (curr.total_amount || 0), 0);
     const totalWorkers = summary.reduce((acc, curr) => acc + (curr.workers_supplied || 0), 0);
 
@@ -64,6 +78,14 @@ export default function AccountingSummary() {
                         <span>🧾</span> Accounting & Supplier Billing
                     </h1>
                     <p className="text-sm text-gray-500">Track daily supplier workforce attendance, hours, and generate monthly contractor invoices</p>
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                        <span className="relative flex h-2 w-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                        </span>
+                        <span>Live · refreshes every 20 s{updatedAt ? ` · updated ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}</span>
+                        <button type="button" onClick={() => loadData(true)} className="font-bold text-[#a8842f] hover:underline cursor-pointer">Refresh now</button>
+                    </div>
                 </div>
 
                 {/* Period / Date Selectors based on tab */}
@@ -73,9 +95,14 @@ export default function AccountingSummary() {
                         <input
                             type="date"
                             value={selectedDate}
-                            onChange={e => setSelectedDate(e.target.value)}
+                            onChange={e => e.target.value && setSelectedDate(e.target.value)}
                             className="text-xs font-bold text-gray-800 bg-transparent focus:outline-none"
                         />
+                        {selectedDate !== qatarToday() && (
+                            <button type="button" onClick={() => setSelectedDate(qatarToday())} className="text-[11px] font-bold text-[#a8842f] hover:underline cursor-pointer">
+                                Today
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm">
@@ -118,7 +145,7 @@ export default function AccountingSummary() {
                         activeTab === 'monthly' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    📊 Monthly Invoicing ({summary.length} Agencies)
+                    📊 Monthly Invoicing ({billedAgencies} Agencies)
                 </button>
             </div>
 
@@ -126,37 +153,44 @@ export default function AccountingSummary() {
             {activeTab === 'daily' && (
                 <div className="space-y-6">
                     {/* Daily KPI Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Daily Payables Estimated</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">
+                            <div className="text-xs font-bold uppercase text-gray-400">Daily Payable</div>
+                            <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
                                 QAR {(dailyData?.total_daily_payables || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">Date: {selectedDate}</div>
+                            <div className="text-xs text-gray-500 mt-1">{dailyData?.total_completed || 0} completed shift(s) on {selectedDate}</div>
                         </div>
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200 bg-emerald-50/20">
-                            <div className="text-xs font-bold uppercase text-emerald-700">Total Drivers Deployed</div>
-                            <div className="text-3xl font-black text-emerald-700 mt-2">
-                                {dailyData?.total_daily_workers || 0} Drivers
+                            <div className="text-xs font-bold uppercase text-emerald-700">Drivers On Duty Now</div>
+                            <div className="text-2xl sm:text-3xl font-black text-emerald-700 mt-2">
+                                {dailyData?.total_on_duty || 0}
                             </div>
-                            <div className="text-xs text-emerald-600 mt-1">From outsource contractors</div>
+                            <div className="text-xs text-emerald-600 mt-1">{dailyData?.total_daily_workers || 0} started · {dailyData?.total_completed || 0} finished</div>
                         </div>
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Suppliers Active on Duty</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">
-                                {dailyData?.suppliers?.length || 0} Agencies
+                            <div className="text-xs font-bold uppercase text-gray-400">Drivers Scheduled</div>
+                            <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
+                                {dailyData?.total_scheduled || 0}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">Scheduled for this date</div>
+                            <div className="text-xs text-gray-500 mt-1">{dailyData?.total_assigned || 0} named drivers assigned</div>
+                        </div>
+                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                            <div className="text-xs font-bold uppercase text-gray-400">Agencies Working</div>
+                            <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
+                                {dailyData?.suppliers?.length || 0}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">{dailyData?.total_duty_hours || 0} verified duty hours</div>
                         </div>
                     </div>
 
                     {/* Daily Breakdown Table */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
                             <h3 className="font-bold text-sm text-gray-800">
                                 Agency Manpower Attendance Breakdown for {selectedDate}
                             </h3>
-                            <span className="text-xs text-gray-500 font-mono">Location-wise attendance tracking</span>
+                            <ExportButtons base="/accounting/daily-breakdown/export" query={`target_date=${selectedDate}`} filename={`daily-supplier-tracking-${selectedDate}`} />
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -164,7 +198,7 @@ export default function AccountingSummary() {
                                     <tr>
                                         <th className="px-5 py-3 text-left">Supplier Agency</th>
                                         <th className="px-5 py-3 text-left">Deployed Locations</th>
-                                        <th className="px-5 py-3 text-center">Allocated</th>
+                                        <th className="px-5 py-3 text-center">Scheduled / Assigned</th>
                                         <th className="px-5 py-3 text-center">Started Shift</th>
                                         <th className="px-5 py-3 text-center">Ended Shift</th>
                                         <th className="px-5 py-3 text-center">Duty Hours</th>
@@ -193,7 +227,7 @@ export default function AccountingSummary() {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-center font-bold text-gray-800">
-                                                {sup.total_workers_allocated}
+                                                {sup.total_workers_allocated} / {sup.assigned_workers_count}
                                             </td>
                                             <td className="px-5 py-4 text-center">
                                                 <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
@@ -219,7 +253,7 @@ export default function AccountingSummary() {
                                     {(dailyData?.suppliers || []).length === 0 && !loading && (
                                         <tr>
                                             <td colSpan={8} className="px-5 py-12 text-center text-gray-400">
-                                                No supplier shifts or attendance logged for {selectedDate}.
+                                                No confirmed agency shifts on {selectedDate}.
                                             </td>
                                         </tr>
                                     )}
@@ -249,13 +283,17 @@ export default function AccountingSummary() {
                         </div>
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                             <div className="text-xs font-bold uppercase text-gray-400">Active Agencies Billed</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">{summary.length} Agencies</div>
-                            <div className="text-xs text-gray-500 mt-1">Ready for invoice generation</div>
+                            <div className="text-3xl font-black text-gray-900 mt-2">{billedAgencies} Agencies</div>
+                            <div className="text-xs text-gray-500 mt-1">With completed shifts, ready to invoice</div>
                         </div>
                     </div>
 
                     {/* Summary Table */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+                            <h3 className="font-bold text-sm text-gray-800">Completed shifts and payables for {month}/{year}</h3>
+                            <ExportButtons base="/accounting/summary/export" query={`month=${month}&year=${year}`} filename={`monthly-billing-${year}-${month.padStart(2, '0')}`} />
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200 text-sm">
                                 <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
