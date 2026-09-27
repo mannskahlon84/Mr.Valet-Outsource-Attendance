@@ -1,4 +1,5 @@
 "use client";
+import { calendarMonth } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -58,7 +59,7 @@ export default function SupplierInvoices() {
                                 <div>
                                     <span className="text-[10px] text-gray-400 block uppercase font-bold">Billing Month</span>
                                     <span className="text-sm font-black text-gray-900">
-                                        {inv.billing_month ? new Date(inv.billing_month).toLocaleDateString([], { month: 'long', year: 'numeric' }) : '-'}
+                                        {inv.billing_month ? calendarMonth(inv.billing_month) : '-'}
                                     </span>
                                 </div>
                                 <div className="text-right">
@@ -108,7 +109,7 @@ export default function SupplierInvoices() {
                                 <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-5 py-4 font-mono font-bold text-gray-900">{inv.invoice_number}</td>
                                     <td className="px-5 py-4 text-gray-700">
-                                        {inv.billing_month ? new Date(inv.billing_month).toLocaleDateString([], { month: 'long', year: 'numeric' }) : '-'}
+                                        {inv.billing_month ? calendarMonth(inv.billing_month) : '-'}
                                     </td>
                                     <td className="px-5 py-4 font-bold text-gray-800">{inv.workers_supplied_quantity} Drivers</td>
                                     <td className="px-5 py-4 text-gray-600">QAR {inv.rate_per_worker?.toFixed(2)}</td>

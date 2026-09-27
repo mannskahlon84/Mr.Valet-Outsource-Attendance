@@ -1,4 +1,5 @@
 "use client";
+import { qatarTime } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -244,7 +245,7 @@ export default function SupplierAttendancePage() {
                                         <td className="px-5 py-3.5 text-xs font-mono">
                                             {w.check_in_time ? (
                                                 <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                                    {new Date(w.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {qatarTime(w.check_in_time)}
                                                 </span>
                                             ) : (
                                                 <span className="text-gray-400">—</span>
@@ -253,7 +254,7 @@ export default function SupplierAttendancePage() {
                                         <td className="px-5 py-3.5 text-xs font-mono">
                                             {w.check_out_time ? (
                                                 <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                                    {new Date(w.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {qatarTime(w.check_out_time)}
                                                 </span>
                                             ) : (
                                                 <span className="text-gray-400">—</span>

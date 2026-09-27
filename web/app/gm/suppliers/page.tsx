@@ -1,4 +1,5 @@
 "use client";
+import { qatarNowParts } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -8,9 +9,7 @@ export default function GMSuppliers() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const now = new Date();
-        const month = now.getMonth() + 1;
-        const year = now.getFullYear();
+        const { month, year } = qatarNowParts();
 
         Promise.all([
             fetchApi('/suppliers/').catch(() => []),

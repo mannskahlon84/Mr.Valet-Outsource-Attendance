@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, tryFetch } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
@@ -186,7 +187,7 @@ export default function Requests() {
                                     </span>
                                 </td>
                                 <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/60">
-                                    <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#1a1a1a]/35" />{new Date(r.required_date).toLocaleDateString()}</span>
+                                    <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#1a1a1a]/35" />{calendarDate(r.required_date)}</span>
                                 </td>
                                 <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-[#1a1a1a]">
                                     <span className="inline-flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-[#1a1a1a]/35" />{r.total_required_workers}</span>

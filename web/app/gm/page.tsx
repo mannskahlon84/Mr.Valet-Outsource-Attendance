@@ -1,4 +1,5 @@
 "use client";
+import { qatarNowParts } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
@@ -11,9 +12,7 @@ export default function GMDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const now = new Date();
-        const month = now.getMonth() + 1;
-        const year = now.getFullYear();
+        const { month, year } = qatarNowParts();
 
         Promise.all([
             fetchApi(`/accounting/summary?month=${month}&year=${year}`).catch(() => []),

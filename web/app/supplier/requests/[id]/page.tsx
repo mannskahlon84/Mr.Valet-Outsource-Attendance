@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate, qatarTime } from '@/lib/time';
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
@@ -188,7 +189,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         <StatusBadge status={myResponse?.status || request.status} />
                     </div>
                     <p className="text-sm text-gray-500">
-                        {site?.name || 'Location'} • {request.required_date ? new Date(request.required_date).toLocaleDateString() : '-'}
+                        {site?.name || 'Location'} • {request.required_date ? calendarDate(request.required_date) : '-'}
                     </p>
                 </div>
                 <Link href="/supplier/requests" className="text-sm text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
@@ -213,7 +214,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     <div className="text-base font-mono font-bold text-gray-900 mt-1">
                         {request.start_time} - {request.end_time}
                     </div>
-                    <div className="text-xs text-gray-500">{request.required_date ? new Date(request.required_date).toLocaleDateString() : 'Shift Date'}</div>
+                    <div className="text-xs text-gray-500">{request.required_date ? calendarDate(request.required_date) : 'Shift Date'}</div>
                 </div>
                 <div>
                     <div className="text-xs font-bold uppercase text-gray-400">Requested for Your Agency</div>
@@ -523,8 +524,8 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                                                 <div>
                                                     <div className="font-bold text-sm text-gray-900">{d.name}</div>
                                                     <div className="text-xs text-gray-500 font-mono">
-                                                        ID: {d.internal_worker_id} • In {new Date(d.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        {d.check_out_time && ` • Out ${new Date(d.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                                        ID: {d.internal_worker_id} • In {qatarTime(d.check_in_time)}
+                                                        {d.check_out_time && ` • Out ${qatarTime(d.check_out_time)}`}
                                                     </div>
                                                 </div>
                                                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${d.status === 'ON_DUTY' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
@@ -554,7 +555,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                                 key={m.id} 
                                 className={`flex flex-col ${m.is_mine ? 'items-end' : 'items-start'}`}
                             >
-                                <div className="text-[10px] text-gray-400 mb-0.5 px-1">{m.sender_name} • {new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                <div className="text-[10px] text-gray-400 mb-0.5 px-1">{m.sender_name} • {qatarTime(m.timestamp)}</div>
                                 <div className={`p-3 rounded-xl max-w-md text-sm ${
                                     m.is_mine 
                                         ? 'bg-[#dbb457] text-white rounded-br-none' 

@@ -1,4 +1,5 @@
 "use client";
+import { qatarDateTime, qatarTime, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, API_URL, downloadFile } from '@/lib/api';
 
@@ -68,13 +69,13 @@ export default function OperationsAttendance() {
                         Live Sync
                     </span>
                     <button 
-                        onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`)}
+                        onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${qatarToday()}.xlsx`)}
                         className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors text-center"
                     >
                         Export Excel
                     </button>
                     <button 
-                        onClick={() => downloadFile('/reports/attendance/export/pdf', `attendance-${new Date().toISOString().slice(0, 10)}.pdf`)}
+                        onClick={() => downloadFile('/reports/attendance/export/pdf', `attendance-${qatarToday()}.pdf`)}
                         className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors text-center"
                     >
                         Export PDF
@@ -232,14 +233,14 @@ export default function OperationsAttendance() {
                                                             <td className="px-4 py-2.5 font-mono">
                                                                 {w.check_in_time ? (
                                                                     <span className="text-emerald-700 font-bold">
-                                                                        {new Date(w.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                        {qatarTime(w.check_in_time)}
                                                                     </span>
                                                                 ) : '—'}
                                                             </td>
                                                             <td className="px-4 py-2.5 font-mono">
                                                                 {w.check_out_time ? (
                                                                     <span className="text-blue-700 font-bold">
-                                                                        {new Date(w.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                        {qatarTime(w.check_out_time)}
                                                                     </span>
                                                                 ) : '—'}
                                                             </td>
@@ -296,7 +297,7 @@ export default function OperationsAttendance() {
                                 </div>
                                 <div className="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-gray-100 font-mono">
                                     <span className="text-gray-600">
-                                        ⏱️ In: {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'} | Out: {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
+                                        ⏱️ In: {r.check_in_time ? qatarTime(r.check_in_time) : '-'} | Out: {r.check_out_time ? qatarTime(r.check_out_time) : '-'}
                                     </span>
                                     <span className="font-black text-gray-900">{r.duty_hours} hrs</span>
                                 </div>
@@ -329,7 +330,7 @@ export default function OperationsAttendance() {
                                         <td className="px-5 py-4 text-gray-600">{r.site_name}</td>
                                         <td className="px-5 py-4 text-gray-600">{r.required_date}</td>
                                         <td className="px-5 py-4 text-gray-600 font-mono text-xs">
-                                            {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'} / {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
+                                            {r.check_in_time ? qatarTime(r.check_in_time) : '-'} / {r.check_out_time ? qatarTime(r.check_out_time) : '-'}
                                         </td>
                                         <td className="px-5 py-4 font-black text-gray-900">{r.duty_hours} hrs</td>
                                         <td className="px-5 py-4">
@@ -373,7 +374,7 @@ export default function OperationsAttendance() {
                                     <b>Reason:</b> {exc.reason}
                                 </p>
                                 <div className="text-xs text-gray-400 mt-1">
-                                    Requested on: {new Date(exc.created_at).toLocaleString()}
+                                    Requested on: {qatarDateTime(exc.created_at)}
                                 </div>
                             </div>
                             {exc.status === 'PENDING_APPROVAL' && (

@@ -1,4 +1,5 @@
 "use client";
+import { qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -56,9 +57,9 @@ export default function NewShiftRequest() {
     ]);
 
     useEffect(() => {
-        // Default required date: tomorrow
-        const tmrw = new Date();
-        tmrw.setDate(tmrw.getDate() + 1);
+        // Default required date: tomorrow in Qatar
+        const tmrw = new Date(`${qatarToday()}T12:00:00Z`);
+        tmrw.setUTCDate(tmrw.getUTCDate() + 1);
         setRequiredDate(tmrw.toISOString().split('T')[0]);
 
         const savedName = sessionStorage.getItem('name') || '';

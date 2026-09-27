@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
 
@@ -150,7 +151,7 @@ export default function Requests() {
                             <tr key={r.id}>
                                 <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">REQ-{r.id}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">Site #{r.site_id}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{new Date(r.required_date).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{calendarDate(r.required_date)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.total_required_workers}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 text-xs font-semibold rounded-full ${r.status === "DRAFT" ? "bg-gray-100 text-gray-800" : r.status === "PUBLISHED" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>

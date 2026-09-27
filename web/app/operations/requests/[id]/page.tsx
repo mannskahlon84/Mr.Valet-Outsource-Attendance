@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate, qatarDate, qatarTime } from '@/lib/time';
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
@@ -145,7 +146,7 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                         <StatusBadge status={request.status} />
                     </div>
                     <p className="text-sm text-gray-500">
-                        {site?.name || 'Location'} • {request.required_date ? new Date(request.required_date).toLocaleDateString() : '-'}
+                        {site?.name || 'Location'} • {request.required_date ? calendarDate(request.required_date) : '-'}
                     </p>
                 </div>
                 <Link href="/operations/requests" className="text-sm text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
@@ -206,7 +207,7 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                 <div>
                     <div className="text-xs font-bold uppercase text-gray-400">Created At</div>
                     <div className="text-base font-medium text-gray-900 mt-1">
-                        {request.created_at ? new Date(request.created_at).toLocaleDateString() : '-'}
+                        {request.created_at ? qatarDate(request.created_at) : '-'}
                     </div>
                     <div className="text-xs text-gray-500">{request.notes || 'No special notes'}</div>
                 </div>
@@ -364,7 +365,7 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                                 key={m.id} 
                                 className={`flex flex-col ${m.is_mine ? 'items-end' : 'items-start'}`}
                             >
-                                <div className="text-[10px] text-gray-400 mb-0.5 px-1">{m.sender_name} • {new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                <div className="text-[10px] text-gray-400 mb-0.5 px-1">{m.sender_name} • {qatarTime(m.timestamp)}</div>
                                 <div className={`p-3 rounded-xl max-w-md text-sm ${
                                     m.is_mine 
                                         ? 'bg-[#dbb457] text-white rounded-br-none' 

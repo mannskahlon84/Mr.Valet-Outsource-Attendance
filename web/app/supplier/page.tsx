@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import RequestActionButton from '@/components/supplier/RequestActionButton';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -167,7 +168,7 @@ export default function SupplierDashboard() {
                                 <div>
                                     <span className="text-[10px] text-gray-400 block uppercase font-bold">Shift Date</span>
                                     <span className="font-semibold text-gray-800">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </span>
                                 </div>
                                 <div>
@@ -220,7 +221,7 @@ export default function SupplierDashboard() {
                                         {r.ops_manager_name || 'Operations Manager'}
                                     </td>
                                     <td className="px-5 py-4 text-gray-700">
-                                        <div className="font-medium text-xs">{r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}</div>
+                                        <div className="font-medium text-xs">{r.required_date ? calendarDate(r.required_date) : '-'}</div>
                                         <div className="text-xs text-gray-500 font-mono">{r.start_time} - {r.end_time}</div>
                                     </td>
                                     <td className="px-5 py-4 font-black text-gray-900">

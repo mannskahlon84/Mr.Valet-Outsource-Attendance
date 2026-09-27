@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -239,21 +240,20 @@ function ManagerLeaderboard({ rows }: { rows: { name: string; count: number }[] 
 
 /** "Today", "Tomorrow", "In 3 days" — counted in Qatar calendar days. */
 function whenLabel(isoDate: string) {
-    const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Qatar' }));
-    const days = Math.round((new Date(isoDate).getTime() - today.getTime()) / 86_400_000);
+    const today = new Date(`${qatarToday()}T00:00:00Z`);
+    const days = Math.round((new Date(`${isoDate.slice(0, 10)}T00:00:00Z`).getTime() - today.getTime()) / 86_400_000);
     if (days <= 0) return 'Today';
     if (days === 1) return 'Tomorrow';
     return `In ${days} days`;
 }
 
 function UpcomingCard({ site, date, quantity }: { site: string; date: string; quantity: number }) {
-    const d = new Date(`${date}T00:00:00`);
     const soon = whenLabel(date);
     return (
         <div className="mv-lift flex items-center gap-4 rounded-2xl border border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/50 p-4">
             <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-[#1a1a1a] text-white">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#dbb457]">{d.toLocaleDateString('en-GB', { month: 'short' })}</span>
-                <span className="text-lg font-bold leading-none">{d.getDate()}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#dbb457]">{calendarDate(date, { month: 'short' })}</span>
+                <span className="text-lg font-bold leading-none">{calendarDate(date, { day: 'numeric' })}</span>
             </div>
             <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-[#1a1a1a]">{site}</div>

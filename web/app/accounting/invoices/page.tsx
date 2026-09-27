@@ -1,4 +1,5 @@
 "use client";
+import { calendarMonth } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 import ExportButtons from '@/components/ui/ExportButtons';
@@ -84,7 +85,7 @@ export default function AccountingInvoices() {
                                         <td className="px-5 py-4 font-mono font-bold text-gray-900">{inv.invoice_number}</td>
                                         <td className="px-5 py-4 font-semibold text-gray-800">{sup?.name || `Agency #${inv.supplier_id}`}</td>
                                         <td className="px-5 py-4 text-gray-600">
-                                            {inv.billing_month ? new Date(inv.billing_month).toLocaleDateString([], { month: 'long', year: 'numeric' }) : '-'}
+                                            {inv.billing_month ? calendarMonth(inv.billing_month) : '-'}
                                         </td>
                                         <td className="px-5 py-4 font-bold text-gray-800">{inv.workers_supplied_quantity} Drivers</td>
                                         <td className="px-5 py-4 text-gray-600">QAR {inv.rate_per_worker?.toFixed(2)}</td>

@@ -1,4 +1,5 @@
 "use client";
+import { qatarDateTime } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -54,7 +55,7 @@ export default function SupplierNotifications() {
                                 <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
                                     {n.entity_type || 'DISPATCH_ALERT'}
                                 </span>
-                                <span className="text-xs text-gray-400">• {new Date(n.created_at).toLocaleString()}</span>
+                                <span className="text-xs text-gray-400">• {qatarDateTime(n.created_at)}</span>
                             </div>
                             <p className="text-sm font-medium">{n.message}</p>
                         </div>

@@ -1,4 +1,5 @@
 "use client";
+import { qatarTime } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 import ExportButtons from '@/components/ui/ExportButtons';
@@ -63,10 +64,10 @@ export default function AccountingAudit() {
                                     <td className="px-5 py-4 text-gray-600">{r.site_name}</td>
                                     <td className="px-5 py-4 text-gray-600">{r.required_date}</td>
                                     <td className="px-5 py-4 font-mono text-xs text-gray-700">
-                                        {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString() : '-'}
+                                        {r.check_in_time ? qatarTime(r.check_in_time, true) : '-'}
                                     </td>
                                     <td className="px-5 py-4 font-mono text-xs text-gray-700">
-                                        {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString() : '-'}
+                                        {r.check_out_time ? qatarTime(r.check_out_time, true) : '-'}
                                     </td>
                                     <td className="px-5 py-4 font-black text-gray-900">{r.duty_hours} hrs</td>
                                     <td className="px-5 py-4">

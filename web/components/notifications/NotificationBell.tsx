@@ -1,4 +1,5 @@
 "use client";
+import { parseInstant } from '@/lib/time';
 import { Bell } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '@/lib/api';
@@ -170,7 +171,7 @@ export default function NotificationBell() {
 
     const timeAgo = (dateStr: string) => {
         try {
-            const date = new Date(dateStr);
+            const date = parseInstant(dateStr) || new Date(dateStr);
             const now = new Date();
             const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
             if (diffSec < 60) return 'Just now';

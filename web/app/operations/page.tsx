@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch } from '@/lib/api';
@@ -100,7 +101,7 @@ export default function OperationsDashboard() {
                             <div className="space-y-1 text-xs text-[#1a1a1a]/65">
                                 <div className="flex items-center gap-1.5">
                                     <CalendarDays className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
-                                    {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                    {r.required_date ? calendarDate(r.required_date) : '-'}
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <Clock className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
@@ -141,7 +142,7 @@ export default function OperationsDashboard() {
                                 <tr key={r.id} className="group transition-colors hover:bg-[#f6f4ef]/70">
                                     <td className="px-6 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
                                     <td className="px-6 py-4 text-[#1a1a1a]/65">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </td>
                                     <td className="px-6 py-4 font-medium tabular-nums text-[#1a1a1a]/65">
                                         {r.start_time} - {r.end_time}

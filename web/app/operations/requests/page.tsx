@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch } from '@/lib/api';
@@ -145,7 +146,7 @@ export default function OperationsRequests() {
                                 <div>
                                     <span className="text-[10px] text-gray-400 block uppercase font-bold">Date</span>
                                     <span className="text-gray-800 font-semibold">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </span>
                                 </div>
                                 <div>
@@ -210,7 +211,7 @@ export default function OperationsRequests() {
                                         )}
                                     </td>
                                     <td className="px-5 py-4 text-gray-700 font-medium">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </td>
                                     <td className="px-5 py-4 text-gray-600 font-mono text-xs">
                                         {r.start_time} - {r.end_time}

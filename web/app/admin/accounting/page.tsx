@@ -1,5 +1,6 @@
 
 "use client";
+import { qatarNowParts } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, API_URL, downloadFile } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
@@ -58,8 +59,8 @@ export default function Accounting() {
     
     // Filters
     const [day, setDay] = useState('');
-    const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
-    const [year, setYear] = useState(new Date().getFullYear().toString());
+    const [month, setMonth] = useState(qatarNowParts().month.toString());
+    const [year, setYear] = useState(qatarNowParts().year.toString());
 
     useEffect(() => { setRole(sessionStorage.getItem('role') || ''); }, []);
     const canManageInvoices = role === 'SUPER_ADMIN' || role === 'ACCOUNTING';

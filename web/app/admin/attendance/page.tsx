@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate, qatarTime, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
@@ -27,7 +28,7 @@ export default function Attendance() {
                 eyebrow="Administration"
                 title="Attendance & Duty Hours"
                 subtitle="Every verified check-in and check-out across all venues"
-                actions={<ExportButtons base="/reports/attendance/export" filename={`attendance-${new Date().toISOString().slice(0, 10)}`} />}
+                actions={<ExportButtons base="/reports/attendance/export" filename={`attendance-${qatarToday()}`} />}
             />
             
             <div className="mv-stagger grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -62,10 +63,10 @@ export default function Attendance() {
                                     </div>
                                 </td>
                                 <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/65">{r.site_name}</td>
-                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/65">{r.required_date}</td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/65">{calendarDate(r.required_date)}</td>
                                 <td className="whitespace-nowrap px-5 py-3.5 text-xs tabular-nums text-[#1a1a1a]/65">
-                                    <div className="flex items-center gap-1.5"><LogIn className="h-3.5 w-3.5 text-emerald-600" />{r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString() : '-'}</div>
-                                    <div className="mt-1 flex items-center gap-1.5"><LogOut className="h-3.5 w-3.5 text-sky-600" />{r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString() : '-'}</div>
+                                    <div className="flex items-center gap-1.5"><LogIn className="h-3.5 w-3.5 text-emerald-600" />{r.check_in_time ? qatarTime(r.check_in_time, true) : '-'}</div>
+                                    <div className="mt-1 flex items-center gap-1.5"><LogOut className="h-3.5 w-3.5 text-sky-600" />{r.check_out_time ? qatarTime(r.check_out_time, true) : '-'}</div>
                                 </td>
                                 <td className="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-[#1a1a1a]">{r.duty_hours}</td>
                                 <td className="whitespace-nowrap px-5 py-3.5">

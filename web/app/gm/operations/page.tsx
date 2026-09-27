@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, API_URL, downloadFile, tryFetch } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
@@ -48,7 +49,7 @@ export default function GMOperations() {
                     <p className="text-sm text-gray-500">Company-wide valet dispatch requests and active location coverage</p>
                 </div>
                 <button 
-                    onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`)}
+                    onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${qatarToday()}.xlsx`)}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
                 >
                     Export Attendance Excel
@@ -184,7 +185,7 @@ export default function GMOperations() {
                                     <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-5 py-4 font-bold text-gray-900">#{r.id}</td>
                                         <td className="px-5 py-4 text-gray-600">
-                                            {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                            {r.required_date ? calendarDate(r.required_date) : '-'}
                                         </td>
                                         <td className="px-5 py-4 font-mono text-xs text-gray-600">{r.start_time} - {r.end_time}</td>
                                         <td className="px-5 py-4 font-bold text-gray-800">{r.total_required_workers} Drivers</td>

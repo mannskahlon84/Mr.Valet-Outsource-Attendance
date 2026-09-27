@@ -1,11 +1,11 @@
 "use client";
+import { qatarNowParts, qatarTime, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
 import ExportButtons from '@/components/ui/ExportButtons';
 
 // Accounting works in Qatar calendar days (a UTC date is wrong between midnight and 03:00 in Doha)
-const qatarToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Qatar' });
 const LIVE_REFRESH_MS = 20_000;
 
 export default function AccountingSummary() {
@@ -13,8 +13,8 @@ export default function AccountingSummary() {
     const [dailyData, setDailyData] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'daily' | 'monthly'>('daily');
     const [selectedDate, setSelectedDate] = useState(qatarToday);
-    const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
-    const [year, setYear] = useState(new Date().getFullYear().toString());
+    const [month, setMonth] = useState(qatarNowParts().month.toString());
+    const [year, setYear] = useState(qatarNowParts().year.toString());
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -83,7 +83,7 @@ export default function AccountingSummary() {
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                         </span>
-                        <span>Live · refreshes every 20 s{updatedAt ? ` · updated ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}</span>
+                        <span>Live · refreshes every 20 s{updatedAt ? ` · updated ${qatarTime(updatedAt, true)}` : ''}</span>
                         <button type="button" onClick={() => loadData(true)} className="font-bold text-[#a8842f] hover:underline cursor-pointer">Refresh now</button>
                     </div>
                 </div>

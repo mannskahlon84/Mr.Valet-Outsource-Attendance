@@ -44,8 +44,8 @@ export default function Users() {
     const handleResetPassword = async (userId: number) => {
         if (!confirm("Generate a password reset link for this user?")) return;
         try {
-            await fetchApi(`/users/${userId}/admin-reset-password`, { method: 'POST' });
-            alert("Password reset link generated (Check backend console for Dev Environment).");
+            const res = await fetchApi(`/users/${userId}/admin-reset-password`, { method: 'POST' });
+            alert(res?.message || "A password reset link was emailed to the user.");
         } catch (err: any) {
             alert(err.message);
         }

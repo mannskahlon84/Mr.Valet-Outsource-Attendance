@@ -1,4 +1,5 @@
 "use client";
+import { qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -18,9 +19,8 @@ export default function CustomInvoicing() {
 
     useEffect(() => {
         // Default to current month range
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const today = now.toISOString().split('T')[0];
+        const today = qatarToday();
+        const firstDay = `${today.slice(0, 8)}01`;
         setStartDate(firstDay);
         setEndDate(today);
 

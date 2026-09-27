@@ -1,4 +1,5 @@
 "use client";
+import { qatarTime } from '@/lib/time';
 import { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '@/lib/api';
 import jsQR from 'jsqr';
@@ -395,7 +396,7 @@ export default function WorkerPortal() {
         try {
             const coords = await getCoordinates();
             const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const timeStr = qatarTime(now, true);
 
             await fetchApi('/attendance/check-in', {
                 method: 'POST',
@@ -615,7 +616,7 @@ export default function WorkerPortal() {
         try {
             const coords = await getCoordinates();
             const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const timeStr = qatarTime(now);
 
             const record = await fetchApi('/attendance/check-out', {
                 method: 'POST',
