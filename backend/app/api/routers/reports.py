@@ -1,5 +1,4 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from app.db.session import get_db
@@ -7,13 +6,7 @@ from app.models.all_models import Attendance, WorkerAssignment, SupplierResponse
 from app.schemas.report import AttendanceReportResponse, AttendanceRecordDTO, ReportSummaryDTO
 from app.api.deps import get_current_user, require_role
 from datetime import datetime, timezone
-import io
-import openpyxl
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
+from typing import Literal
 
 router = APIRouter()
 
@@ -150,60 +143,26 @@ def get_attendance_report(
     
     return AttendanceReportResponse(summary=summary, records=records)
 
-@router.get("/attendance/export/excel")
-def export_attendance_excel(
-    worker_id: int = Query(None),
-    qid: str = Query(None),
-    supplier_id: int = Query(None),
-    site_id: int = Query(None),
-    ops_manager_id: int = Query(None),
-    date_from: datetime = Query(None),
-    date_to: datetime = Query(None),
-    status: str = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    query = get_base_query(db, current_user)
-    query = apply_filters(query, worker_id, qid, supplier_id, site_id, ops_manager_id, date_from, date_to, status, current_user)
-    results = query.all()
-    summary, records = process_results(results)
-    
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Attendance Report"
-    
-    headers = ["Worker ID", "Name", "QID", "Supplier", "Site", "Ops Manager", "Date", "Check In", "Check Out", "Duty Hours", "Status"]
-    ws.append(headers)
-    
-    for r in records:
-        ws.append([
-            r.worker_id, r.worker_name, r.qid, r.supplier_name, r.site_name,
-            r.ops_manager_name, str(r.required_date),
-            r.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if r.check_in_time else "",
-            r.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if r.check_out_time else "",
-            r.duty_hours, r.status
-        ])
-        
-    ws.append([])
-    ws.append(["SUMMARY"])
-    ws.append(["Total Present Days", summary.total_present_days])
-    ws.append(["Total Absent Days", summary.total_absent_days])
-    ws.append(["Total Duty Hours", summary.total_duty_hours])
-    ws.append(["Average Duty Hours", summary.average_duty_hours])
-    ws.append(["Number of Locations", summary.number_of_locations])
-    
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    
-    return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=attendance_report.xlsx"}
-    )
+def attendance_export(fmt: str, records, summary):
+    from app.services.exports import export_response, qatar_time
+    headers = ["Worker ID", "Name", "QID", "Agency", "Venue", "Ops manager", "Date", "Check-in (Qatar)", "Check-out (Qatar)", "Duty hours", "Status"]
+    rows = [[r.worker_id, r.worker_name, r.qid, r.supplier_name, r.site_name, r.ops_manager_name,
+             r.required_date.strftime("%Y-%m-%d") if hasattr(r.required_date, "strftime") else str(r.required_date),
+             qatar_time(r.check_in_time), qatar_time(r.check_out_time), r.duty_hours, r.status] for r in records]
+    totals = [
+        ("Total present days", summary.total_present_days),
+        ("Total absent days", summary.total_absent_days),
+        ("Total duty hours", summary.total_duty_hours),
+        ("Average duty hours", summary.average_duty_hours),
+        ("Number of locations", summary.number_of_locations),
+    ]
+    return export_response(fmt, f"attendance-report-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}", "Attendance & Duty Hours Report",
+                           headers, rows, summary=totals)
 
-@router.get("/attendance/export/pdf")
-def export_attendance_pdf(
+
+@router.get("/attendance/export/{fmt}")
+def export_attendance(
+    fmt: Literal["excel", "pdf"],
     worker_id: int = Query(None),
     qid: str = Query(None),
     supplier_id: int = Query(None),
@@ -217,42 +176,5 @@ def export_attendance_pdf(
 ):
     query = get_base_query(db, current_user)
     query = apply_filters(query, worker_id, qid, supplier_id, site_id, ops_manager_id, date_from, date_to, status, current_user)
-    results = query.all()
-    summary, records = process_results(results)
-    
-    output = io.BytesIO()
-    doc = SimpleDocTemplate(output, pagesize=letter)
-    elements = []
-    styles = getSampleStyleSheet()
-    
-    elements.append(Paragraph("Attendance Report", styles['Title']))
-    
-    data = [["Name", "Site", "Date", "In", "Out", "Hours", "Status"]]
-    for r in records:
-        data.append([
-            r.worker_name, r.site_name, str(r.required_date),
-            r.check_in_time.strftime('%H:%M') if r.check_in_time else "-",
-            r.check_out_time.strftime('%H:%M') if r.check_out_time else "-",
-            str(r.duty_hours), r.status
-        ])
-        
-    t = Table(data)
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.grey),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0,0), (-1,0), 12),
-        ('BACKGROUND', (0,1), (-1,-1), colors.beige),
-        ('GRID', (0,0), (-1,-1), 1, colors.black)
-    ]))
-    elements.append(t)
-    
-    doc.build(elements)
-    output.seek(0)
-    
-    return StreamingResponse(
-        output,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=attendance_report.pdf"}
-    )
+    summary, records = process_results(query.all())
+    return attendance_export(fmt, records, summary)

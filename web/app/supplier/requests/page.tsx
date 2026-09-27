@@ -1,6 +1,6 @@
 "use client";
+import RequestActionButton from '@/components/supplier/RequestActionButton';
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { fetchApi, tryFetch } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -91,12 +91,7 @@ export default function SupplierRequests() {
                                 </div>
                             </div>
 
-                            <Link 
-                                href={`/supplier/requests/${r.id}`}
-                                className="block text-center w-full text-xs font-bold bg-[#dbb457] text-white py-2.5 rounded-lg hover:bg-[#c29d45] transition-colors shadow-sm"
-                            >
-                                Respond & Assign Drivers →
-                            </Link>
+                            <RequestActionButton request={r} block />
                         </div>
                     ))}
                     {requests.length === 0 && (
@@ -144,12 +139,7 @@ export default function SupplierRequests() {
                                         <StatusBadge status={r.supplier_response_status || r.status} />
                                     </td>
                                     <td className="px-5 py-4 text-right">
-                                        <Link 
-                                            href={`/supplier/requests/${r.id}`}
-                                            className="text-[#dbb457] hover:text-[#c29d45] font-bold text-xs border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-50 inline-block transition-colors"
-                                        >
-                                            Respond & Assign →
-                                        </Link>
+                                        <RequestActionButton request={r} />
                                     </td>
                                 </tr>
                             ))}

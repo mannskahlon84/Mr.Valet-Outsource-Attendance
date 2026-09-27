@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL, downloadFile } from '@/lib/api';
+import { fetchApi } from '@/lib/api';
+import ExportButtons from '@/components/ui/ExportButtons';
 
 export default function AccountingAudit() {
     const [report, setReport] = useState<any>(null);
@@ -20,17 +21,12 @@ export default function AccountingAudit() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900">Duty Hours Reconciliation Audit</h1>
                     <p className="text-sm text-gray-500">Cross-reference biometric check-in timestamps with contractor billing records</p>
                 </div>
-                <button 
-                    onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
-                >
-                    Export Audit Spreadsheet
-                </button>
+                <ExportButtons base="/reports/attendance/export" filename={`attendance-audit-${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Qatar' })}`} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

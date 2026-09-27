@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
+import ExportButtons from '@/components/ui/ExportButtons';
 
 export default function AccountingInvoices() {
     const [invoices, setInvoices] = useState<any[]>([]);
@@ -50,9 +51,12 @@ export default function AccountingInvoices() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-black text-gray-900">Generated Monthly Invoices</h1>
-                <p className="text-sm text-gray-500">Official generated contractor statements, PDF exports, and audit controls</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900">Generated Monthly Invoices</h1>
+                    <p className="text-sm text-gray-500">Official generated contractor statements, PDF exports, and audit controls</p>
+                </div>
+                <ExportButtons base="/accounting/invoices/export" filename="invoices" />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

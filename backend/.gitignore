@@ -7,3 +7,5 @@ __pycache__/
 venv/
 # Rotated-password exports (scripts/rotate_default_passwords.py) must never be committed
 *passwords*.csv
+# Invoice PDFs are generated at runtime (and rebuilt on demand)
+invoices/
