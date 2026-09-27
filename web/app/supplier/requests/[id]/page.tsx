@@ -18,7 +18,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const [loadError, setLoadError] = useState('');
     const [submittingResp, setSubmittingResp] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
-    const [activeTab, setActiveTab] = useState<'response' | 'assign' | 'chat'>('response');
+    const [activeTab, setActiveTab] = useState<'response' | 'attendance' | 'chat'>('response');
 
     // Response form state
     const [confirmedQty, setConfirmedQty] = useState('');
@@ -28,26 +28,21 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState(false);
 
-    // Driver assignment state
-    const [roster, setRoster] = useState<any[]>([]);
-    const [assignment, setAssignment] = useState<{ confirmed_quantity: number; assigned: any[] } | null>(null);
-    const [selectedWorkerIds, setSelectedWorkerIds] = useState<number[]>([]);
-    const [submittingAlloc, setSubmittingAlloc] = useState(false);
-
-    const loadAssignments = async (responseId: number) => {
-        const data = await tryFetch(`/allocations/${responseId}`);
-        if (data) setAssignment(data);
+    // Drivers who checked in against this agency's confirmed places
+    const [headcount, setHeadcount] = useState<any>(null);
+    const loadHeadcount = async (responseId: number) => {
+        const data = await tryFetch(`/attendance/response/${responseId}/headcount`);
+        if (data) setHeadcount(data);
     };
 
     const loadData = async () => {
         try {
             let failure = '';
             const onError = (m: string) => { failure = m; };
-            const [allReqs, allSites, myResponses, myWorkers, msgs] = await Promise.all([
+            const [allReqs, allSites, myResponses, msgs] = await Promise.all([
                 tryFetch('/requests/supplier', onError),
                 tryFetch('/sites/'),
                 tryFetch('/requests/supplier-responses', onError),
-                tryFetch('/workers/'),
                 tryFetch(`/requests/${requestId}/messages`)
             ]);
             setLoadError(failure);
@@ -65,8 +60,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
 
             const resp = myResponses.find((r: any) => r.manpower_request_id?.toString() === requestId || r.request_id?.toString() === requestId);
             setMyResponse(resp);
-            if (Array.isArray(myWorkers)) setRoster(myWorkers.filter((w: any) => w.status === 'active'));
-            if (resp && ['ACCEPTED', 'ACCEPTED_BY_OM'].includes(resp.status)) loadAssignments(resp.id);
+            if (resp && ['ACCEPTED', 'ACCEPTED_BY_OM'].includes(resp.status)) loadHeadcount(resp.id);
 
             const defaultQuota = resp?.requested_quantity || current?.requested_quantity || current?.total_required_workers || '1';
 
@@ -88,8 +82,8 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     };
 
     useEffect(() => {
-        // Links from the request list can open straight on the Assign Drivers tab
-        if (new URLSearchParams(window.location.search).get('tab') === 'assign') setActiveTab('assign');
+        // Links from the request list can open straight on the Driver Attendance tab
+        if (new URLSearchParams(window.location.search).get('tab') === 'attendance') setActiveTab('attendance');
         loadData();
         const handleSync = () => loadData();
         window.addEventListener('portal_data_updated', handleSync);
@@ -143,38 +137,6 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
         }
     };
 
-    const handleAllocateWorkers = async () => {
-        if (!myResponse || selectedWorkerIds.length === 0) return;
-        setSubmittingAlloc(true);
-        try {
-            await fetchApi(`/allocations/${myResponse.id}/allocate-workers`, {
-                method: 'POST',
-                body: JSON.stringify({ worker_ids: selectedWorkerIds })
-            });
-            setSelectedWorkerIds([]);
-            await loadAssignments(myResponse.id);
-            broadcastPortalEvent('workers_assigned', { requestId: request?.id });
-        } catch (err: any) {
-            alert(err.message);
-        } finally {
-            setSubmittingAlloc(false);
-        }
-    };
-
-    const handleUnassign = async (assignmentId: number, name: string) => {
-        if (!myResponse || !confirm(`Remove ${name} from this shift?`)) return;
-        try {
-            await fetchApi(`/allocations/${myResponse.id}/unassign/${assignmentId}`, { method: 'POST' });
-            await loadAssignments(myResponse.id);
-        } catch (err: any) {
-            alert(err.message);
-        }
-    };
-
-    const toggleWorkerSelect = (id: number) => {
-        setSelectedWorkerIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
-    };
-
     const handleSendProposal = async (e: React.FormEvent) => {
         e.preventDefault();
         await handleActionResponse('COUNTER_PROPOSED');
@@ -214,10 +176,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const isFinalized = myResponse?.status === 'ACCEPTED_BY_OM';
     const isCancelled = request.status === 'CANCELLED';
     const responseLocked = isFinalized || isCancelled;
-    const canAssign = !isCancelled && ['ACCEPTED', 'ACCEPTED_BY_OM'].includes(myResponse?.status);
-    const placesConfirmed = assignment?.confirmed_quantity ?? myResponse?.confirmed_quantity ?? 0;
-    const assignedIds = new Set((assignment?.assigned || []).map((a: any) => a.worker_id));
-    const remainingSlots = Math.max(0, placesConfirmed - (assignment?.assigned?.length || 0));
+    const hasPlaces = !isCancelled && ['ACCEPTED', 'ACCEPTED_BY_OM'].includes(myResponse?.status);
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -306,7 +265,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                 }`}>
                     <div className="text-sm">
                         <b>{isFinalized ? 'Finalized by Operations' : `Current Response: ${myResponse.status}`}</b>
-                        {isFinalized && ` • ${myResponse.confirmed_quantity} drivers confirmed. Your response is locked; assign your drivers below.`}
+                        {isFinalized && ` • ${myResponse.confirmed_quantity} drivers confirmed. Your response is locked; your drivers check in at the venue.`}
                         {myResponse.status === 'ACCEPTED' && ` • Supplying ${myResponse.confirmed_quantity} drivers.`}
                         {myResponse.status === 'REJECTED' && ` • Reason: ${myResponse.supplier_message || 'Shift declined by agency'}`}
                         {myResponse.status === 'COUNTER_PROPOSED' && ` • Proposed ${myResponse.confirmed_quantity} drivers (${myResponse.proposed_start_time} - ${myResponse.proposed_end_time}).`}
@@ -314,11 +273,11 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     {responseLocked ? (
                         <button
                             type="button"
-                            onClick={() => setActiveTab('assign')}
+                            onClick={() => setActiveTab('attendance')}
                             disabled={isCancelled}
                             className="text-xs font-bold underline hover:opacity-80 disabled:opacity-40"
                         >
-                            Assign Drivers
+                            View Driver Attendance
                         </button>
                     ) : (
                         <button
@@ -402,12 +361,12 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     1. Submit / Counter-Proposal
                 </button>
                 <button 
-                    onClick={() => setActiveTab('assign')}
+                    onClick={() => setActiveTab('attendance')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'assign' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'attendance' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    2. Assign Drivers to Shift
+                    2. Driver Attendance
                 </button>
                 <button 
                     onClick={() => setActiveTab('chat')}
@@ -515,116 +474,67 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                 </form>
             )}
 
-            {/* TAB 2: ASSIGN DRIVERS */}
-            {activeTab === 'assign' && (
+            {/* TAB 2: DRIVER ATTENDANCE (read-only: drivers claim a place by checking in at the venue) */}
+            {activeTab === 'attendance' && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h3 className="font-bold text-base text-gray-900">Assign Drivers to this Shift</h3>
-                            <p className="text-xs text-gray-500">Only assigned drivers can check in at the venue for this shift.</p>
+                            <h3 className="font-bold text-base text-gray-900">Driver Attendance</h3>
+                            <p className="text-xs text-gray-500">Any active driver from your agency can check in at the venue until your confirmed places are filled.</p>
                         </div>
-                        {canAssign && (
-                            <div className="text-xs font-bold bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-                                {assignment?.assigned?.length || 0} of {placesConfirmed} assigned
-                            </div>
+                        {hasPlaces && myResponse && (
+                            <button type="button" onClick={() => loadHeadcount(myResponse.id)} className="text-xs font-bold text-[#a8842f] hover:underline cursor-pointer">
+                                Refresh
+                            </button>
                         )}
                     </div>
 
-                    {!canAssign && (
+                    {!hasPlaces && (
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                            {isCancelled
-                                ? 'This request was cancelled, so no drivers can be assigned.'
-                                : 'Accept the request first. Drivers can be assigned once your agency has accepted the shift.'}
+                            {isCancelled ? 'This request was cancelled.' : 'Accept the request first. Attendance appears here once drivers check in at the venue.'}
                         </div>
                     )}
 
-                    {canAssign && (
+                    {hasPlaces && (
                         <>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                {[
+                                    ['Confirmed', headcount?.confirmed ?? myResponse?.confirmed_quantity ?? 0, 'text-gray-900'],
+                                    ['Checked in', headcount?.checked_in ?? 0, 'text-emerald-700'],
+                                    ['On duty', headcount?.on_duty ?? 0, 'text-emerald-700'],
+                                    ['Finished', headcount?.finished ?? 0, 'text-blue-700'],
+                                    ['Missing', headcount?.missing ?? (myResponse?.confirmed_quantity ?? 0), (headcount?.missing ?? 1) > 0 ? 'text-rose-700' : 'text-gray-900'],
+                                ].map(([label, value, color]) => (
+                                    <div key={label as string} className="rounded-lg border border-gray-200 p-3">
+                                        <div className="text-[11px] font-bold uppercase text-gray-400">{label}</div>
+                                        <div className={`text-2xl font-black ${color}`}>{value}</div>
+                                    </div>
+                                ))}
+                            </div>
+
                             <div>
-                                <div className="text-xs font-bold uppercase text-gray-500 mb-2">Assigned drivers</div>
-                                {(assignment?.assigned || []).length === 0 ? (
-                                    <div className="text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg p-4 text-center">No drivers assigned yet.</div>
+                                <div className="text-xs font-bold uppercase text-gray-500 mb-2">Drivers who checked in</div>
+                                {(headcount?.drivers || []).length === 0 ? (
+                                    <div className="text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg p-4 text-center">No driver has checked in for this shift yet.</div>
                                 ) : (
                                     <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
-                                        {assignment!.assigned.map((a: any) => (
-                                            <li key={a.assignment_id} className="flex items-center justify-between gap-3 p-3">
+                                        {headcount.drivers.map((d: any) => (
+                                            <li key={d.worker_id} className="flex items-center justify-between gap-3 p-3">
                                                 <div>
-                                                    <div className="font-bold text-sm text-gray-900">{a.name}</div>
-                                                    <div className="text-xs text-gray-500 font-mono">ID: {a.internal_worker_id} • QID: {a.qid || 'N/A'}</div>
+                                                    <div className="font-bold text-sm text-gray-900">{d.name}</div>
+                                                    <div className="text-xs text-gray-500 font-mono">
+                                                        ID: {d.internal_worker_id} • In {new Date(d.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {d.check_out_time && ` • Out ${new Date(d.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                                    </div>
                                                 </div>
-                                                {a.attendance === 'NOT_STARTED' ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleUnassign(a.assignment_id, a.name)}
-                                                        className="text-xs font-bold text-rose-700 border border-rose-200 px-3 py-1 rounded-lg hover:bg-rose-50 cursor-pointer"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                ) : (
-                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.attendance === 'ON_DUTY' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                        {a.attendance === 'ON_DUTY' ? 'On duty' : 'Shift ended'}
-                                                    </span>
-                                                )}
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${d.status === 'ON_DUTY' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                    {d.status === 'ON_DUTY' ? 'On duty' : 'Shift ended'}
+                                                </span>
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                             </div>
-
-                            {remainingSlots > 0 && (
-                                <div>
-                                    <div className="text-xs font-bold uppercase text-gray-500 mb-2">
-                                        Add from your roster ({selectedWorkerIds.length} selected, {remainingSlots} place{remainingSlots === 1 ? '' : 's'} left)
-                                    </div>
-                                    <div className="space-y-2 max-h-72 overflow-y-auto border border-gray-200 p-3 rounded-lg">
-                                        {roster.filter(w => !assignedIds.has(w.id)).map((w) => {
-                                            const checked = selectedWorkerIds.includes(w.id);
-                                            const full = !checked && selectedWorkerIds.length >= remainingSlots;
-                                            return (
-                                                <label
-                                                    key={w.id}
-                                                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                                                        checked ? 'bg-amber-50/50 border-[#dbb457]' : 'bg-white border-gray-200 hover:bg-gray-50'
-                                                    } ${full ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={checked}
-                                                            disabled={full}
-                                                            onChange={() => toggleWorkerSelect(w.id)}
-                                                            className="h-4 w-4 rounded border-gray-300"
-                                                        />
-                                                        <div>
-                                                            <div className="font-bold text-sm text-gray-900">{w.first_name} {w.last_name}</div>
-                                                            <div className="text-xs text-gray-500 font-mono">QID: {w.qid || 'N/A'} • ID: {w.internal_worker_id}</div>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">{w.whatsapp_number || 'No phone'}</span>
-                                                </label>
-                                            );
-                                        })}
-                                        {roster.filter(w => !assignedIds.has(w.id)).length === 0 && (
-                                            <div className="text-center py-6 text-gray-400 text-sm">
-                                                No more active drivers in your roster. Enroll drivers under &quot;Worker Roster&quot;.
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleAllocateWorkers}
-                                        disabled={submittingAlloc || selectedWorkerIds.length === 0}
-                                        className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow transition-colors disabled:opacity-50 cursor-pointer"
-                                    >
-                                        {submittingAlloc ? 'Assigning...' : `Assign ${selectedWorkerIds.length} Driver(s) to Shift`}
-                                    </button>
-                                </div>
-                            )}
-                            {remainingSlots === 0 && (assignment?.assigned || []).length > 0 && (
-                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-                                    All {placesConfirmed} confirmed places are filled.
-                                </div>
-                            )}
                         </>
                     )}
                 </div>

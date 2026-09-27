@@ -6,13 +6,13 @@ type SupplierRequestRow = { id: number; status?: string; supplier_response_statu
  * What the agency can still do with a request:
  * - not answered yet            -> Respond
  * - answered, waiting for Ops   -> View / Edit Response
- * - finalized by Ops            -> Respond is closed; only Assign Drivers remains
+ * - finalized by Ops            -> Respond is closed; the agency follows who checked in
  * - rejected / cancelled        -> nothing to do
  */
 export function supplierRequestAction(r: SupplierRequestRow): { label: string; href?: string } {
     const response = r.supplier_response_status || 'PENDING';
     if (r.status === 'CANCELLED') return { label: 'Cancelled' };
-    if (response === 'ACCEPTED_BY_OM') return { label: 'Assign Drivers →', href: `/supplier/requests/${r.id}?tab=assign` };
+    if (response === 'ACCEPTED_BY_OM') return { label: 'View Attendance →', href: `/supplier/requests/${r.id}?tab=attendance` };
     if (response === 'REJECTED') return { label: 'Declined' };
     if (response === 'PENDING') return { label: 'Respond →', href: `/supplier/requests/${r.id}` };
     return { label: 'View / Edit Response →', href: `/supplier/requests/${r.id}` };
@@ -28,12 +28,12 @@ export default function RequestActionButton({ request, block = false }: { reques
             </span>
         );
     }
-    const assign = action.label.startsWith('Assign');
+    const finalized = action.label.startsWith('View Attendance');
     return (
         <Link
             href={action.href}
-            className={`${layout} rounded-lg text-xs font-bold transition-colors shadow-sm ${
-                assign
+            className={`${layout} whitespace-nowrap rounded-lg text-xs font-bold transition-colors shadow-sm ${
+                finalized
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                     : 'border border-amber-200 text-[#a8842f] hover:bg-amber-50'
             }`}

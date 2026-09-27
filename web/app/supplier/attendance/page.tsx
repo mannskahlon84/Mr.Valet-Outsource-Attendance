@@ -14,10 +14,12 @@ export default function SupplierAttendancePage() {
 
     const loadLiveData = async () => {
         try {
-            const [records, roster] = await Promise.all([
+            const [records, roster, shifts] = await Promise.all([
                 fetchApi('/attendance/supplier-live'),
-                fetchApi('/workers/')
+                fetchApi('/workers/'),
+                fetchApi('/attendance/supplier-shifts')
             ]);
+            const shiftList = Array.isArray(shifts) ? shifts : [];
             // The API lists today's assigned shifts; shape them for this page and count the full roster
             const statusMap: Record<string, string> = { ON_SHIFT: 'ON_SHIFT', SHIFT_ENDED: 'COMPLETED', SCHEDULED: 'NOT_STARTED' };
             const workers: LiveWorker[] = (Array.isArray(records) ? (records as LiveRecord[]) : []).map(r => ({
@@ -33,6 +35,10 @@ export default function SupplierAttendancePage() {
                 active_on_shift_count: workers.filter(w => w.status === 'ON_SHIFT').length,
                 ended_shift_count: workers.filter(w => w.status === 'COMPLETED').length,
                 not_checked_in_count: workers.filter(w => w.status === 'NOT_STARTED').length,
+                shifts: shiftList,
+                confirmed_count: shiftList.reduce((n: number, sh: any) => n + (sh.confirmed || 0), 0),
+                checked_in_count: shiftList.reduce((n: number, sh: any) => n + (sh.checked_in || 0), 0),
+                missing_count: shiftList.reduce((n: number, sh: any) => n + (sh.missing || 0), 0),
             });
         } catch (e) {
             // Keep the last data on screen if a refresh fails
@@ -94,28 +100,58 @@ export default function SupplierAttendancePage() {
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* KPI Cards: confirmed places against drivers who actually checked in */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="text-xs font-bold uppercase text-gray-400">Total Enrolled</div>
-                    <div className="text-3xl font-black text-gray-900 mt-1">{liveData?.total_roster_count || 0}</div>
-                    <div className="text-xs text-gray-500 mt-1">Agency drivers roster</div>
+                    <div className="text-xs font-bold uppercase text-gray-400">Confirmed Today</div>
+                    <div className="text-3xl font-black text-gray-900 mt-1">{liveData?.confirmed_count || 0}</div>
+                    <div className="text-xs text-gray-500 mt-1">Drivers promised to Operations</div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="text-xs font-bold uppercase text-gray-400">Checked In</div>
+                    <div className="text-3xl font-black text-gray-900 mt-1">{liveData?.checked_in_count || 0}</div>
+                    <div className="text-xs text-gray-500 mt-1">Arrived at the venue</div>
                 </div>
                 <div className="bg-white p-5 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/20">
-                    <div className="text-xs font-bold uppercase text-emerald-600">Currently On Shift</div>
+                    <div className="text-xs font-bold uppercase text-emerald-600">On Shift Now</div>
                     <div className="text-3xl font-black text-emerald-600 mt-1">{liveData?.active_on_shift_count || 0}</div>
                     <div className="text-xs text-emerald-700 mt-1">Clocked in & working</div>
                 </div>
                 <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm bg-blue-50/20">
-                    <div className="text-xs font-bold uppercase text-blue-600">Completed Shifts</div>
+                    <div className="text-xs font-bold uppercase text-blue-600">Completed</div>
                     <div className="text-3xl font-black text-blue-600 mt-1">{liveData?.ended_shift_count || 0}</div>
                     <div className="text-xs text-blue-700 mt-1">Shift ended today</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="text-xs font-bold uppercase text-gray-400">Not Started</div>
-                    <div className="text-3xl font-black text-gray-500 mt-1">{liveData?.not_checked_in_count || 0}</div>
-                    <div className="text-xs text-gray-400 mt-1">Off-duty or pending</div>
+                <div className={`bg-white p-5 rounded-xl border shadow-sm ${(liveData?.missing_count || 0) > 0 ? 'border-rose-200 bg-rose-50/30' : 'border-gray-200'}`}>
+                    <div className="text-xs font-bold uppercase text-rose-600">Missing</div>
+                    <div className="text-3xl font-black text-rose-600 mt-1">{liveData?.missing_count || 0}</div>
+                    <div className="text-xs text-rose-700 mt-1">Confirmed but not checked in</div>
                 </div>
+            </div>
+
+            {/* Today's confirmed shifts */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-200 bg-gray-50 font-bold text-sm text-gray-800">Today&apos;s confirmed shifts</div>
+                {(liveData?.shifts || []).length === 0 ? (
+                    <div className="p-6 text-center text-sm text-gray-400">No confirmed shifts for your agency today.</div>
+                ) : (
+                    <ul className="divide-y divide-gray-100">
+                        {liveData.shifts.map((sh: any) => (
+                            <li key={sh.response_id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <div className="font-bold text-gray-900">{sh.site_name}</div>
+                                    <div className="text-xs text-gray-500 font-mono">Request #{sh.request_id} • {sh.shift_window}</div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                                    <span className="px-2 py-1 rounded bg-gray-100 text-gray-800">{sh.checked_in} / {sh.confirmed} checked in</span>
+                                    <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-800">{sh.on_duty} on duty</span>
+                                    <span className="px-2 py-1 rounded bg-blue-100 text-blue-800">{sh.finished} finished</span>
+                                    <span className={`px-2 py-1 rounded ${sh.missing > 0 ? 'bg-rose-100 text-rose-800' : 'bg-gray-100 text-gray-500'}`}>{sh.missing} missing</span>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
 
             {/* Filters */}

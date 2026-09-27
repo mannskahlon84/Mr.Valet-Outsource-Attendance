@@ -1,6 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { activeNavHref } from '@/lib/nav';
 
 interface NavItem {
     label: string;
@@ -10,13 +11,12 @@ interface NavItem {
 
 export default function MobileBottomNav({ items }: { items: NavItem[] }) {
     const pathname = usePathname();
+    const activeHref = activeNavHref(pathname, items.map(i => i.href));
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg px-2 py-1.5 flex justify-around items-center safe-area-bottom">
             {items.map((item, idx) => {
-                const isExact = pathname === item.href;
-                const isRoot = ['/admin', '/operations', '/supplier', '/accounting', '/gm', '/worker'].includes(item.href);
-                const isActive = isExact || (!isRoot && pathname?.startsWith(item.href));
+                const isActive = item.href === activeHref;
 
                 return (
                     <Link

@@ -1,6 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { activeNavHref } from '@/lib/nav';
 
 export default function Sidebar({ 
     items, 
@@ -12,6 +13,7 @@ export default function Sidebar({
     onClose?: () => void;
 }) {
     const pathname = usePathname();
+    const activeHref = activeNavHref(pathname, items.map(i => i.href));
 
     const navContent = (
         <>
@@ -20,9 +22,7 @@ export default function Sidebar({
             </div>
             <nav className="flex-1 overflow-y-auto p-4 space-y-1">
                 {items.map((item, idx) => {
-                    const isExact = pathname === item.href;
-                    const isRoot = ['/admin', '/operations', '/supplier', '/accounting', '/gm', '/worker'].includes(item.href);
-                    const isActive = isExact || (!isRoot && pathname?.startsWith(item.href));
+                    const isActive = item.href === activeHref;
                     return (
                         <Link 
                             key={idx} 
