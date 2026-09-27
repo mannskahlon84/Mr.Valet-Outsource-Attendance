@@ -4,6 +4,12 @@ import { fetchApi } from '@/lib/api';
 import DataTable from '@/components/ui/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge';
 
+import PageHeader from '@/components/ui/PageHeader';
+import Modal from '@/components/ui/Modal';
+import StatCard from '@/components/ui/StatCard';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { ui } from '@/lib/ui';
+import { Building2, CheckCircle2, KeyRound, Mail, Pencil, Plus, Wallet } from 'lucide-react';
 export default function Suppliers() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -83,19 +89,23 @@ export default function Suppliers() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500 font-medium">Loading suppliers roster...</div>;
+    if (loading) return <DashboardSkeleton cards={3} rows={6} />;
+
+    const activeCount = suppliers.filter((s: any) => s.status === 'active').length;
+    const rates = suppliers.map((s: any) => parseFloat(s.billing_rate)).filter((r: number) => !isNaN(r));
+    const avgRate = rates.length ? rates.reduce((a: number, b: number) => a + b, 0) / rates.length : 0;
 
     const columns = [
         { 
             header: 'Supplier Name', 
             field: (row: any) => (
-                <div className="font-bold text-gray-900 flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center text-xs font-black">
+                <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dbb457]/15 text-xs font-bold text-[#7a5f1f]">
                         {row.name.substring(0, 2).toUpperCase()}
                     </span>
                     <div>
-                        <div>{row.name}</div>
-                        <div className="text-[11px] text-gray-400 font-normal">Agency #{row.id}</div>
+                        <div className="font-semibold text-[#1a1a1a]">{row.name}</div>
+                        <div className="text-[11px] text-[#1a1a1a]/40">Agency #{row.id}</div>
                     </div>
                 </div>
             )
@@ -104,12 +114,12 @@ export default function Suppliers() {
             header: 'Portal Login Account', 
             field: (row: any) => (
                 row.login_email ? (
-                    <div className="flex items-center gap-1.5 font-mono text-xs text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-200 w-fit">
-                        <span>✉️</span>
-                        <span>{row.login_email}</span>
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#f6f4ef] px-2.5 py-1 font-mono text-xs text-[#1a1a1a]/75">
+                        <Mail className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
+                        {row.login_email}
+                    </span>
                 ) : (
-                    <span className="text-xs text-amber-600 italic">No login email configured</span>
+                    <span className="text-xs italic text-amber-700">No login email configured</span>
                 )
             ) 
         },
@@ -117,130 +127,111 @@ export default function Suppliers() {
         { 
             header: 'Billing Rate', 
             field: (row: any) => (
-                <span className="font-mono text-xs font-bold text-gray-700">
+                <span className="text-sm font-semibold tabular-nums text-[#1a1a1a]">
                     {row.billing_rate != null ? `QAR ${parseFloat(row.billing_rate).toFixed(2)}` : '—'}
                 </span>
             ) 
         },
         { header: 'Status', field: (row: any) => <StatusBadge status={row.status} /> },
         { header: 'Actions', field: (row: any) => (
-            <button 
-                onClick={() => openEdit(row)} 
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2.5 py-1 rounded border border-blue-100"
-            >
-                Edit & Login Access
+            <button onClick={() => openEdit(row)} className={ui.action}>
+                <Pencil className="h-3.5 w-3.5" /> Edit & Login Access
             </button>
         )}
     ];
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900">Manpower Suppliers</h1>
-                    <p className="text-sm text-gray-500">Manage approved vendor agencies and configure their supplier portal logins</p>
-                </div>
-                <button 
-                    onClick={openAdd} 
-                    className="bg-[#dbb457] text-white px-5 py-2.5 rounded-lg hover:bg-[#c29d45] font-bold text-sm shadow transition-colors"
-                >
-                    + Add New Supplier
-                </button>
+            <PageHeader
+                eyebrow="Administration"
+                title="Manpower Suppliers"
+                subtitle="Manage approved vendor agencies and configure their supplier portal logins"
+                actions={<button onClick={openAdd} className={ui.btnPrimary}><Plus className="h-4 w-4" /> Add New Supplier</button>}
+            />
+
+            <div className="mv-stagger grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard label="Agencies" value={suppliers.length} hint="Registered outsourcing partners" icon={Building2} accent="ink" />
+                <StatCard label="Active" value={activeCount} hint="Allowed to receive shift requests" icon={CheckCircle2} accent="green" />
+                <StatCard label="Average Rate" value={avgRate} decimals={2} prefix="QAR " hint="Per completed shift" icon={Wallet} accent="gold" />
             </div>
             
             {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg space-y-4 my-8">
-                        <div className="flex justify-between items-center border-b pb-3">
-                            <h2 className="text-lg font-bold text-gray-900">
-                                {editingSupplier ? `Edit Supplier: ${editingSupplier.name}` : 'Add New Supplier Agency'}
-                            </h2>
-                            <button 
-                                onClick={() => setShowModal(false)}
-                                className="text-gray-400 hover:text-gray-600 font-bold text-lg"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
+                <Modal
+                    title={editingSupplier ? `Edit Supplier: ${editingSupplier.name}` : 'Add New Supplier Agency'}
+                    subtitle="Agency details, billing rate and portal login"
+                    onClose={() => setShowModal(false)}
+                    width="max-w-lg"
+                >
                         {error && (
-                            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
+                            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
                                 {error}
                             </div>
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
                             <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                                    Supplier Agency Name *
-                                </label>
+                                <label className={ui.label}>Supplier Agency Name *</label>
                                 <input 
                                     type="text" 
                                     required 
                                     value={name} 
                                     onChange={e => setName(e.target.value)} 
                                     placeholder="e.g. Deepu, Kanan, Hanees..."
-                                    className="w-full border p-2.5 rounded-lg text-sm" 
+                                    className={ui.input} 
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                                        Contact Person
-                                    </label>
+                                    <label className={ui.label}>Contact Person</label>
                                     <input 
                                         type="text" 
                                         value={contact} 
                                         onChange={e => setContact(e.target.value)} 
                                         placeholder="Agency Rep Name"
-                                        className="w-full border p-2.5 rounded-lg text-sm" 
+                                        className={ui.input} 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                                        Billing Rate (QAR)
-                                    </label>
+                                    <label className={ui.label}>Billing Rate (QAR)</label>
                                     <input 
                                         type="number" 
                                         step="any" 
                                         required 
                                         value={billingRate} 
                                         onChange={e => setBillingRate(e.target.value)} 
-                                        className="w-full border p-2.5 rounded-lg text-sm font-mono" 
+                                        className={`${ui.input} tabular-nums`} 
                                     />
                                 </div>
                             </div>
 
                             {/* CREDENTIALS SECTION */}
-                            <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-xl space-y-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-base">🔐</span>
+                            <div className="space-y-3 rounded-2xl border border-[#dbb457]/40 bg-[#dbb457]/[0.07] p-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1a1a1a] text-[#dbb457]">
+                                        <KeyRound className="h-4 w-4" />
+                                    </span>
                                     <div>
-                                        <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                                            Supplier Portal Login Credentials
-                                        </h4>
-                                        <p className="text-[11px] text-amber-700">
-                                            Configure the email and password for this supplier to log into their agency dashboard.
+                                        <h4 className="text-sm font-semibold text-[#1a1a1a]">Supplier Portal Login</h4>
+                                        <p className="text-[11px] text-[#1a1a1a]/55">
+                                            The email and password this supplier uses to sign in to their agency dashboard.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">
-                                        Login Email Address
-                                    </label>
+                                    <label className={ui.label}>Login Email Address</label>
                                     <input 
                                         type="email" 
                                         value={loginEmail} 
                                         onChange={e => setLoginEmail(e.target.value)} 
                                         placeholder="supplier@example.com"
-                                        className="w-full border p-2.5 rounded-lg text-sm font-mono bg-white" 
+                                        className={ui.input} 
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                                    <label className={ui.label}>
                                         {editingSupplier ? 'New Password (leave blank to keep current)' : 'Login Password *'}
                                     </label>
                                     <input 
@@ -248,20 +239,18 @@ export default function Suppliers() {
                                         value={password} 
                                         onChange={e => setPassword(e.target.value)} 
                                         placeholder={editingSupplier ? "•••••••• (Leave blank to keep unchanged)" : "Minimum 8 characters"}
-                                        className="w-full border p-2.5 rounded-lg text-sm font-mono bg-white" 
+                                        className={ui.input} 
                                     />
                                 </div>
                             </div>
 
                             {editingSupplier && (
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                                        Agency Status
-                                    </label>
+                                    <label className={ui.label}>Agency Status</label>
                                     <select 
                                         value={status} 
                                         onChange={e => setStatus(e.target.value)} 
-                                        className="w-full border p-2.5 rounded-lg text-sm bg-white"
+                                        className={ui.input}
                                     >
                                         <option value="active">Active (Permitted to deploy drivers)</option>
                                         <option value="inactive">Inactive (Suspended)</option>
@@ -269,30 +258,19 @@ export default function Suppliers() {
                                 </div>
                             )}
 
-                            <div className="flex justify-end gap-2 pt-3 border-t">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowModal(false)} 
-                                    className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
-                                >
+                            <div className="flex justify-end gap-2 border-t border-[#1a1a1a]/[0.06] pt-4">
+                                <button type="button" onClick={() => setShowModal(false)} className={ui.btnSecondary}>
                                     Cancel
                                 </button>
-                                <button 
-                                    type="submit" 
-                                    disabled={submitting} 
-                                    className="px-5 py-2 text-xs font-bold bg-[#dbb457] text-white rounded-lg hover:bg-[#c29d45] disabled:opacity-50"
-                                >
+                                <button type="submit" disabled={submitting} className={ui.btnPrimary}>
                                     {submitting ? 'Saving...' : 'Save Supplier'}
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <DataTable columns={columns} data={suppliers} keyField="id" />
-            </div>
+            <DataTable columns={columns} data={suppliers} keyField="id" emptyText="No supplier agencies yet." />
         </div>
     );
 }

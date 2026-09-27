@@ -41,10 +41,12 @@ body {
   to { background-position: 400px 0; }
 }
 
-/* Page content rises in when a page opens */
-.mv-page { animation: mv-fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* Page content rises in when a page opens. "backwards" (not "both") so no transform is left
+   behind afterwards: a leftover transform would make pop-up dialogs position against the page
+   instead of the screen. */
+.mv-page { animation: mv-fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 /* Direct children appear one after another */
-.mv-stagger > * { animation: mv-fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.mv-stagger > * { animation: mv-fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .mv-stagger > *:nth-child(2) { animation-delay: 60ms; }
 .mv-stagger > *:nth-child(3) { animation-delay: 120ms; }
 .mv-stagger > *:nth-child(4) { animation-delay: 180ms; }
@@ -159,4 +161,11 @@ body {
   div:has(> table.rt) {
     overflow-x: visible !important;
   }
+}
+
+/* Printing a venue QR poster prints only the poster */
+@media print {
+  body:has(#printable-qr-poster) * { visibility: hidden; }
+  #printable-qr-poster, #printable-qr-poster * { visibility: visible; }
+  #printable-qr-poster { position: absolute; inset: 0 auto auto 0; width: 100%; }
 }

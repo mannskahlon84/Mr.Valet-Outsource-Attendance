@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL, downloadFile } from '@/lib/api';
+import { fetchApi } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
+import ExportButtons from '@/components/ui/ExportButtons';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { ui } from '@/lib/ui';
+import { CalendarCheck, CalendarX, Clock, LogIn, LogOut, MapPin, Timer } from 'lucide-react';
 
 export default function Attendance() {
     const [report, setReport] = useState<any>(null);
@@ -10,64 +17,73 @@ export default function Attendance() {
         fetchApi('/reports/attendance').then(setReport).finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <DashboardSkeleton />;
 
-    const exportExcel = () => { downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`); };
-    const exportPdf = () => { downloadFile('/reports/attendance/export/pdf', `attendance-${new Date().toISOString().slice(0, 10)}.pdf`); };
+    const summary = report?.summary || {};
 
     return (
-        <div>
-            <div className="flex justify-end space-x-2 mb-4">
-                <button onClick={exportExcel} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-bold">Export Excel</button>
-                <button onClick={exportPdf} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-sm font-bold">Export PDF</button>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                eyebrow="Administration"
+                title="Attendance & Duty Hours"
+                subtitle="Every verified check-in and check-out across all venues"
+                actions={<ExportButtons base="/reports/attendance/export" filename={`attendance-${new Date().toISOString().slice(0, 10)}`} />}
+            />
             
-            <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <div className="text-gray-500 text-xs font-bold uppercase">Total Duty Hours</div>
-                    <div className="text-2xl font-black mt-1">{report?.summary?.total_duty_hours || 0}</div>
-                </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <div className="text-gray-500 text-xs font-bold uppercase">Present Days</div>
-                    <div className="text-2xl font-black mt-1">{report?.summary?.total_present_days || 0}</div>
-                </div>
+            <div className="mv-stagger grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <StatCard label="Total Duty Hours" value={Number(summary.total_duty_hours) || 0} decimals={1} suffix=" h" hint="Between check-in and check-out" icon={Timer} accent="ink" />
+                <StatCard label="Present Days" value={summary.total_present_days || 0} hint="Driver shifts attended" icon={CalendarCheck} accent="green" />
+                <StatCard label="Absent Days" value={summary.total_absent_days || 0} hint="Scheduled but not checked in" icon={CalendarX} accent="red" />
+                <StatCard label="Locations" value={summary.number_of_locations || 0} hint="Venues with attendance" icon={MapPin} accent="gold" />
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            <div className={`${ui.card} overflow-hidden`}>
+                <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                    <thead className="border-b border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/60">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worker</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In / Out</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className={ui.th}>Worker</th>
+                            <th className={ui.th}>Location</th>
+                            <th className={ui.th}>Date</th>
+                            <th className={ui.th}>In / Out</th>
+                            <th className={ui.th}>Hours</th>
+                            <th className={ui.th}>Status</th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                         {(report?.records || []).map((r: any, idx: number) => (
-                            <tr key={idx}>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">{r.worker_name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.site_name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.required_date}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                    {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString() : '-'} <br/> 
-                                    {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString() : '-'}
+                            <tr key={idx} className={ui.tr}>
+                                <td className="whitespace-nowrap px-5 py-3.5">
+                                    <div className="flex items-center gap-3">
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f6f4ef] text-[11px] font-bold text-[#1a1a1a]/70">
+                                            {(r.worker_name || '').split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()}
+                                        </span>
+                                        <span className="font-semibold text-[#1a1a1a]">{r.worker_name}</span>
+                                    </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-700">{r.duty_hours}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${r.status === 'CHECKED_OUT' ? 'bg-green-100 text-green-800' : (r.status === 'ABSENT' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800')}`}>
-                                        {r.status.replace('_', ' ')}
-                                    </span>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/65">{r.site_name}</td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/65">{r.required_date}</td>
+                                <td className="whitespace-nowrap px-5 py-3.5 text-xs tabular-nums text-[#1a1a1a]/65">
+                                    <div className="flex items-center gap-1.5"><LogIn className="h-3.5 w-3.5 text-emerald-600" />{r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString() : '-'}</div>
+                                    <div className="mt-1 flex items-center gap-1.5"><LogOut className="h-3.5 w-3.5 text-sky-600" />{r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString() : '-'}</div>
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-[#1a1a1a]">{r.duty_hours}</td>
+                                <td className="whitespace-nowrap px-5 py-3.5">
+                                    <StatusBadge status={r.status} />
                                 </td>
                             </tr>
                         ))}
                         {(!report?.records || report.records.length === 0) && (
-                            <tr><td colSpan={6} className="px-6 py-4 text-center text-gray-500">No attendance records found.</td></tr>
+                            <tr><td colSpan={6}>
+                                <div className="flex flex-col items-center gap-2 py-12 text-center">
+                                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f6f4ef] text-[#1a1a1a]/35"><Clock className="h-5 w-5" /></span>
+                                    <p className="text-sm text-[#1a1a1a]/45">No attendance records found.</p>
+                                </div>
+                            </td></tr>
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     );

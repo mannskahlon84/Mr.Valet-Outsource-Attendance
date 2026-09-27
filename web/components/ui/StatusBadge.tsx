@@ -11,9 +11,9 @@ const TONES: Record<Tone, string> = {
 
 const STATUS_TONE: Record<string, Tone> = {
     CONFIRMED: 'green', ACCEPTED_BY_OM: 'green', ACCEPTED: 'green', active: 'green', APPROVED: 'green',
-    GENERATED: 'green', CHECKED_OUT: 'blue', CHECKED_IN: 'green',
+    GENERATED: 'green', CHECKED_OUT: 'blue', CHECKED_IN: 'green', ACTIVE: 'green', REVOKED: 'red', INACTIVE: 'red',
     PENDING: 'amber', RESPONSES_PENDING: 'amber', SUBMITTED: 'gold', PENDING_APPROVAL: 'amber', COUNTER_PROPOSED: 'amber', PARTIAL: 'amber',
-    PARTIALLY_CONFIRMED: 'blue',
+    PARTIALLY_CONFIRMED: 'blue', ABSENT: 'red', SCHEDULED: 'gray', PRESENT: 'green',
     CANCELLED: 'red', REJECTED: 'red', inactive: 'red', VOIDED: 'red',
 };
 
