@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 /** Counts up from the previous value to the new one, so live figures visibly change. */
-function useCountUp(target: number, durationMs = 700): number {
+function useCountUp(target: number, durationMs = 700, decimals = 0): number {
     const [shown, setShown] = useState(target);
     const from = useRef(0);
     useEffect(() => {
@@ -13,13 +13,14 @@ function useCountUp(target: number, durationMs = 700): number {
         const step = (now: number) => {
             const t = Math.min(1, (now - start) / durationMs);
             const eased = 1 - Math.pow(1 - t, 3);
-            setShown(Math.round(origin + (target - origin) * eased));
+            const factor = Math.pow(10, decimals);
+            setShown(Math.round((origin + (target - origin) * eased) * factor) / factor);
             if (t < 1) frame = requestAnimationFrame(step);
             else from.current = target;
         };
         frame = requestAnimationFrame(step);
         return () => cancelAnimationFrame(frame);
-    }, [target, durationMs]);
+    }, [target, durationMs, decimals]);
     return shown;
 }
 
@@ -34,7 +35,7 @@ const ACCENTS: Record<Accent, { icon: string; value: string }> = {
 };
 
 /** A headline figure with an icon; numbers animate when they change. */
-export default function StatCard({ label, value, hint, icon: Icon, accent = 'gold', prefix = '', suffix = '' }: {
+export default function StatCard({ label, value, hint, icon: Icon, accent = 'gold', prefix = '', suffix = '', decimals = 0 }: {
     label: string;
     value: number;
     hint?: string;
@@ -42,8 +43,9 @@ export default function StatCard({ label, value, hint, icon: Icon, accent = 'gol
     accent?: Accent;
     prefix?: string;
     suffix?: string;
+    decimals?: number;
 }) {
-    const shown = useCountUp(value);
+    const shown = useCountUp(value, 700, decimals);
     const colors = ACCENTS[accent];
     return (
         <div className="mv-lift rounded-2xl border border-[#1a1a1a]/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
@@ -56,7 +58,7 @@ export default function StatCard({ label, value, hint, icon: Icon, accent = 'gol
                 )}
             </div>
             <div className={`mt-2 text-3xl font-bold tracking-tight tabular-nums ${colors.value}`}>
-                {prefix}{shown.toLocaleString()}{suffix}
+                {prefix}{shown.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}
             </div>
             {hint && <div className="mt-1 text-xs text-[#1a1a1a]/45">{hint}</div>}
         </div>
