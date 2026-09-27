@@ -1,4 +1,5 @@
 "use client";
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { calendarDate } from '@/lib/time';
 import RequestActionButton from '@/components/supplier/RequestActionButton';
 import { useEffect, useState, useCallback } from 'react';
@@ -34,7 +35,7 @@ export default function SupplierRequests() {
         };
     }, [loadData]);
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading incoming requests...</div>;
+    if (loading) return <DashboardSkeleton />;
 
     const totalDrivers = requests.reduce((acc, r) => acc + (r.requested_quantity || r.total_required_workers || 0), 0);
     const totalLocations = new Set(requests.map(r => r.site_id).filter(Boolean)).size;
@@ -44,51 +45,52 @@ export default function SupplierRequests() {
             <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900">Incoming Shift Requests</h1>
-                    <p className="text-sm text-gray-500">Review manpower requests routed to your agency with location name, manager name, and required quotas</p>
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />Supplier Agency</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a]">Incoming Shift Requests</h1>
+                    <p className="text-sm text-[#1a1a1a]/55">Review manpower requests routed to your agency with location name, manager name, and required quotas</p>
                 </div>
                 <div className="text-xs bg-amber-50 text-amber-800 font-bold px-3 py-1.5 rounded-full border border-amber-200">
                     {totalDrivers} Total Drivers across {totalLocations} Venues
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
                 {/* Mobile Cards View (< md screens) */}
-                <div className="md:hidden divide-y divide-gray-100 p-3 space-y-3">
+                <div className="md:hidden divide-y divide-[#1a1a1a]/[0.05] p-3 space-y-3">
                     {requests.map((r) => (
-                        <div key={r.id} className="bg-gray-50/70 p-4 rounded-xl border border-gray-200/80 space-y-3">
+                        <div key={r.id} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/80 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-black text-gray-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <span className="text-xs font-bold text-[#1a1a1a] bg-white px-2.5 py-1 rounded-lg border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
                                     Req #{r.id}
                                 </span>
                                 <StatusBadge status={r.supplier_response_status || r.status} />
                             </div>
 
                             <div>
-                                <div className="text-sm font-black text-gray-900">
-                                    📍 {r.site_name || `Location #${r.site_id}`}
+                                <div className="text-sm font-bold text-[#1a1a1a]">
+                                    {r.site_name || `Location #${r.site_id}`}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-0.5">
-                                    👤 Manager: <strong>{r.ops_manager_name || 'Operations Manager'}</strong>
+                                <div className="text-xs text-[#1a1a1a]/55 mt-0.5">
+                                    Manager: <strong>{r.ops_manager_name || 'Operations Manager'}</strong>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-gray-100 font-medium">
+                            <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-[#1a1a1a]/[0.05] font-medium">
                                 <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Shift Date</span>
-                                    <span className="text-gray-800 font-semibold">
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold">Shift Date</span>
+                                    <span className="text-[#1a1a1a]/85 font-semibold">
                                         {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Window</span>
-                                    <span className="text-gray-800 font-mono">
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold">Window</span>
+                                    <span className="text-[#1a1a1a]/85 font-mono">
                                         {r.start_time} - {r.end_time}
                                     </span>
                                 </div>
-                                <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-100">
-                                    <span className="text-[10px] text-gray-500 uppercase font-bold">Your Agency Quota:</span>
-                                    <span className="text-[#dbb457] font-black">{r.requested_quantity || r.total_required_workers} Drivers</span>
+                                <div className="col-span-2 flex justify-between items-center pt-1 border-t border-[#1a1a1a]/[0.05]">
+                                    <span className="text-[10px] text-[#1a1a1a]/55 uppercase font-bold">Your Agency Quota:</span>
+                                    <span className="text-[#a8842f] font-bold">{r.requested_quantity || r.total_required_workers} Drivers</span>
                                 </div>
                             </div>
 
@@ -96,7 +98,7 @@ export default function SupplierRequests() {
                         </div>
                     ))}
                     {requests.length === 0 && (
-                        <div className="p-8 text-center text-xs text-gray-400">
+                        <div className="p-8 text-center text-xs text-[#1a1a1a]/40">
                             No incoming shift requests found.
                         </div>
                     )}
@@ -104,8 +106,8 @@ export default function SupplierRequests() {
 
                 {/* Desktop Table */}
                 <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                    <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                        <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                             <tr>
                                 <th className="px-5 py-3 text-left">Req ID</th>
                                 <th className="px-5 py-3 text-left">Location / Venue</th>
@@ -116,22 +118,22 @@ export default function SupplierRequests() {
                                 <th className="px-5 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 bg-white">
+                        <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                             {requests.map((r) => (
-                                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-5 py-4 font-bold text-gray-900">#{r.id}</td>
+                                <tr key={r.id} className="hover:bg-[#f6f4ef]/60 transition-colors">
+                                    <td className="px-5 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
                                     <td className="px-5 py-4">
-                                        <div className="font-bold text-gray-900">{r.site_name || `Location #${r.site_id}`}</div>
-                                        {r.site_address && <div className="text-xs text-gray-400">{r.site_address}</div>}
+                                        <div className="font-bold text-[#1a1a1a]">{r.site_name || `Location #${r.site_id}`}</div>
+                                        {r.site_address && <div className="text-xs text-[#1a1a1a]/40">{r.site_address}</div>}
                                     </td>
-                                    <td className="px-5 py-4 text-gray-800 font-semibold text-xs">
+                                    <td className="px-5 py-4 text-[#1a1a1a]/85 font-semibold text-xs">
                                         {r.ops_manager_name || 'Operations Manager'}
                                     </td>
-                                    <td className="px-5 py-4 text-gray-700">
+                                    <td className="px-5 py-4 text-[#1a1a1a]/75">
                                         <div className="font-medium text-xs">{r.required_date ? calendarDate(r.required_date) : '-'}</div>
-                                        <div className="text-xs text-gray-500 font-mono">{r.start_time} - {r.end_time}</div>
+                                        <div className="text-xs text-[#1a1a1a]/55 font-mono">{r.start_time} - {r.end_time}</div>
                                     </td>
-                                    <td className="px-5 py-4 font-black text-gray-900">
+                                    <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                         <span className="bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded text-xs">
                                             {r.requested_quantity || r.total_required_workers} Drivers
                                         </span>
@@ -146,7 +148,7 @@ export default function SupplierRequests() {
                             ))}
                             {requests.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
+                                    <td colSpan={7} className="px-5 py-8 text-center text-[#1a1a1a]/40">
                                         No incoming shift requests found.
                                     </td>
                                 </tr>
