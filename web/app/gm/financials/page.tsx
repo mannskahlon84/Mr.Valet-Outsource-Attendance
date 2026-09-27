@@ -1,4 +1,6 @@
 "use client";
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { calendarMonth, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -7,7 +9,7 @@ export default function GMFinancials() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [dailyData, setDailyData] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'daily' | 'invoices'>('daily');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(qatarToday());
     const [loading, setLoading] = useState(true);
 
     const loadData = () => {
@@ -47,52 +49,52 @@ export default function GMFinancials() {
         .filter(i => i.status !== 'VOIDED')
         .reduce((acc, curr) => acc + (curr.total_amount || 0), 0);
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading financials...</div>;
+    if (loading) return <DashboardSkeleton />;
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                        <span>🧾</span> Financial Liability & Supplier Spend
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />General Manager</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a] flex items-center gap-2"> Financial Liability & Supplier Spend
                     </h1>
-                    <p className="text-sm text-gray-500">Executive tracking of daily outsource contractor headcount, payables, and historical invoices</p>
+                    <p className="text-sm text-[#1a1a1a]/55">Executive tracking of daily outsource contractor headcount, payables, and historical invoices</p>
                 </div>
                 {activeTab === 'daily' ? (
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
-                        <span className="text-xs font-bold uppercase text-gray-400">Date:</span>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
+                        <span className="text-xs font-bold uppercase text-[#1a1a1a]/40">Date:</span>
                         <input
                             type="date"
                             value={selectedDate}
                             onChange={e => setSelectedDate(e.target.value)}
-                            className="text-xs font-bold text-gray-800 bg-transparent focus:outline-none"
+                            className="text-xs font-bold text-[#1a1a1a]/85 bg-transparent focus:outline-none"
                         />
                     </div>
                 ) : (
-                    <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-right">
-                        <div className="text-[10px] font-bold uppercase text-gray-400">Total Valid Invoices</div>
-                        <div className="text-lg font-black text-gray-900">QAR {totalInvoiced.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                    <div className="bg-white px-4 py-2 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)] text-right">
+                        <div className="text-[10px] font-bold uppercase text-[#1a1a1a]/40">Total Valid Invoices</div>
+                        <div className="text-lg font-bold text-[#1a1a1a]">QAR {totalInvoiced.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
                 )}
             </div>
 
             {/* Tab Controls */}
-            <div className="flex gap-4 border-b border-gray-200">
+            <div className="flex gap-4 border-b border-[#1a1a1a]/[0.08]">
                 <button
                     onClick={() => setActiveTab('daily')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'daily' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'daily' ? 'border-[#dbb457] text-[#a8842f]' : 'border-transparent text-[#1a1a1a]/55 hover:text-[#1a1a1a]/75'
                     }`}
                 >
-                    📅 Daily Outsource Tracking ({dailyData?.suppliers?.length || 0} Agencies)
+                    Daily Outsource Tracking ({dailyData?.suppliers?.length || 0} Agencies)
                 </button>
                 <button
                     onClick={() => setActiveTab('invoices')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'invoices' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'invoices' ? 'border-[#dbb457] text-[#a8842f]' : 'border-transparent text-[#1a1a1a]/55 hover:text-[#1a1a1a]/75'
                     }`}
                 >
-                    📑 Monthly Invoices ({invoices.length})
+                    Monthly Invoices ({invoices.length})
                 </button>
             </div>
 
@@ -100,32 +102,32 @@ export default function GMFinancials() {
             {activeTab === 'daily' && (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Daily Payables Estimated</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Daily Payables Estimated</div>
+                            <div className="text-3xl font-bold text-[#1a1a1a] mt-2">
                                 QAR {(dailyData?.total_daily_payables || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">Date: {selectedDate}</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">Date: {selectedDate}</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200 bg-emerald-50/20">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-emerald-200 bg-emerald-50/20">
                             <div className="text-xs font-bold uppercase text-emerald-700">Total Drivers Deployed</div>
-                            <div className="text-3xl font-black text-emerald-700 mt-2">
+                            <div className="text-3xl font-bold text-emerald-700 mt-2">
                                 {dailyData?.total_daily_workers || 0} Drivers
                             </div>
                             <div className="text-xs text-emerald-600 mt-1">From outsource contractors</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Suppliers Active on Duty</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Suppliers Active on Duty</div>
+                            <div className="text-3xl font-bold text-[#1a1a1a] mt-2">
                                 {dailyData?.suppliers?.length || 0} Agencies
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">Scheduled for this date</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">Scheduled for this date</div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                            <h3 className="font-bold text-sm text-gray-800">
+                    <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
+                        <div className="p-4 border-b border-[#1a1a1a]/[0.08] bg-[#f6f4ef]/60 flex items-center justify-between">
+                            <h3 className="font-bold text-sm text-[#1a1a1a]/85">
                                 Daily Outsource Headcount & Spend for {selectedDate}
                             </h3>
                             <span className="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-mono">
@@ -133,8 +135,8 @@ export default function GMFinancials() {
                             </span>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                            <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                                <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                                     <tr>
                                         <th className="px-5 py-3 text-left">Supplier Agency</th>
                                         <th className="px-5 py-3 text-left">Locations</th>
@@ -146,26 +148,26 @@ export default function GMFinancials() {
                                         <th className="px-5 py-3 text-right">Payable</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-white">
+                                <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                                     {(dailyData?.suppliers || []).map((sup: any) => (
-                                        <tr key={sup.supplier_id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-5 py-4 font-black text-gray-900">
+                                        <tr key={sup.supplier_id} className="hover:bg-[#f6f4ef]/60 transition-colors">
+                                            <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                                 {sup.supplier_name}
-                                                <div className="text-xs text-gray-400 font-normal">Head: {sup.contact_person || 'Agency Contact'}</div>
+                                                <div className="text-xs text-[#1a1a1a]/40 font-normal">Head: {sup.contact_person || 'Agency Contact'}</div>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {(sup.locations || []).map((loc: any, lIdx: number) => (
-                                                        <span key={lIdx} className="bg-gray-100 text-gray-800 text-xs px-2 py-0.5 rounded border border-gray-200">
+                                                        <span key={lIdx} className="bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/85 text-xs px-2 py-0.5 rounded border border-[#1a1a1a]/[0.08]">
                                                             {loc.site_name} <b className="text-emerald-700">({loc.started_shift}/{loc.workers_allocated})</b>
                                                         </span>
                                                     ))}
                                                     {(sup.locations || []).length === 0 && (
-                                                        <span className="text-xs text-gray-400">None</span>
+                                                        <span className="text-xs text-[#1a1a1a]/40">None</span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4 text-center font-bold text-gray-800">{sup.total_workers_allocated}</td>
+                                            <td className="px-5 py-4 text-center font-bold text-[#1a1a1a]/85">{sup.total_workers_allocated}</td>
                                             <td className="px-5 py-4 text-center">
                                                 <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                                                     {sup.started_shift_count}
@@ -176,16 +178,16 @@ export default function GMFinancials() {
                                                     {sup.ended_shift_count}
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-4 text-center font-mono font-bold text-gray-900">{sup.total_duty_hours} hrs</td>
-                                            <td className="px-5 py-4 text-right font-mono text-xs text-gray-600">QAR {sup.billing_rate?.toFixed(2)}/shift</td>
-                                            <td className="px-5 py-4 text-right font-black text-gray-900">
+                                            <td className="px-5 py-4 text-center font-mono font-bold text-[#1a1a1a]">{sup.total_duty_hours} hrs</td>
+                                            <td className="px-5 py-4 text-right font-mono text-xs text-[#1a1a1a]/65">QAR {sup.billing_rate?.toFixed(2)}/shift</td>
+                                            <td className="px-5 py-4 text-right font-bold text-[#1a1a1a]">
                                                 QAR {sup.daily_total_payable?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     ))}
                                     {(dailyData?.suppliers || []).length === 0 && !loading && (
                                         <tr>
-                                            <td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                                            <td colSpan={8} className="px-5 py-12 text-center text-[#1a1a1a]/40">
                                                 No outsource manpower attendance logged for {selectedDate}.
                                             </td>
                                         </tr>
@@ -199,10 +201,10 @@ export default function GMFinancials() {
 
             {/* TAB 2: INVOICES ARCHIVE */}
             {activeTab === 'invoices' && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                        <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                            <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                                 <tr>
                                     <th className="px-5 py-3 text-left">Invoice #</th>
                                     <th className="px-5 py-3 text-left">Agency Partner</th>
@@ -214,21 +216,21 @@ export default function GMFinancials() {
                                     <th className="px-5 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
+                            <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                                 {invoices.map((inv) => {
                                     const sup = suppliers.find(s => s.id === inv.supplier_id);
                                     const isVoid = inv.status === 'VOIDED';
 
                                     return (
-                                        <tr key={inv.id} className={`hover:bg-gray-50 transition-colors ${isVoid ? 'opacity-60 bg-gray-50' : ''}`}>
-                                            <td className="px-5 py-4 font-mono font-bold text-gray-900">{inv.invoice_number}</td>
-                                            <td className="px-5 py-4 font-semibold text-gray-800">{sup?.name || `Agency #${inv.supplier_id}`}</td>
-                                            <td className="px-5 py-4 text-gray-600">
-                                                {inv.billing_month ? new Date(inv.billing_month).toLocaleDateString([], { month: 'long', year: 'numeric' }) : '-'}
+                                        <tr key={inv.id} className={`hover:bg-[#f6f4ef]/60 transition-colors ${isVoid ? 'opacity-60 bg-[#f6f4ef]/60' : ''}`}>
+                                            <td className="px-5 py-4 font-mono font-bold text-[#1a1a1a]">{inv.invoice_number}</td>
+                                            <td className="px-5 py-4 font-semibold text-[#1a1a1a]/85">{sup?.name || `Agency #${inv.supplier_id}`}</td>
+                                            <td className="px-5 py-4 text-[#1a1a1a]/65">
+                                                {inv.billing_month ? calendarMonth(inv.billing_month) : '-'}
                                             </td>
-                                            <td className="px-5 py-4 font-bold text-gray-700">{inv.workers_supplied_quantity} Drivers</td>
-                                            <td className="px-5 py-4 text-gray-600">QAR {inv.rate_per_worker?.toFixed(2)}</td>
-                                            <td className="px-5 py-4 font-black text-gray-900">
+                                            <td className="px-5 py-4 font-bold text-[#1a1a1a]/75">{inv.workers_supplied_quantity} Drivers</td>
+                                            <td className="px-5 py-4 text-[#1a1a1a]/65">QAR {inv.rate_per_worker?.toFixed(2)}</td>
+                                            <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                                 QAR {inv.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-5 py-4">
@@ -241,9 +243,9 @@ export default function GMFinancials() {
                                             <td className="px-5 py-4 text-right">
                                                 <button 
                                                     onClick={() => handleDownloadPdf(inv.id, inv.invoice_number)}
-                                                    className="text-[#dbb457] hover:text-[#c29d45] font-bold text-xs border border-amber-200 px-3 py-1 rounded-lg hover:bg-amber-50 inline-block transition-colors"
+                                                    className="text-[#a8842f] hover:text-[#1a1a1a] font-bold text-xs border border-amber-200 px-3 py-1 rounded-lg hover:bg-amber-50 inline-block transition-colors"
                                                 >
-                                                    Download PDF ⬇
+                                                    Download PDF 
                                                 </button>
                                             </td>
                                         </tr>
@@ -251,7 +253,7 @@ export default function GMFinancials() {
                                 })}
                                 {invoices.length === 0 && (
                                     <tr>
-                                        <td colSpan={8} className="px-5 py-8 text-center text-gray-400">
+                                        <td colSpan={8} className="px-5 py-8 text-center text-[#1a1a1a]/40">
                                             No invoices recorded in the system yet.
                                         </td>
                                     </tr>

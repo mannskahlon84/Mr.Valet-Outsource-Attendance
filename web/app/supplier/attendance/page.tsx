@@ -1,4 +1,5 @@
 "use client";
+import { qatarTime } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -79,74 +80,73 @@ export default function SupplierAttendancePage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                        <span>⏱️</span> Live Driver Shift Attendance
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />Supplier Agency</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a] tracking-tight flex items-center gap-2"> Live Driver Shift Attendance
                     </h1>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-[#1a1a1a]/55">
                         Real-time tracking of your agency's deployed drivers across all client locations.
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                         Live Auto-Sync Active
                     </span>
                     <button
                         onClick={loadLiveData}
-                        className="text-xs bg-white hover:bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg font-medium text-gray-700 shadow-sm"
+                        className="text-xs bg-white hover:bg-[#f6f4ef]/60 border border-[#1a1a1a]/[0.08] px-3 py-1.5 rounded-lg font-medium text-[#1a1a1a]/75 shadow-[0_1px_2px_rgb(26_26_26/0.04)]"
                     >
-                        🔄 Refresh
+                        Refresh
                     </button>
                 </div>
             </div>
 
             {/* KPI Cards: confirmed places against drivers who actually checked in */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="text-xs font-bold uppercase text-gray-400">Confirmed Today</div>
-                    <div className="text-3xl font-black text-gray-900 mt-1">{liveData?.confirmed_count || 0}</div>
-                    <div className="text-xs text-gray-500 mt-1">Drivers promised to Operations</div>
+                <div className="bg-white p-5 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
+                    <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Confirmed Today</div>
+                    <div className="text-3xl font-bold text-[#1a1a1a] mt-1">{liveData?.confirmed_count || 0}</div>
+                    <div className="text-xs text-[#1a1a1a]/55 mt-1">Drivers promised to Operations</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="text-xs font-bold uppercase text-gray-400">Checked In</div>
-                    <div className="text-3xl font-black text-gray-900 mt-1">{liveData?.checked_in_count || 0}</div>
-                    <div className="text-xs text-gray-500 mt-1">Arrived at the venue</div>
+                <div className="bg-white p-5 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
+                    <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Checked In</div>
+                    <div className="text-3xl font-bold text-[#1a1a1a] mt-1">{liveData?.checked_in_count || 0}</div>
+                    <div className="text-xs text-[#1a1a1a]/55 mt-1">Arrived at the venue</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/20">
+                <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-[0_1px_2px_rgb(26_26_26/0.04)] bg-emerald-50/20">
                     <div className="text-xs font-bold uppercase text-emerald-600">On Shift Now</div>
-                    <div className="text-3xl font-black text-emerald-600 mt-1">{liveData?.active_on_shift_count || 0}</div>
+                    <div className="text-3xl font-bold text-emerald-600 mt-1">{liveData?.active_on_shift_count || 0}</div>
                     <div className="text-xs text-emerald-700 mt-1">Clocked in & working</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm bg-blue-50/20">
+                <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-[0_1px_2px_rgb(26_26_26/0.04)] bg-blue-50/20">
                     <div className="text-xs font-bold uppercase text-blue-600">Completed</div>
-                    <div className="text-3xl font-black text-blue-600 mt-1">{liveData?.ended_shift_count || 0}</div>
+                    <div className="text-3xl font-bold text-blue-600 mt-1">{liveData?.ended_shift_count || 0}</div>
                     <div className="text-xs text-blue-700 mt-1">Shift ended today</div>
                 </div>
-                <div className={`bg-white p-5 rounded-xl border shadow-sm ${(liveData?.missing_count || 0) > 0 ? 'border-rose-200 bg-rose-50/30' : 'border-gray-200'}`}>
+                <div className={`bg-white p-5 rounded-2xl border shadow-[0_1px_2px_rgb(26_26_26/0.04)] ${(liveData?.missing_count || 0) > 0 ? 'border-rose-200 bg-rose-50/30' : 'border-[#1a1a1a]/[0.08]'}`}>
                     <div className="text-xs font-bold uppercase text-rose-600">Missing</div>
-                    <div className="text-3xl font-black text-rose-600 mt-1">{liveData?.missing_count || 0}</div>
+                    <div className="text-3xl font-bold text-rose-600 mt-1">{liveData?.missing_count || 0}</div>
                     <div className="text-xs text-rose-700 mt-1">Confirmed but not checked in</div>
                 </div>
             </div>
 
             {/* Today's confirmed shifts */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-200 bg-gray-50 font-bold text-sm text-gray-800">Today&apos;s confirmed shifts</div>
+            <div className="bg-white rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)] overflow-hidden">
+                <div className="p-4 border-b border-[#1a1a1a]/[0.08] bg-[#f6f4ef]/60 font-bold text-sm text-[#1a1a1a]/85">Today&apos;s confirmed shifts</div>
                 {(liveData?.shifts || []).length === 0 ? (
-                    <div className="p-6 text-center text-sm text-gray-400">No confirmed shifts for your agency today.</div>
+                    <div className="p-6 text-center text-sm text-[#1a1a1a]/40">No confirmed shifts for your agency today.</div>
                 ) : (
-                    <ul className="divide-y divide-gray-100">
+                    <ul className="divide-y divide-[#1a1a1a]/[0.05]">
                         {liveData.shifts.map((sh: any) => (
                             <li key={sh.response_id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <div>
-                                    <div className="font-bold text-gray-900">{sh.site_name}</div>
-                                    <div className="text-xs text-gray-500 font-mono">Request #{sh.request_id} • {sh.shift_window}</div>
+                                    <div className="font-bold text-[#1a1a1a]">{sh.site_name}</div>
+                                    <div className="text-xs text-[#1a1a1a]/55 font-mono">Request #{sh.request_id} • {sh.shift_window}</div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 text-xs font-bold">
-                                    <span className="px-2 py-1 rounded bg-gray-100 text-gray-800">{sh.checked_in} / {sh.confirmed} checked in</span>
+                                    <span className="px-2 py-1 rounded bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/85">{sh.checked_in} / {sh.confirmed} checked in</span>
                                     <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-800">{sh.on_duty} on duty</span>
                                     <span className="px-2 py-1 rounded bg-blue-100 text-blue-800">{sh.finished} finished</span>
-                                    <span className={`px-2 py-1 rounded ${sh.missing > 0 ? 'bg-rose-100 text-rose-800' : 'bg-gray-100 text-gray-500'}`}>{sh.missing} missing</span>
+                                    <span className={`px-2 py-1 rounded ${sh.missing > 0 ? 'bg-rose-100 text-rose-800' : 'bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/55'}`}>{sh.missing} missing</span>
                                 </div>
                             </li>
                         ))}
@@ -155,20 +155,20 @@ export default function SupplierAttendancePage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+            <div className="bg-white p-4 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)] flex flex-col md:flex-row gap-3 items-center justify-between">
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <span className="text-xs font-bold uppercase text-gray-400 mr-2">Filter:</span>
+                    <span className="text-xs font-bold uppercase text-[#1a1a1a]/40 mr-2">Filter:</span>
                     {['ALL', 'ON_SHIFT', 'COMPLETED', 'NOT_STARTED'].map((st) => (
                         <button
                             key={st}
                             onClick={() => setFilterStatus(st)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                                 filterStatus === st
-                                    ? 'bg-[#dbb457] text-white shadow-sm'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-[#1a1a1a] text-white shadow-[0_1px_2px_rgb(26_26_26/0.04)]'
+                                    : 'bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/65 hover:bg-[#1a1a1a]/[0.08]'
                             }`}
                         >
-                            {st === 'ALL' ? 'All Drivers' : st === 'ON_SHIFT' ? '🟢 On Shift' : st === 'COMPLETED' ? '🔴 Ended Shift' : '⚪ Not Started'}
+                            {st === 'ALL' ? 'All Drivers' : st === 'ON_SHIFT' ? 'On Shift' : st === 'COMPLETED' ? 'Ended Shift' : 'Not Started'}
                         </button>
                     ))}
                 </div>
@@ -177,15 +177,15 @@ export default function SupplierAttendancePage() {
                     placeholder="Search by driver name, QID, ID, or location..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full md:w-80 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                    className="w-full md:w-80 border border-[#1a1a1a]/15 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                 />
             </div>
 
             {/* Attendance Roster Table */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)] overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-gray-500 font-semibold text-xs uppercase tracking-wider">
+                    <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                        <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 font-semibold text-xs uppercase tracking-wider">
                             <tr>
                                 <th className="px-5 py-3 text-left">Driver Name</th>
                                 <th className="px-5 py-3 text-left">Identifiers</th>
@@ -196,70 +196,68 @@ export default function SupplierAttendancePage() {
                                 <th className="px-5 py-3 text-left">Method</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center text-gray-400">Loading live shift data...</td>
+                                    <td colSpan={7} className="px-5 py-12 text-center text-[#1a1a1a]/40">Loading live shift data...</td>
                                 </tr>
                             ) : filteredWorkers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center text-gray-400">No driver records found.</td>
+                                    <td colSpan={7} className="px-5 py-12 text-center text-[#1a1a1a]/40">No driver records found.</td>
                                 </tr>
                             ) : (
                                 filteredWorkers.map((w: any) => (
                                     <tr key={w.worker_id} className="hover:bg-gray-50/80 transition-colors">
                                         <td className="px-5 py-3.5">
-                                            <div className="font-bold text-gray-900">{w.worker_name}</div>
-                                            <div className="text-xs text-gray-400">ID #{w.worker_id}</div>
+                                            <div className="font-bold text-[#1a1a1a]">{w.worker_name}</div>
+                                            <div className="text-xs text-[#1a1a1a]/40">ID #{w.worker_id}</div>
                                         </td>
-                                        <td className="px-5 py-3.5 text-xs font-mono text-gray-600">
-                                            <div>QID: <span className="font-semibold text-gray-900">{w.qid || 'N/A'}</span></div>
+                                        <td className="px-5 py-3.5 text-xs font-mono text-[#1a1a1a]/65">
+                                            <div>QID: <span className="font-semibold text-[#1a1a1a]">{w.qid || 'N/A'}</span></div>
                                             <div>Badge: {w.internal_id || '-'}</div>
                                         </td>
                                         <td className="px-5 py-3.5">
                                             {w.status === 'ON_SHIFT' && (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                                     On Shift
                                                 </span>
                                             )}
                                             {w.status === 'COMPLETED' && (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                                                     Shift Ended
                                                 </span>
                                             )}
                                             {w.status === 'NOT_STARTED' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/65">
                                                     Not Started
                                                 </span>
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            <div className="font-medium text-gray-900">{w.site_name || '—'}</div>
+                                            <div className="font-medium text-[#1a1a1a]">{w.site_name || '—'}</div>
                                             {w.scheduled_shift && (
-                                                <div className="text-xs text-gray-400 font-mono">Shift: {w.scheduled_shift}</div>
+                                                <div className="text-xs text-[#1a1a1a]/40 font-mono">Shift: {w.scheduled_shift}</div>
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5 text-xs font-mono">
                                             {w.check_in_time ? (
                                                 <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                                    {new Date(w.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {qatarTime(w.check_in_time)}
                                                 </span>
                                             ) : (
-                                                <span className="text-gray-400">—</span>
+                                                <span className="text-[#1a1a1a]/40">—</span>
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5 text-xs font-mono">
                                             {w.check_out_time ? (
                                                 <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                                    {new Date(w.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {qatarTime(w.check_out_time)}
                                                 </span>
                                             ) : (
-                                                <span className="text-gray-400">—</span>
+                                                <span className="text-[#1a1a1a]/40">—</span>
                                             )}
                                         </td>
-                                        <td className="px-5 py-3.5 text-xs text-gray-500 uppercase font-mono">
+                                        <td className="px-5 py-3.5 text-xs text-[#1a1a1a]/55 uppercase font-mono">
                                             {w.check_in_method || '—'}
                                         </td>
                                     </tr>

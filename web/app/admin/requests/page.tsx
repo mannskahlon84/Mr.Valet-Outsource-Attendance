@@ -1,7 +1,14 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, tryFetch } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
+import PageHeader from '@/components/ui/PageHeader';
+import Modal from '@/components/ui/Modal';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { ui } from '@/lib/ui';
+import { CalendarDays, ClipboardList, MapPin, Plus, Trash2, Users, XCircle } from 'lucide-react';
 
 export default function Requests() {
     const [requests, setRequests] = useState([]);
@@ -77,125 +84,140 @@ export default function Requests() {
         setRequestsList(newReqs);
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <DashboardSkeleton cards={0} rows={8} />;
 
     return (
-        <div>
+        <div className="space-y-6">
             <LoadErrorBar message={loadError} onRetry={loadData} />
-            {cancelMsg && <div role="status" className="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800">{cancelMsg}</div>}
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-gray-800">Manpower Requests</h1>
-                {role !== "General Manager" && role !== "Supplier Head" && (
-                    <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold">+ Create Request</button>
+            {cancelMsg && <div role="status" className={`${ui.card} px-4 py-3 text-sm text-[#1a1a1a]/80`}>{cancelMsg}</div>}
+            <PageHeader
+                eyebrow="Administration"
+                title="Manpower Requests"
+                subtitle={`${requests.length} shift requests across all venues and agencies`}
+                actions={role !== "General Manager" && role !== "Supplier Head" && (
+                    <button onClick={() => setShowModal(true)} className={ui.btnPrimary}><Plus className="h-4 w-4" /> Create Request</button>
                 )}
-            </div>
+            />
 
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md max-h-screen overflow-y-auto">
-                        <h2 className="text-xl font-bold mb-4">Create Manpower Request</h2>
+                <Modal title="Create Manpower Request" subtitle="One or more shifts, each sent to one agency" onClose={() => setShowModal(false)} width="max-w-lg">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {requestsList.map((req, index) => (
-                                <div key={index} className="p-4 border border-gray-200 rounded mb-4 bg-gray-50">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h3 className="font-bold">Request #{index + 1}</h3>
+                                <div key={index} className="rounded-2xl border border-[#1a1a1a]/[0.08] bg-[#f6f4ef]/60 p-4">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h3 className="flex items-center gap-2 text-sm font-bold text-[#1a1a1a]">
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1a1a1a] text-[11px] text-[#dbb457]">{index + 1}</span>
+                                            Request #{index + 1}
+                                        </h3>
                                         {requestsList.length > 1 && (
-                                            <button type="button" onClick={() => setRequestsList(requestsList.filter((_, i) => i !== index))} className="text-red-500 text-sm">Remove</button>
+                                            <button type="button" onClick={() => setRequestsList(requestsList.filter((_, i) => i !== index))} className={ui.actionDanger}><Trash2 className="h-3.5 w-3.5" /> Remove</button>
                                         )}
                                     </div>
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Location / Site</label>
-                                            <select required value={req.siteId} onChange={e=>updateReq(index, 'siteId', e.target.value)} className="w-full border p-2 rounded mt-1">
+                                            <label className={ui.label}>Location / Site</label>
+                                            <select required value={req.siteId} onChange={e=>updateReq(index, 'siteId', e.target.value)} className={ui.input}>
                                                 <option value="">Select Location</option>
                                                 {sites.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Required Date</label>
-                                            <input type="date" required value={req.reqDate} onChange={e=>updateReq(index, 'reqDate', e.target.value)} className="w-full border p-2 rounded mt-1" />
+                                            <label className={ui.label}>Required Date</label>
+                                            <input type="date" required value={req.reqDate} onChange={e=>updateReq(index, 'reqDate', e.target.value)} className={ui.input} />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Shift Start</label>
-                                                <input type="time" required value={req.startTime} onChange={e=>updateReq(index, 'startTime', e.target.value)} className="w-full border p-2 rounded mt-1" />
+                                                <label className={ui.label}>Shift Start</label>
+                                                <input type="time" required value={req.startTime} onChange={e=>updateReq(index, 'startTime', e.target.value)} className={ui.input} />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Shift End</label>
-                                                <input type="time" required value={req.endTime} onChange={e=>updateReq(index, 'endTime', e.target.value)} className="w-full border p-2 rounded mt-1" />
+                                                <label className={ui.label}>Shift End</label>
+                                                <input type="time" required value={req.endTime} onChange={e=>updateReq(index, 'endTime', e.target.value)} className={ui.input} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Number of Workers Required</label>
-                                            <input type="number" required min="1" value={req.totalWorkers} onChange={e=>updateReq(index, 'totalWorkers', e.target.value)} className="w-full border p-2 rounded mt-1" />
+                                            <label className={ui.label}>Number of Workers Required</label>
+                                            <input type="number" required min="1" value={req.totalWorkers} onChange={e=>updateReq(index, 'totalWorkers', e.target.value)} className={ui.input} />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Supplier</label>
-                                            <select required value={req.supplierId} onChange={e=>updateReq(index, 'supplierId', e.target.value)} className="w-full border p-2 rounded mt-1">
+                                            <label className={ui.label}>Supplier</label>
+                                            <select required value={req.supplierId} onChange={e=>updateReq(index, 'supplierId', e.target.value)} className={ui.input}>
                                                 <option value="">Select Supplier</option>
                                                 {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                                            <textarea value={req.notes} onChange={e=>updateReq(index, 'notes', e.target.value)} className="w-full border p-2 rounded mt-1" rows={2}></textarea>
+                                            <label className={ui.label}>Notes (Optional)</label>
+                                            <textarea value={req.notes} onChange={e=>updateReq(index, 'notes', e.target.value)} className={ui.input} rows={2}></textarea>
                                         </div>
                                     </div>
                                 </div>
                             ))}
-                            <div className="mb-4">
-                                <button type="button" onClick={() => setRequestsList([...requestsList, { siteId: '', reqDate: '', startTime: '08:00', endTime: '17:00', totalWorkers: '10', notes: '', supplierId: '' }])} className="text-blue-600 hover:underline font-medium">+ Add Another Request</button>
-                            </div>
-                            <div className="flex justify-end space-x-2 mt-6">
-                                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit Request(s)</button>
+                            <button type="button" onClick={() => setRequestsList([...requestsList, { siteId: '', reqDate: '', startTime: '08:00', endTime: '17:00', totalWorkers: '10', notes: '', supplierId: '' }])} className={`${ui.btnSecondary} w-full border-dashed`}>
+                                <Plus className="h-4 w-4" /> Add Another Request
+                            </button>
+                            <div className="flex justify-end gap-2 border-t border-[#1a1a1a]/[0.06] pt-4">
+                                <button type="button" onClick={() => setShowModal(false)} className={ui.btnSecondary}>Cancel</button>
+                                <button type="submit" className={ui.btnPrimary}>Submit Request(s)</button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
 
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            <div className={`${ui.card} overflow-hidden`}>
+                <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                    <thead className="border-b border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/60">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Req ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Required</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className={ui.th}>Req ID</th>
+                            <th className={ui.th}>Site</th>
+                            <th className={ui.th}>Date</th>
+                            <th className={ui.th}>Required</th>
+                            <th className={ui.th}>Status</th>
+                            <th className={ui.th}>Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                         {requests.map((r: any) => (
-                            <tr key={r.id}>
-                                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">REQ-{r.id}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.site_name || `Site #${r.site_id}`}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{new Date(r.required_date).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.total_required_workers}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 text-xs font-semibold rounded-full ${r.status === "DRAFT" ? "bg-gray-100 text-gray-800" : r.status === "PUBLISHED" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
-                                        {r.status}
+                            <tr key={r.id} className={ui.tr}>
+                                <td className="whitespace-nowrap px-5 py-3.5 font-bold text-[#1a1a1a]">REQ-{r.id}</td>
+                                <td className="whitespace-nowrap px-5 py-3.5">
+                                    <span className="inline-flex items-center gap-2 font-medium text-[#1a1a1a]/80">
+                                        <MapPin className="h-4 w-4 text-[#a8842f]" /> {r.site_name || `Site #${r.site_id}`}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/60">
+                                    <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#1a1a1a]/35" />{calendarDate(r.required_date)}</span>
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-[#1a1a1a]">
+                                    <span className="inline-flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-[#1a1a1a]/35" />{r.total_required_workers}</span>
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5">
+                                    <StatusBadge status={r.status} />
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-3.5">
                                     {r.status !== 'CANCELLED' && (cancelling === r.id ? (
                                         <span className="inline-flex flex-wrap gap-2">
-                                            <button type="button" onClick={() => cancelRequest(r.id)} className="min-h-[36px] px-3 rounded bg-red-600 text-white text-xs font-bold">Yes, cancel</button>
-                                            <button type="button" onClick={() => setCancelling(null)} className="min-h-[36px] px-3 rounded border text-xs font-bold text-gray-700">Keep</button>
+                                            <button type="button" onClick={() => cancelRequest(r.id)} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700">Yes, cancel</button>
+                                            <button type="button" onClick={() => setCancelling(null)} className={ui.action}>Keep</button>
                                         </span>
                                     ) : (
-                                        <button type="button" onClick={() => setCancelling(r.id)} className="min-h-[36px] px-3 rounded border border-red-200 text-red-700 text-xs font-bold hover:bg-red-50">Cancel</button>
+                                        <button type="button" onClick={() => setCancelling(r.id)} className={ui.actionDanger}><XCircle className="h-3.5 w-3.5" /> Cancel</button>
                                     ))}
                                 </td>
                             </tr>
                         ))}
                         {requests.length === 0 && (
-                            <tr><td colSpan={6} className="px-6 py-4 text-center text-gray-500">No requests found.</td></tr>
+                            <tr><td colSpan={6}>
+                                <div className="flex flex-col items-center gap-2 py-12 text-center">
+                                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f6f4ef] text-[#1a1a1a]/35"><ClipboardList className="h-5 w-5" /></span>
+                                    <p className="text-sm text-[#1a1a1a]/45">No requests found.</p>
+                                </div>
+                            </td></tr>
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     );

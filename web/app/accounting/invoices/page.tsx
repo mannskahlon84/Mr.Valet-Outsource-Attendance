@@ -1,4 +1,6 @@
 "use client";
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { calendarMonth } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
 import ExportButtons from '@/components/ui/ExportButtons';
@@ -47,22 +49,23 @@ export default function AccountingInvoices() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading invoices...</div>;
+    if (loading) return <DashboardSkeleton />;
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900">Generated Monthly Invoices</h1>
-                    <p className="text-sm text-gray-500">Official generated contractor statements, PDF exports, and audit controls</p>
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />Accounting</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a]">Generated Monthly Invoices</h1>
+                    <p className="text-sm text-[#1a1a1a]/55">Official generated contractor statements, PDF exports, and audit controls</p>
                 </div>
                 <ExportButtons base="/accounting/invoices/export" filename="invoices" />
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                    <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                        <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                             <tr>
                                 <th className="px-5 py-3 text-left">Invoice #</th>
                                 <th className="px-5 py-3 text-left">Agency</th>
@@ -74,21 +77,21 @@ export default function AccountingInvoices() {
                                 <th className="px-5 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 bg-white">
+                        <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                             {invoices.map((inv) => {
                                 const sup = suppliers.find(s => s.id === inv.supplier_id);
                                 const isVoid = inv.status === 'VOIDED';
 
                                 return (
-                                    <tr key={inv.id} className={`hover:bg-gray-50 transition-colors ${isVoid ? 'opacity-60 bg-gray-50/50' : ''}`}>
-                                        <td className="px-5 py-4 font-mono font-bold text-gray-900">{inv.invoice_number}</td>
-                                        <td className="px-5 py-4 font-semibold text-gray-800">{sup?.name || `Agency #${inv.supplier_id}`}</td>
-                                        <td className="px-5 py-4 text-gray-600">
-                                            {inv.billing_month ? new Date(inv.billing_month).toLocaleDateString([], { month: 'long', year: 'numeric' }) : '-'}
+                                    <tr key={inv.id} className={`hover:bg-[#f6f4ef]/60 transition-colors ${isVoid ? 'opacity-60 bg-gray-50/50' : ''}`}>
+                                        <td className="px-5 py-4 font-mono font-bold text-[#1a1a1a]">{inv.invoice_number}</td>
+                                        <td className="px-5 py-4 font-semibold text-[#1a1a1a]/85">{sup?.name || `Agency #${inv.supplier_id}`}</td>
+                                        <td className="px-5 py-4 text-[#1a1a1a]/65">
+                                            {inv.billing_month ? calendarMonth(inv.billing_month) : '-'}
                                         </td>
-                                        <td className="px-5 py-4 font-bold text-gray-800">{inv.workers_supplied_quantity} Drivers</td>
-                                        <td className="px-5 py-4 text-gray-600">QAR {inv.rate_per_worker?.toFixed(2)}</td>
-                                        <td className="px-5 py-4 font-black text-gray-900">
+                                        <td className="px-5 py-4 font-bold text-[#1a1a1a]/85">{inv.workers_supplied_quantity} Drivers</td>
+                                        <td className="px-5 py-4 text-[#1a1a1a]/65">QAR {inv.rate_per_worker?.toFixed(2)}</td>
+                                        <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                             QAR {inv.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </td>
                                         <td className="px-5 py-4">
@@ -101,9 +104,9 @@ export default function AccountingInvoices() {
                                         <td className="px-5 py-4 text-right space-x-2">
                                             <button 
                                                 onClick={() => handleDownloadPdf(inv.id, inv.invoice_number)}
-                                                className="text-[#dbb457] hover:text-[#c29d45] font-bold text-xs border border-amber-200 px-3 py-1 rounded-lg hover:bg-amber-50 inline-block transition-colors"
+                                                className="text-[#a8842f] hover:text-[#1a1a1a] font-bold text-xs border border-amber-200 px-3 py-1 rounded-lg hover:bg-amber-50 inline-block transition-colors"
                                             >
-                                                PDF ⬇
+                                                PDF 
                                             </button>
                                             {!isVoid && (
                                                 <button 
@@ -119,7 +122,7 @@ export default function AccountingInvoices() {
                             })}
                             {invoices.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className="px-5 py-8 text-center text-gray-400">
+                                    <td colSpan={8} className="px-5 py-8 text-center text-[#1a1a1a]/40">
                                         No invoices generated yet. Go to "Billing Summary" to generate one.
                                     </td>
                                 </tr>

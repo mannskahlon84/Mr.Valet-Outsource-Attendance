@@ -1,4 +1,5 @@
 "use client";
+import { qatarTime, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, API_URL, downloadFile } from '../../../lib/api';
 
@@ -12,8 +13,8 @@ export default function Attendance() {
 
     if (loading) return <div>Loading...</div>;
 
-    const exportExcel = () => { downloadFile('/reports/attendance/export/excel', `attendance-${new Date().toISOString().slice(0, 10)}.xlsx`); };
-    const exportPdf = () => { downloadFile('/reports/attendance/export/pdf', `attendance-${new Date().toISOString().slice(0, 10)}.pdf`); };
+    const exportExcel = () => { downloadFile('/reports/attendance/export/excel', `attendance-${qatarToday()}.xlsx`); };
+    const exportPdf = () => { downloadFile('/reports/attendance/export/pdf', `attendance-${qatarToday()}.pdf`); };
 
     return (
         <div>
@@ -52,8 +53,8 @@ export default function Attendance() {
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.site_name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">{r.required_date}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                    {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString() : '-'} <br/> 
-                                    {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString() : '-'}
+                                    {r.check_in_time ? qatarTime(r.check_in_time, true) : '-'} <br/> 
+                                    {r.check_out_time ? qatarTime(r.check_out_time, true) : '-'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-700">{r.duty_hours}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">

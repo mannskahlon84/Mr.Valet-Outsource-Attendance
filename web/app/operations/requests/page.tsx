@@ -1,4 +1,5 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch } from '@/lib/api';
@@ -75,7 +76,6 @@ export default function OperationsRequests() {
                         key={idx}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200/90 shadow-2xs"
                     >
-                        <span className="text-[11px]">🏢</span>
                         <span>{name}</span>
                     </span>
                 ))}
@@ -93,12 +93,13 @@ export default function OperationsRequests() {
             <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900">Shift Requests</h1>
-                    <p className="text-sm text-gray-500">Track allocations, review supplier confirmations, and manage shifts</p>
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />Operations</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a]">Shift Requests</h1>
+                    <p className="text-sm text-[#1a1a1a]/55">Track allocations, review supplier confirmations, and manage shifts</p>
                 </div>
                 <Link 
                     href="/operations/requests/new" 
-                    className="bg-[#dbb457] hover:bg-[#c29d45] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow transition-colors"
+                    className="bg-[#1a1a1a] hover:bg-[#dbb457] hover:text-[#1a1a1a] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow transition-colors"
                 >
                     + New Shift Request
                 </Link>
@@ -112,8 +113,8 @@ export default function OperationsRequests() {
                         onClick={() => setFilterStatus(st)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                             filterStatus === st 
-                                ? 'bg-gray-900 text-white' 
-                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                ? 'bg-[#1a1a1a] text-white' 
+                                : 'bg-white text-[#1a1a1a]/65 hover:bg-[#1a1a1a]/[0.05] border border-[#1a1a1a]/[0.08]'
                         }`}
                     >
                         {st.replace('_', ' ')}
@@ -122,62 +123,62 @@ export default function OperationsRequests() {
             </div>
 
             {/* Table & Mobile Cards */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
                 {/* Mobile Cards View (< md screens) */}
-                <div className="md:hidden divide-y divide-gray-100 p-3 space-y-3">
+                <div className="md:hidden divide-y divide-[#1a1a1a]/[0.05] p-3 space-y-3">
                     {filtered.map((r) => (
-                        <div key={r.id} className="bg-gray-50/70 p-4 rounded-xl border border-gray-200/80 space-y-3">
+                        <div key={r.id} className="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/80 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-black text-gray-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <span className="text-xs font-bold text-[#1a1a1a] bg-white px-2.5 py-1 rounded-lg border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
                                     Req #{r.id}
                                 </span>
                                 <StatusBadge status={r.status} />
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-black text-gray-900">{r.site_name || `Location #${r.site_id}`}</h3>
+                                <h3 className="text-sm font-bold text-[#1a1a1a]">{r.site_name || `Location #${r.site_id}`}</h3>
                                 {r.site_address && (
-                                    <p className="text-xs text-gray-500 truncate">{r.site_address}</p>
+                                    <p className="text-xs text-[#1a1a1a]/55 truncate">{r.site_address}</p>
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-gray-100 font-medium">
+                            <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-[#1a1a1a]/[0.05] font-medium">
                                 <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Date</span>
-                                    <span className="text-gray-800 font-semibold">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold">Date</span>
+                                    <span className="text-[#1a1a1a]/85 font-semibold">
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Shift</span>
-                                    <span className="text-gray-800 font-mono">
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold">Shift</span>
+                                    <span className="text-[#1a1a1a]/85 font-mono">
                                         {r.start_time} - {r.end_time}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Headcount</span>
-                                    <span className="text-[#dbb457] font-black">{r.total_required_workers} Drivers</span>
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold">Headcount</span>
+                                    <span className="text-[#a8842f] font-bold">{r.total_required_workers} Drivers</span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Role</span>
-                                    <span className="text-gray-600">{r.skill_category || 'Valet Driver'}</span>
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold">Role</span>
+                                    <span className="text-[#1a1a1a]/65">{r.skill_category || 'Valet Driver'}</span>
                                 </div>
                                 <div className="col-span-2 sm:col-span-1">
-                                    <span className="text-[10px] text-gray-400 block uppercase font-bold mb-1">Supplier(s)</span>
+                                    <span className="text-[10px] text-[#1a1a1a]/40 block uppercase font-bold mb-1">Supplier(s)</span>
                                     {renderSupplierBadges(r)}
                                 </div>
                             </div>
 
                             <Link 
                                 href={`/operations/requests/${r.id}`}
-                                className="block text-center w-full text-xs font-bold bg-[#dbb457] text-white py-2.5 rounded-lg hover:bg-[#c29d45] transition-colors shadow-sm"
+                                className="block text-center w-full text-xs font-bold bg-[#1a1a1a] text-white py-2.5 rounded-lg hover:bg-[#dbb457] hover:text-[#1a1a1a] transition-colors shadow-[0_1px_2px_rgb(26_26_26/0.04)]"
                             >
                                 Review Bids & Manage Shift →
                             </Link>
                         </div>
                     ))}
                     {filtered.length === 0 && !loading && (
-                        <div className="p-8 text-center text-xs text-gray-400">
+                        <div className="p-8 text-center text-xs text-[#1a1a1a]/40">
                             No requests found matching this filter.
                         </div>
                     )}
@@ -185,8 +186,8 @@ export default function OperationsRequests() {
 
                 {/* Desktop Table (>= md screens) */}
                 <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                    <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                        <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                             <tr>
                                 <th className="px-5 py-3 text-left">ID</th>
                                 <th className="px-5 py-3 text-left">Location</th>
@@ -199,26 +200,26 @@ export default function OperationsRequests() {
                                 <th className="px-5 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 bg-white">
+                        <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                             {filtered.map((r) => (
-                                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-5 py-4 font-bold text-gray-900">#{r.id}</td>
+                                <tr key={r.id} className="hover:bg-[#f6f4ef]/60 transition-colors">
+                                    <td className="px-5 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
                                     <td className="px-5 py-4">
-                                        <div className="font-bold text-gray-900 text-sm">{r.site_name || `Location #${r.site_id}`}</div>
+                                        <div className="font-bold text-[#1a1a1a] text-sm">{r.site_name || `Location #${r.site_id}`}</div>
                                         {r.site_address && (
-                                            <div className="text-xs text-gray-400 truncate max-w-[200px]">{r.site_address}</div>
+                                            <div className="text-xs text-[#1a1a1a]/40 truncate max-w-[200px]">{r.site_address}</div>
                                         )}
                                     </td>
-                                    <td className="px-5 py-4 text-gray-700 font-medium">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                    <td className="px-5 py-4 text-[#1a1a1a]/75 font-medium">
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </td>
-                                    <td className="px-5 py-4 text-gray-600 font-mono text-xs">
+                                    <td className="px-5 py-4 text-[#1a1a1a]/65 font-mono text-xs">
                                         {r.start_time} - {r.end_time}
                                     </td>
-                                    <td className="px-5 py-4 font-bold text-gray-900">
+                                    <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                         {r.total_required_workers} Drivers
                                     </td>
-                                    <td className="px-5 py-4 text-gray-500">
+                                    <td className="px-5 py-4 text-[#1a1a1a]/55">
                                         {r.skill_category || 'Valet Driver'}
                                     </td>
                                     <td className="px-5 py-4">
@@ -230,7 +231,7 @@ export default function OperationsRequests() {
                                     <td className="px-5 py-4 text-right">
                                         <Link 
                                             href={`/operations/requests/${r.id}`}
-                                            className="text-[#dbb457] hover:text-[#c29d45] font-bold text-xs border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-50 inline-block transition-colors"
+                                            className="text-[#a8842f] hover:text-[#1a1a1a] font-bold text-xs border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-50 inline-block transition-colors"
                                         >
                                             Review Bids & Chat →
                                         </Link>
@@ -239,7 +240,7 @@ export default function OperationsRequests() {
                             ))}
                             {filtered.length === 0 && !loading && (
                                 <tr>
-                                    <td colSpan={9} className="px-5 py-8 text-center text-gray-400">
+                                    <td colSpan={9} className="px-5 py-8 text-center text-[#1a1a1a]/40">
                                         No requests found matching this filter.
                                     </td>
                                 </tr>

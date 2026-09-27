@@ -1,9 +1,14 @@
 "use client";
+import { calendarDate } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi, tryFetch } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, Clock, Hourglass, MapPin, Plus, Users } from 'lucide-react';
 
 export default function OperationsDashboard() {
     const [requests, setRequests] = useState<any[]>([]);
@@ -44,140 +49,144 @@ export default function OperationsDashboard() {
     const totalSites = sites.length;
     const workersOnDuty = attendanceReport?.summary?.total_present_days || 0;
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading operations dashboard...</div>;
+    if (loading) return <DashboardSkeleton />;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <LoadErrorBar message={loadError} onRetry={loadData} />
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900">Operations Control Center</h1>
-                    <p className="text-sm text-gray-500">Manage site shifts, supplier allocations, and live valet attendance</p>
-                </div>
-                <Link 
-                    href="/operations/requests/new" 
-                    className="bg-[#dbb457] hover:bg-[#c29d45] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow transition-colors"
-                >
-                    + Dispatch New Request
-                </Link>
-            </div>
+            <PageHeader
+                eyebrow="Operations"
+                title="Operations Control Center"
+                subtitle="Manage site shifts, supplier allocations, and live valet attendance"
+                actions={
+                    <Link 
+                        href="/operations/requests/new" 
+                        className="group inline-flex items-center gap-2 rounded-xl bg-[#1a1a1a] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#dbb457] hover:text-[#1a1a1a] hover:shadow-md"
+                    >
+                        <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
+                        Dispatch New Request
+                    </Link>
+                }
+            />
 
             {/* Metric KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div className="text-xs font-bold uppercase text-gray-400">Total Shift Requests</div>
-                    <div className="text-3xl font-black text-gray-900 mt-2">{requests.length}</div>
-                    <div className="text-xs text-gray-500 mt-1">Across all managed locations</div>
-                </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-amber-200 bg-amber-50/20">
-                    <div className="text-xs font-bold uppercase text-amber-700">Pending Supplier Bids</div>
-                    <div className="text-3xl font-black text-amber-600 mt-2">{pendingBids}</div>
-                    <div className="text-xs text-amber-700 mt-1">Awaiting review or confirmation</div>
-                </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-green-200 bg-green-50/20">
-                    <div className="text-xs font-bold uppercase text-green-700">Active / Confirmed Shifts</div>
-                    <div className="text-3xl font-black text-green-600 mt-2">{confirmedShifts}</div>
-                    <div className="text-xs text-green-700 mt-1">Ready for on-site execution</div>
-                </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div className="text-xs font-bold uppercase text-gray-400">Managed Locations</div>
-                    <div className="text-3xl font-black text-gray-900 mt-2">{totalSites}</div>
-                    <div className="text-xs text-gray-500 mt-1">Geofenced client locations</div>
-                </div>
+            <div className="mv-stagger grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <StatCard label="Total Shift Requests" value={requests.length} hint="Across all managed locations" icon={ClipboardList} accent="ink" />
+                <StatCard label="Pending Supplier Bids" value={pendingBids} hint="Awaiting review or confirmation" icon={Hourglass} accent="gold" />
+                <StatCard label="Active / Confirmed Shifts" value={confirmedShifts} hint="Ready for on-site execution" icon={CheckCircle2} accent="green" />
+                <StatCard label="Managed Locations" value={totalSites} hint="Geofenced client locations" icon={MapPin} accent="blue" />
             </div>
 
             {/* Recent Requests Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 sm:p-5 border-b border-gray-200 flex justify-between items-center">
-                    <h2 className="text-base font-bold text-gray-900">Recent Manpower Requests</h2>
-                    <Link href="/operations/requests" className="text-xs font-bold text-[#dbb457] hover:underline">
-                        View All ({requests.length}) →
+            <section className="mv-fade-in overflow-hidden rounded-2xl border border-[#1a1a1a]/[0.06] bg-white shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
+                <div className="flex items-center justify-between gap-3 border-b border-[#1a1a1a]/[0.06] px-5 py-4 sm:px-6">
+                    <div>
+                        <h2 className="text-base font-bold text-[#1a1a1a]">Recent Manpower Requests</h2>
+                        <p className="text-xs text-[#1a1a1a]/45">The five most recent shifts you dispatched</p>
+                    </div>
+                    <Link href="/operations/requests" className="group inline-flex items-center gap-1 text-xs font-semibold text-[#a8842f] hover:text-[#1a1a1a]">
+                        View All ({requests.length})
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                     </Link>
                 </div>
 
                 {/* Mobile Cards View (Phones) */}
-                <div className="md:hidden divide-y divide-gray-100 p-2 sm:p-3 space-y-2">
+                <div className="md:hidden space-y-2 p-3">
                     {requests.slice(0, 5).map((r) => (
-                        <div key={r.id} className="bg-gray-50/70 p-3.5 rounded-xl border border-gray-200/80 space-y-2.5">
+                        <div key={r.id} className="space-y-3 rounded-xl border border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/60 p-4">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
-                                    #{r.id}
-                                </span>
+                                <span className="text-sm font-bold text-[#1a1a1a]">#{r.id}</span>
                                 <StatusBadge status={r.status} />
                             </div>
-                            <div>
-                                <div className="text-xs font-semibold text-gray-800">
-                                    📅 {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                            <div className="space-y-1 text-xs text-[#1a1a1a]/65">
+                                <div className="flex items-center gap-1.5">
+                                    <CalendarDays className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
+                                    {r.required_date ? calendarDate(r.required_date) : '-'}
                                 </div>
-                                <div className="text-xs text-gray-500 font-mono mt-0.5">
-                                    ⏱️ {r.start_time} - {r.end_time} • <strong className="text-gray-700">{r.total_required_workers} Drivers</strong>
+                                <div className="flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
+                                    <span className="tabular-nums">{r.start_time} - {r.end_time}</span>
+                                    <span className="text-[#1a1a1a]/30">•</span>
+                                    <Users className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
+                                    <strong className="font-semibold text-[#1a1a1a]">{r.total_required_workers} Drivers</strong>
                                 </div>
                             </div>
                             <Link 
                                 href={`/operations/requests/${r.id}`}
-                                className="block text-center w-full text-xs font-bold bg-white text-gray-800 border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
+                                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#1a1a1a]/10 bg-white py-2.5 text-xs font-semibold text-[#1a1a1a] transition-colors hover:border-[#dbb457]"
                             >
-                                Review Bids & Chat →
+                                Review Bids & Chat <ArrowRight className="h-3.5 w-3.5" />
                             </Link>
                         </div>
                     ))}
                     {requests.length === 0 && (
-                        <div className="p-6 text-center text-xs text-gray-400">
-                            No shift requests created yet. Tap "+ Dispatch New Request" above.
-                        </div>
+                        <EmptyRequests />
                     )}
                 </div>
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
-                            <tr>
-                                <th className="px-5 py-3 text-left">Req ID</th>
-                                <th className="px-5 py-3 text-left">Date</th>
-                                <th className="px-5 py-3 text-left">Shift Window</th>
-                                <th className="px-5 py-3 text-left">Headcount</th>
-                                <th className="px-5 py-3 text-left">Status</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                    <table className="min-w-full text-sm">
+                        <thead>
+                            <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-[#1a1a1a]/40">
+                                <th className="px-6 py-3">Req ID</th>
+                                <th className="px-6 py-3">Date</th>
+                                <th className="px-6 py-3">Shift Window</th>
+                                <th className="px-6 py-3">Headcount</th>
+                                <th className="px-6 py-3">Status</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 bg-white">
+                        <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                             {requests.slice(0, 5).map((r) => (
-                                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-5 py-4 font-bold text-gray-900">#{r.id}</td>
-                                    <td className="px-5 py-4 text-gray-600">
-                                        {r.required_date ? new Date(r.required_date).toLocaleDateString() : '-'}
+                                <tr key={r.id} className="group transition-colors hover:bg-[#f6f4ef]/70">
+                                    <td className="px-6 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
+                                    <td className="px-6 py-4 text-[#1a1a1a]/65">
+                                        {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </td>
-                                    <td className="px-5 py-4 text-gray-600 font-mono text-xs">
+                                    <td className="px-6 py-4 font-medium tabular-nums text-[#1a1a1a]/65">
                                         {r.start_time} - {r.end_time}
                                     </td>
-                                    <td className="px-5 py-4 font-bold text-gray-800">
+                                    <td className="px-6 py-4 font-semibold text-[#1a1a1a]">
                                         {r.total_required_workers} Drivers
                                     </td>
-                                    <td className="px-5 py-4">
+                                    <td className="px-6 py-4">
                                         <StatusBadge status={r.status} />
                                     </td>
-                                    <td className="px-5 py-4 text-right">
+                                    <td className="px-6 py-4 text-right">
                                         <Link 
                                             href={`/operations/requests/${r.id}`}
-                                            className="text-[#dbb457] hover:text-[#c29d45] font-bold text-xs border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-50 inline-block transition-colors"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a1a1a]/10 px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] transition-all hover:border-[#dbb457] hover:bg-[#dbb457]/10"
                                         >
-                                            Review Bids & Chat →
+                                            Review Bids & Chat
+                                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                                         </Link>
                                     </td>
                                 </tr>
                             ))}
                             {requests.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
-                                        No manpower requests created yet. Click "+ Dispatch New Request" above.
+                                    <td colSpan={6}>
+                                        <EmptyRequests />
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
+        </div>
+    );
+}
+
+function EmptyRequests() {
+    return (
+        <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dbb457]/15 text-[#a8842f]">
+                <ClipboardList className="h-6 w-6" strokeWidth={1.8} />
+            </span>
+            <div className="text-sm font-semibold text-[#1a1a1a]">No manpower requests yet</div>
+            <div className="text-xs text-[#1a1a1a]/45">Use &ldquo;Dispatch New Request&rdquo; to send your first shift to the agencies.</div>
         </div>
     );
 }

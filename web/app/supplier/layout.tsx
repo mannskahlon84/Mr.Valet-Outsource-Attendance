@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
+import PageTransition from '@/components/layout/PageTransition';
 import TopNavigation from '@/components/layout/TopNavigation';
 
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
@@ -25,7 +26,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     ];
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-[#f6f4ef]">
             <Sidebar items={navItems} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavigation 
@@ -34,8 +35,8 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                     title="Supplier Agency Portal" 
                     onToggleMobile={() => setMobileOpen(prev => !prev)} 
                 />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-3 sm:p-6 pb-24 md:pb-6">
-                    {children}
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#f6f4ef] p-3 sm:p-6 lg:p-8 pb-24 md:pb-6">
+                    <PageTransition>{children}</PageTransition>
                 </main>
                 <MobileBottomNav items={navItems} />
             </div>

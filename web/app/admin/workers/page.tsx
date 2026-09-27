@@ -5,6 +5,12 @@ import DataTable from '@/components/ui/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { validateQatarIdClient } from '@/lib/qidValidator';
 
+import PageHeader from '@/components/ui/PageHeader';
+import Modal from '@/components/ui/Modal';
+import StatCard from '@/components/ui/StatCard';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { ui } from '@/lib/ui';
+import { AlertTriangle, Ban, Building2, CheckCircle2, Pencil, Smartphone, SmartphoneNfc, Trash2, UserPlus, Users } from 'lucide-react';
 export default function Workers() {
     const [workers, setWorkers] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -144,22 +150,23 @@ export default function Workers() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500 font-medium">Loading workforce directory...</div>;
+    if (loading) return <DashboardSkeleton cards={3} rows={8} />;
+
+    const activeWorkers = workers.filter((w: any) => (w.status || 'active') === 'active').length;
+    const boundDevices = workers.filter((w: any) => w.device_id).length;
 
     const columns = [
         { 
-            header: 'Worker ID', 
+            header: 'Driver', 
             field: (row: any) => (
-                <span className="font-mono text-xs font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
-                    {row.internal_worker_id}
-                </span>
-            )
-        },
-        { 
-            header: 'Driver Name', 
-            field: (row: any) => (
-                <div>
-                    <span className="font-bold text-gray-900">{row.first_name} {row.last_name}</span>
+                <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f4ef] text-[11px] font-bold text-[#1a1a1a]/70">
+                        {`${row.first_name?.[0] || ''}${row.last_name?.[0] || ''}`.toUpperCase()}
+                    </span>
+                    <div>
+                        <div className="font-semibold text-[#1a1a1a]">{row.first_name} {row.last_name}</div>
+                        <div className="font-mono text-[11px] text-[#1a1a1a]/45">{row.internal_worker_id}</div>
+                    </div>
                 </div>
             )
         },
@@ -169,78 +176,59 @@ export default function Workers() {
                 const sup = suppliers.find(s => s.id === row.supplier_id);
                 const name = row.supplier_name || sup?.name || 'Direct Employee';
                 return (
-                    <span className="font-semibold text-gray-800 bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded text-xs">
-                        🏢 {name}
-                    </span>
+                    <div>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#dbb457]/15 px-2.5 py-1 text-xs font-semibold text-[#7a5f1f]">
+                            <Building2 className="h-3.5 w-3.5" /> {name}
+                        </span>
+                        <div className="mt-1 text-[11px] text-[#1a1a1a]/45">by {row.supplier_head_name || 'Admin Provisioned'}</div>
+                    </div>
                 );
             }
         },
         { 
-            header: 'Registered Under', 
+            header: 'QID / Mobile', 
             field: (row: any) => (
-                <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                    <span>👤</span>
-                    <span>{row.supplier_head_name || 'Admin Provisioned'}</span>
+                <div className="font-mono text-xs">
+                    <div className="font-semibold text-[#1a1a1a]/80">{row.qid || '—'}</div>
+                    <div className="mt-0.5 text-[#1a1a1a]/50">{row.whatsapp_number || '—'}</div>
                 </div>
-            )
-        },
-        { 
-            header: 'Qatar ID (QID)', 
-            field: (row: any) => (
-                <span className="font-mono text-xs font-semibold text-gray-800">
-                    {row.qid || '—'}
-                </span>
-            ) 
-        },
-        { 
-            header: 'Mobile Number', 
-            field: (row: any) => (
-                <span className="font-mono text-xs text-gray-600">
-                    {row.whatsapp_number || '—'}
-                </span>
             ) 
         },
         { header: 'Status', field: (row: any) => <StatusBadge status={row.status || 'active'} /> },
         { 
-            header: 'Device Binding', 
+            header: 'Device', 
             field: (row: any) => (
-                <div className="flex flex-col gap-1">
-                    {row.device_id ? (
-                        <>
-                            <span className="font-mono text-[10px] text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded break-all max-w-[120px]">
-                                {row.device_id.substring(0, 15)}...
-                            </span>
-                            <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Locked</span>
-                        </>
-                    ) : (
-                        <span className="text-[10px] text-gray-400 font-medium">Unbound</span>
-                    )}
-                </div>
+                row.device_id ? (
+                    <span title={row.device_id} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        <SmartphoneNfc className="h-3.5 w-3.5" /> Locked
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1a1a1a]/[0.04] px-2.5 py-1 text-xs font-medium text-[#1a1a1a]/45">
+                        <Smartphone className="h-3.5 w-3.5" /> Unbound
+                    </span>
+                )
             ) 
         },
         { 
             header: 'Actions', 
             field: (row: any) => (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                    <button 
-                        onClick={() => openEdit(row)} 
-                        className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 px-2.5 py-1 rounded border border-blue-100"
-                    >
-                        Edit
+                <div className="flex flex-nowrap items-center gap-2">
+                    <button onClick={() => openEdit(row)} className={ui.action}>
+                        <Pencil className="h-3.5 w-3.5" /> Edit
                     </button>
                     <button 
                         onClick={() => handleResetDevice(row)} 
-                        className="text-amber-600 hover:text-amber-800 font-bold text-xs bg-amber-50 px-2.5 py-1 rounded border border-amber-200 hover:bg-amber-100 transition-colors"
+                        className={ui.action}
                         title="Reset mobile device binding so they can log in from a new phone"
                     >
-                        Reset Device
+                        <Smartphone className="h-3.5 w-3.5" /> Reset Device
                     </button>
                     <button 
                         onClick={() => handleDelete(row)} 
-                        className="text-rose-600 hover:text-rose-800 font-bold text-xs bg-rose-50 px-2.5 py-1 rounded border border-rose-200 hover:bg-rose-100 transition-colors"
+                        className={ui.actionDanger}
                         title="Only Super Admin can delete employee from database to release QID for re-registration"
                     >
-                        Delete & Release
+                        <Trash2 className="h-3.5 w-3.5" /> Delete & Release
                     </button>
                 </div>
             )
@@ -249,48 +237,38 @@ export default function Workers() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900">Total Workforce Directory</h1>
-                    <p className="text-sm text-gray-500">
-                        Super Admin directory of all enrolled drivers. Only Super Admin has authority to permanently delete and release QIDs.
-                    </p>
-                </div>
-                <button 
-                    onClick={openAdd} 
-                    className="bg-[#dbb457] text-white px-5 py-2.5 rounded-lg hover:bg-[#c29d45] font-bold text-sm shadow transition-colors"
-                >
-                    + Add New Employee
-                </button>
+            <PageHeader
+                eyebrow="Administration"
+                title="Total Workforce Directory"
+                subtitle="All enrolled drivers. Only Super Admin can permanently delete a driver and release their QID."
+                actions={<button onClick={openAdd} className={ui.btnPrimary}><UserPlus className="h-4 w-4" /> Add New Employee</button>}
+            />
+
+            <div className="mv-stagger grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard label="Enrolled Drivers" value={workers.length} hint="Across every supplier agency" icon={Users} accent="ink" />
+                <StatCard label="Active" value={activeWorkers} hint="Allowed to sign in and check in" icon={CheckCircle2} accent="green" />
+                <StatCard label="Phones Bound" value={boundDevices} hint="Locked to their first sign-in device" icon={SmartphoneNfc} accent="gold" />
             </div>
             
             {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg space-y-4 my-8">
-                        <div className="flex justify-between items-center border-b pb-3">
-                            <h2 className="text-lg font-bold text-gray-900">
-                                {editingWorker ? `Edit Employee: ${editingWorker.first_name} ${editingWorker.last_name}` : 'Enroll New Employee'}
-                            </h2>
-                            <button 
-                                onClick={() => setShowModal(false)}
-                                className="text-gray-400 hover:text-gray-600 font-bold text-lg"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
+                <Modal
+                    title={editingWorker ? `Edit Employee: ${editingWorker.first_name} ${editingWorker.last_name}` : 'Enroll New Employee'}
+                    subtitle="Driver identity, agency and app login"
+                    onClose={() => setShowModal(false)}
+                    width="max-w-lg"
+                >
                         {error && (
-                            <div className={`p-3.5 rounded-xl text-xs font-medium border ${
+                            <div className={`mb-4 rounded-xl border p-3.5 text-xs font-medium ${
                                 error.includes('already registered') 
-                                    ? 'bg-rose-50 border-rose-300 text-rose-900 shadow-sm' 
-                                    : 'bg-red-50 border-red-200 text-red-700'
+                                    ? 'border-rose-300 bg-rose-50 text-rose-900' 
+                                    : 'border-rose-200 bg-rose-50 text-rose-700'
                             }`}>
                                 <div className="flex items-start gap-2.5">
-                                    <span className="text-base leading-none mt-0.5">
-                                        {error.includes('already registered') ? '🚫' : '⚠️'}
-                                    </span>
+                                    {error.includes('already registered')
+                                        ? <Ban className="mt-0.5 h-4 w-4 shrink-0" />
+                                        : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
                                     <div className="space-y-1">
-                                        <div className="font-bold text-xs uppercase tracking-wide">
+                                        <div className="text-xs font-bold">
                                             {error.includes('already registered') ? 'Cross-Supplier Registration Blocked' : 'Registration Error'}
                                         </div>
                                         <div className="leading-relaxed">{error}</div>
@@ -302,22 +280,22 @@ export default function Workers() {
                         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Worker ID</label>
+                                    <label className={ui.label}>Worker ID</label>
                                     <input 
                                         type="text" 
                                         required 
                                         value={internalId} 
                                         onChange={e=>setInternalId(e.target.value)} 
-                                        className="w-full border p-2.5 rounded-lg text-sm font-mono font-bold bg-gray-50" 
+                                        className={`${ui.input} bg-[#f6f4ef] font-mono font-semibold`} 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Assign Supplier Agency *</label>
+                                    <label className={ui.label}>Assign Supplier Agency *</label>
                                     <select 
                                         value={supplierId} 
                                         onChange={e=>setSupplierId(e.target.value)} 
                                         required 
-                                        className="w-full border p-2.5 rounded-lg text-sm bg-white"
+                                        className={ui.input}
                                     >
                                         <option value="">Select Supplier Agency</option>
                                         {suppliers.map((s: any) => (
@@ -329,29 +307,29 @@ export default function Workers() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">First Name *</label>
+                                    <label className={ui.label}>First Name *</label>
                                     <input 
                                         type="text" 
                                         required 
                                         value={firstName} 
                                         onChange={e=>setFirstName(e.target.value)} 
-                                        className="w-full border p-2.5 rounded-lg text-sm" 
+                                        className={ui.input} 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Last Name *</label>
+                                    <label className={ui.label}>Last Name *</label>
                                     <input 
                                         type="text" 
                                         required 
                                         value={lastName} 
                                         onChange={e=>setLastName(e.target.value)} 
-                                        className="w-full border p-2.5 rounded-lg text-sm" 
+                                        className={ui.input} 
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Qatar ID (QID) *</label>
+                                <label className={ui.label}>Qatar ID (QID) *</label>
                                 <input 
                                     type="text" 
                                     required 
@@ -359,21 +337,23 @@ export default function Workers() {
                                     value={qid} 
                                     onChange={e=>setQid(e.target.value.replace(/\D/g, ''))} 
                                     placeholder="11-digit Qatar ID (e.g. 295356...)"
-                                    className="w-full border p-2.5 rounded-lg text-sm font-mono tracking-wide" 
+                                    className={`${ui.input} font-mono tracking-wide`} 
                                 />
                                 {qid.length > 0 && (
-                                    <div className={`mt-1.5 p-2 rounded-lg text-xs flex items-start gap-1.5 ${
+                                    <div className={`mt-2 flex items-start gap-2 rounded-xl border p-2.5 text-xs ${
                                         qidValidation?.isValid 
-                                            ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
-                                            : 'bg-amber-50 border border-amber-200 text-amber-800'
+                                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800' 
+                                            : 'border-amber-200 bg-amber-50 text-amber-800'
                                     }`}>
-                                        <span className="text-sm leading-none mt-0.5">{qidValidation?.isValid ? '✓' : '⚠️'}</span>
+                                        {qidValidation?.isValid
+                                            ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                                            : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
                                         <div>
                                             <div className="font-semibold">
                                                 {qidValidation?.isValid ? qidValidation.summary : qidValidation?.errorMessage}
                                             </div>
                                             {qidValidation?.isValid && (
-                                                <div className="text-[10px] text-emerald-600 mt-0.5">
+                                                <div className="mt-0.5 text-[10px] text-emerald-600">
                                                     Qatar MOI verified format • Anti-bogus check passed
                                                 </div>
                                             )}
@@ -384,18 +364,18 @@ export default function Workers() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Mobile / WhatsApp *</label>
+                                    <label className={ui.label}>Mobile / WhatsApp *</label>
                                     <input 
                                         type="text" 
                                         required 
                                         value={mobile} 
                                         onChange={e=>setMobile(e.target.value)} 
                                         placeholder="+974..."
-                                        className="w-full border p-2.5 rounded-lg text-sm" 
+                                        className={ui.input} 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                                    <label className={ui.label}>
                                         {editingWorker ? 'Reset App Password (blank to keep)' : 'Worker App Password *'}
                                     </label>
                                     <input 
@@ -404,18 +384,18 @@ export default function Workers() {
                                         value={password} 
                                         onChange={e=>setPassword(e.target.value)} 
                                         placeholder={editingWorker ? "••••••••" : "At least 8 characters, letters and numbers"}
-                                        className="w-full border p-2.5 rounded-lg text-sm" 
+                                        className={ui.input} 
                                     />
                                 </div>
                             </div>
 
                             {editingWorker && (
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Status</label>
+                                    <label className={ui.label}>Status</label>
                                     <select 
                                         value={status} 
                                         onChange={e=>setStatus(e.target.value)} 
-                                        className="w-full border p-2.5 rounded-lg text-sm bg-white"
+                                        className={ui.input}
                                     >
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
@@ -423,30 +403,19 @@ export default function Workers() {
                                 </div>
                             )}
 
-                            <div className="flex justify-end gap-2 pt-3 border-t">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowModal(false)} 
-                                    className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
-                                >
+                            <div className="flex justify-end gap-2 border-t border-[#1a1a1a]/[0.06] pt-4">
+                                <button type="button" onClick={() => setShowModal(false)} className={ui.btnSecondary}>
                                     Cancel
                                 </button>
-                                <button 
-                                    type="submit" 
-                                    disabled={submitting} 
-                                    className="px-5 py-2 text-xs font-bold bg-[#dbb457] text-white rounded-lg hover:bg-[#c29d45] disabled:opacity-50"
-                                >
+                                <button type="submit" disabled={submitting} className={ui.btnPrimary}>
                                     {submitting ? 'Saving...' : 'Save Employee'}
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <DataTable columns={columns} data={workers} keyField="id" />
-            </div>
+            <DataTable columns={columns} data={workers} keyField="id" emptyText="No drivers enrolled yet." />
         </div>
     );
 }

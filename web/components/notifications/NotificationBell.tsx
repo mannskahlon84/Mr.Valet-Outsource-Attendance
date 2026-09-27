@@ -1,4 +1,6 @@
 "use client";
+import { parseInstant } from '@/lib/time';
+import { Bell, Car, ClipboardList, Inbox, Users, X } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '@/lib/api';
 
@@ -169,7 +171,7 @@ export default function NotificationBell() {
 
     const timeAgo = (dateStr: string) => {
         try {
-            const date = new Date(dateStr);
+            const date = parseInstant(dateStr) || new Date(dateStr);
             const now = new Date();
             const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
             if (diffSec < 60) return 'Just now';
@@ -186,25 +188,25 @@ export default function NotificationBell() {
             {/* Top Slide-Down In-App Push Banner Toast */}
             {activeToast && (
                 <div className="fixed top-4 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50 animate-in fade-in slide-in-from-top duration-300">
-                    <div className="bg-gray-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-amber-400/40 flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-[#dbb457] flex items-center justify-center text-gray-900 font-bold text-lg flex-shrink-0 shadow">
-                            🔔
+                    <div className="mv-pop bg-[#1a1a1a]/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-[#dbb457]/40 flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-[#dbb457] flex items-center justify-center text-[#1a1a1a] flex-shrink-0 shadow">
+                            <Bell className="h-4 w-4" strokeWidth={2.2} />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                            <div className="text-xs font-bold text-[#dbb457] uppercase tracking-wider">
                                 {activeToast.title || 'In-App Push Alert'}
                             </div>
-                            <p className="text-xs text-gray-200 mt-0.5 leading-snug line-clamp-2">
+                            <p className="text-xs text-white/85 mt-0.5 leading-snug line-clamp-2">
                                 {activeToast.message}
                             </p>
-                            <span className="text-[10px] text-gray-400 mt-1 block">Just now</span>
+                            <span className="text-[10px] text-white/50 mt-1 block">Just now</span>
                         </div>
                         <button 
                             onClick={() => setActiveToast(null)}
-                            className="text-gray-400 hover:text-white p-1 text-sm font-bold flex-shrink-0"
+                            className="text-white/50 hover:text-white p-1 flex-shrink-0"
                             aria-label="Dismiss alert"
                         >
-                            ✕
+                            <X className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
@@ -213,12 +215,12 @@ export default function NotificationBell() {
             {/* Bell Icon Button */}
             <button
                 onClick={() => setIsOpen(prev => !prev)}
-                className="relative p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors focus:outline-none"
+                className="relative rounded-xl p-2.5 text-[#1a1a1a]/65 transition-colors hover:bg-[#1a1a1a]/5 hover:text-[#1a1a1a]"
                 aria-label="View notifications"
             >
-                <span className="text-xl">🔔</span>
+                <Bell className="h-5 w-5" strokeWidth={1.9} />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 bg-red-600 text-white font-black text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 shadow-md animate-pulse">
+                    <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dbb457] px-1 text-[10px] font-bold text-[#1a1a1a] ring-2 ring-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -228,11 +230,11 @@ export default function NotificationBell() {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-[calc(100vw-32px)] sm:w-96 max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="mv-pop absolute right-0 mt-2 w-[calc(100vw-32px)] sm:w-96 max-w-sm bg-white rounded-2xl shadow-2xl border border-[#1a1a1a]/[0.06] z-50 overflow-hidden flex flex-col max-h-[85vh]">
                         {/* Header */}
-                        <div className="p-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white flex items-center justify-between">
+                        <div className="p-4 bg-[#1a1a1a] text-white flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg">🔔</span>
+                                <Bell className="h-4 w-4 text-[#dbb457]" strokeWidth={2} />
                                 <h3 className="font-bold text-sm">Notifications</h3>
                                 {unreadCount > 0 && (
                                     <span className="bg-[#dbb457] text-gray-950 font-black text-[10px] px-2 py-0.5 rounded-full">
@@ -252,9 +254,10 @@ export default function NotificationBell() {
                                 )}
                                 <button 
                                     onClick={() => setIsOpen(false)} 
-                                    className="text-gray-400 hover:text-white p-1 text-sm font-bold ml-1"
+                                    className="text-white/50 hover:text-white p-1 ml-1"
+                                    aria-label="Close notifications"
                                 >
-                                    ✕
+                                    <X className="h-4 w-4" />
                                 </button>
                             </div>
                         </div>
@@ -265,7 +268,7 @@ export default function NotificationBell() {
                                 <span>Enable sound & device alerts</span>
                                 <button
                                     onClick={requestNativePermission}
-                                    className="bg-[#dbb457] hover:bg-[#c29d45] text-white font-bold px-2.5 py-1 rounded text-[11px] transition-colors"
+                                    className="bg-[#1a1a1a] hover:bg-[#dbb457] hover:text-[#1a1a1a] text-white font-semibold px-2.5 py-1 rounded-lg text-[11px] transition-colors"
                                 >
                                     Enable
                                 </button>
@@ -273,10 +276,10 @@ export default function NotificationBell() {
                         )}
 
                         {/* Notification List */}
-                        <div className="flex-1 overflow-y-auto divide-y divide-gray-100 p-1">
+                        <div className="flex-1 overflow-y-auto divide-y divide-[#1a1a1a]/[0.05] p-1">
                             {notifications.length === 0 ? (
-                                <div className="p-8 text-center text-gray-400 text-xs">
-                                    <div className="text-3xl mb-2">📭</div>
+                                <div className="p-8 text-center text-[#1a1a1a]/45 text-xs">
+                                    <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f6f4ef] text-[#1a1a1a]/35"><Inbox className="h-5 w-5" /></span>
                                     No notifications yet. You will receive push alerts when shifts are assigned or updated.
                                 </div>
                             ) : (
@@ -285,29 +288,29 @@ export default function NotificationBell() {
                                         key={item.id}
                                         onClick={() => markAsRead(item.id)}
                                         className={`p-3 rounded-xl transition-colors cursor-pointer flex items-start gap-3 ${
-                                            item.is_read ? 'hover:bg-gray-50' : 'bg-amber-50/50 hover:bg-amber-50'
+                                            item.is_read ? 'hover:bg-[#f6f4ef]' : 'bg-[#dbb457]/[0.08] hover:bg-[#dbb457]/15'
                                         }`}
                                     >
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mt-0.5 ${
-                                            item.is_read ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-800'
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                            item.is_read ? 'bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/50' : 'bg-[#1a1a1a] text-[#dbb457]'
                                         }`}>
-                                            {item.entity_type === 'SHIFT_ASSIGNMENT' ? '🚘' :
-                                             item.entity_type === 'MANPOWER_REQUEST' ? '📋' :
-                                             item.entity_type === 'OPS_ALERT' ? '👥' : '🔔'}
+                                            {item.entity_type === 'SHIFT_ASSIGNMENT' ? <Car className="h-4 w-4" /> :
+                                             item.entity_type === 'MANPOWER_REQUEST' ? <ClipboardList className="h-4 w-4" /> :
+                                             item.entity_type === 'OPS_ALERT' ? <Users className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             {item.title && (
-                                                <div className={`text-xs font-bold leading-snug ${item.is_read ? 'text-gray-800' : 'text-amber-900'}`}>
+                                                <div className={`text-xs font-bold leading-snug ${item.is_read ? 'text-[#1a1a1a]/80' : 'text-[#1a1a1a]'}`}>
                                                     {item.title}
                                                 </div>
                                             )}
-                                            <p className={`text-xs mt-0.5 leading-relaxed ${item.is_read ? 'text-gray-500' : 'text-gray-800 font-medium'}`}>
+                                            <p className={`text-xs mt-0.5 leading-relaxed ${item.is_read ? 'text-[#1a1a1a]/55' : 'text-[#1a1a1a]/85 font-medium'}`}>
                                                 {item.message}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] text-gray-400">{timeAgo(item.created_at)}</span>
+                                                <span className="text-[10px] text-[#1a1a1a]/40">{timeAgo(item.created_at)}</span>
                                                 {!item.is_read && (
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#dbb457]"></span>
                                                 )}
                                             </div>
                                         </div>

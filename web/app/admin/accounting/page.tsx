@@ -1,7 +1,14 @@
 
 "use client";
+import { qatarNowParts } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi, API_URL, downloadFile } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ui } from '@/lib/ui';
+import { Ban, Building2, CalendarRange, Download, FileText, Receipt, Wallet } from 'lucide-react';
 
 export default function Accounting() {
     const [summary, setSummary] = useState<any[]>([]);
@@ -52,8 +59,8 @@ export default function Accounting() {
     
     // Filters
     const [day, setDay] = useState('');
-    const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
-    const [year, setYear] = useState(new Date().getFullYear().toString());
+    const [month, setMonth] = useState(qatarNowParts().month.toString());
+    const [year, setYear] = useState(qatarNowParts().year.toString());
 
     useEffect(() => { setRole(sessionStorage.getItem('role') || ''); }, []);
     const canManageInvoices = role === 'SUPER_ADMIN' || role === 'ACCOUNTING';
@@ -110,39 +117,55 @@ export default function Accounting() {
         downloadFile(`/accounting/invoices/${invoiceId}/download`, `invoice-${invoiceId}.pdf`);
     };
 
+    const summaryTotal = summary.reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+    const summaryShifts = summary.reduce((acc: number, s: any) => acc + (s.workers_supplied || 0), 0);
+    const tabs = [
+        { key: 'summary', label: 'Monthly Summary', icon: CalendarRange },
+        { key: 'invoices', label: 'Invoice History', icon: FileText },
+    ];
+    const tableSkeleton = (
+        <div className="space-y-2 rounded-2xl bg-white p-5">
+            {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-10" />)}
+        </div>
+    );
+
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Accounting & Invoicing</h1>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                eyebrow="Administration"
+                title="Accounting & Invoicing"
+                subtitle="Completed shifts, supplier payables and generated invoices"
+            />
             
-            <div className="mb-4 border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8">
+            <div className="inline-flex rounded-xl bg-[#1a1a1a]/[0.05] p-1">
+                {tabs.map(({ key, label, icon: Icon }) => (
                     <button
-                        onClick={() => setActiveTab('summary')}
-                        className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'summary' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        key={key}
+                        onClick={() => setActiveTab(key)}
+                        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${activeTab === key ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#1a1a1a]/55 hover:text-[#1a1a1a]'}`}
                     >
-                        Monthly Summary
+                        <Icon className={`h-4 w-4 ${activeTab === key ? 'text-[#a8842f]' : ''}`} />
+                        {label}
                     </button>
-                    <button
-                        onClick={() => setActiveTab('invoices')}
-                        className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'invoices' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                    >
-                        Invoice History
-                    </button>
-                </nav>
+                ))}
             </div>
 
             {activeTab === 'summary' && (
-                <div className="space-y-4">
-                    <div className="flex space-x-4 bg-white p-4 rounded-lg shadow-sm">
+                <div className="space-y-6">
+                    <div className="mv-stagger grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <StatCard label="Total Payable" value={summaryTotal} decimals={2} prefix="QAR " hint="For the selected period" icon={Wallet} accent="ink" />
+                        <StatCard label="Completed Shifts" value={summaryShifts} hint="Checked in and checked out" icon={Receipt} accent="green" />
+                        <StatCard label="Agencies" value={summary.length} hint="In this summary" icon={Building2} accent="gold" />
+                    </div>
+
+                    <div className={`${ui.card} grid grid-cols-1 gap-4 p-4 sm:grid-cols-3`}>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Day (Optional)</label>
-                            <input type="number" min="1" max="31" value={day} onChange={e => setDay(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md" placeholder="All" />
+                            <label className={ui.label}>Day (Optional)</label>
+                            <input type="number" min="1" max="31" value={day} onChange={e => setDay(e.target.value)} className={ui.input} placeholder="All" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Month</label>
-                            <select value={month} onChange={e => setMonth(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md">
+                            <label className={ui.label}>Month</label>
+                            <select value={month} onChange={e => setMonth(e.target.value)} className={ui.input}>
                                 <option value="">All</option>
                                 {[...Array(12)].map((_, i) => (
                                     <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('en', { month: 'long' })}</option>
@@ -150,42 +173,47 @@ export default function Accounting() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Year</label>
-                            <input type="number" value={year} onChange={e => setYear(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md" placeholder="All" />
+                            <label className={ui.label}>Year</label>
+                            <input type="number" value={year} onChange={e => setYear(e.target.value)} className={ui.input} placeholder="All" />
                         </div>
                     </div>
 
-                    {loading ? (
-                        <div>Loading...</div>
-                    ) : (
-                        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                    {loading ? tableSkeleton : (
+                        <div className={`${ui.card} overflow-hidden`}>
+                            <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="border-b border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/60">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completed Shifts</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Payable</th>
-                                        {canManageInvoices && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>}
+                                        <th className={ui.th}>Supplier</th>
+                                        <th className={ui.th}>Completed Shifts</th>
+                                        <th className={ui.th}>Rate</th>
+                                        <th className={ui.th}>Total Payable</th>
+                                        {canManageInvoices && <th className={ui.th}>Action</th>}
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                                     {summary.map((s: any) => (
-                                        <tr key={s.supplier_id}>
-                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{s.supplier_name}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">{s.workers_supplied}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">QAR {s.billing_rate}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-bold">QAR {s.total_amount.toLocaleString()}</td>
+                                        <tr key={s.supplier_id} className={ui.tr}>
+                                            <td className="whitespace-nowrap px-5 py-3.5">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#dbb457]/15 text-[11px] font-bold text-[#7a5f1f]">{(s.supplier_name || '').slice(0, 2).toUpperCase()}</span>
+                                                    <span className="font-semibold text-[#1a1a1a]">{s.supplier_name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="whitespace-nowrap px-5 py-3.5 tabular-nums text-[#1a1a1a]/70">{s.workers_supplied}</td>
+                                            <td className="whitespace-nowrap px-5 py-3.5 tabular-nums text-[#1a1a1a]/70">QAR {s.billing_rate}</td>
+                                            <td className="whitespace-nowrap px-5 py-3.5 font-bold tabular-nums text-[#1a1a1a]">QAR {s.total_amount.toLocaleString()}</td>
                                             {canManageInvoices && (
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    <button onClick={() => handleGenerateInvoice(s.supplier_id)} className="text-[#dbb457] hover:underline">Generate Invoice</button>
+                                                <td className="whitespace-nowrap px-5 py-3.5">
+                                                    <button onClick={() => handleGenerateInvoice(s.supplier_id)} className={ui.action}><FileText className="h-3.5 w-3.5" /> Generate Invoice</button>
                                                 </td>
                                             )}
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            {summary.length === 0 && <div className="p-4 text-center text-gray-500">No data found for this period.</div>}
+                            </div>
+                            {summary.length === 0 && <div className="p-10 text-center text-sm text-[#1a1a1a]/45">No data found for this period.</div>}
                         </div>
                     )}
                 </div>
@@ -193,81 +221,83 @@ export default function Accounting() {
 
             
             {activeTab === 'custom' && (
-                <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
-                    <h2 className="text-lg font-bold">Generate Custom Invoice</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`${ui.card} space-y-4 p-6`}>
+                    <h2 className="text-lg font-bold text-[#1a1a1a]">Generate Custom Invoice</h2>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Supplier</label>
-                            <select value={customSupplier} onChange={e => setCustomSupplier(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md">
+                            <label className={ui.label}>Supplier</label>
+                            <select value={customSupplier} onChange={e => setCustomSupplier(e.target.value)} className={ui.input}>
                                 <option value="">Select Supplier</option>
                                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Location (Optional)</label>
-                            <select value={customSite} onChange={e => setCustomSite(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md">
+                            <label className={ui.label}>Location (Optional)</label>
+                            <select value={customSite} onChange={e => setCustomSite(e.target.value)} className={ui.input}>
                                 <option value="">All Locations</option>
                                 {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md" />
+                            <label className={ui.label}>Start Date</label>
+                            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className={ui.input} />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">End Date</label>
-                            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="mt-1 block w-full border border-gray-300 p-2 rounded-md" />
+                            <label className={ui.label}>End Date</label>
+                            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className={ui.input} />
                         </div>
                     </div>
-                    <div className="mt-4">
-                        <button onClick={handleDownloadCustom} className="bg-[#dbb457] text-white px-4 py-2 rounded-md hover:bg-[#c29d45]">Download Custom Invoice PDF</button>
+                    <div className="pt-2">
+                        <button onClick={handleDownloadCustom} className={ui.btnPrimary}><Download className="h-4 w-4" /> Download Custom Invoice PDF</button>
                     </div>
                 </div>
             )}
 
             {activeTab === 'invoices' && (
                 <div className="space-y-4">
-                    {loading ? (
-                        <div>Loading...</div>
-                    ) : (
-                        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                    {loading ? tableSkeleton : (
+                        <div className={`${ui.card} overflow-hidden`}>
+                            <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="border-b border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/60">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty / Rate</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        <th className={ui.th}>Invoice #</th>
+                                        <th className={ui.th}>Supplier</th>
+                                        <th className={ui.th}>Period</th>
+                                        <th className={ui.th}>Qty / Rate</th>
+                                        <th className={ui.th}>Total</th>
+                                        <th className={ui.th}>Status</th>
+                                        <th className={ui.th}>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                                     {invoices.map((item: any) => {
                                         const inv = item.invoice;
                                         return (
-                                            <tr key={inv.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{inv.invoice_number}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{item.supplier_name}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{inv.billing_month}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">{inv.workers_supplied_quantity} @ {inv.rate_per_worker}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-bold">QAR {inv.total_amount.toLocaleString()}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 text-xs font-semibold rounded-full ${inv.status === "GENERATED" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{inv.status}</span>
+                                            <tr key={inv.id} className={ui.tr}>
+                                                <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs font-semibold text-[#1a1a1a]">{inv.invoice_number}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/70">{item.supplier_name}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 text-[#1a1a1a]/70">{inv.billing_month}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 tabular-nums text-[#1a1a1a]/70">{inv.workers_supplied_quantity} @ {inv.rate_per_worker}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5 font-bold tabular-nums text-[#1a1a1a]">QAR {inv.total_amount.toLocaleString()}</td>
+                                                <td className="whitespace-nowrap px-5 py-3.5">
+                                                    <StatusBadge status={inv.status} />
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                                                    <button onClick={() => handleDownload(inv.id)} className="text-[#dbb457] hover:underline">Download PDF</button>
-                                                    {canManageInvoices && inv.status === "GENERATED" && (
-                                                        <button onClick={() => handleVoidInvoice(inv.id)} className="text-red-600 hover:underline">Void</button>
-                                                    )}
+                                                <td className="whitespace-nowrap px-5 py-3.5">
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => handleDownload(inv.id)} className={ui.action}><Download className="h-3.5 w-3.5" /> PDF</button>
+                                                        {canManageInvoices && inv.status === "GENERATED" && (
+                                                            <button onClick={() => handleVoidInvoice(inv.id)} className={ui.actionDanger}><Ban className="h-3.5 w-3.5" /> Void</button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )
                                     })}
                                 </tbody>
                             </table>
-                            {invoices.length === 0 && <div className="p-4 text-center text-gray-500">No invoices generated yet.</div>}
+                            </div>
+                            {invoices.length === 0 && <div className="p-10 text-center text-sm text-[#1a1a1a]/45">No invoices generated yet.</div>}
                         </div>
                     )}
                 </div>

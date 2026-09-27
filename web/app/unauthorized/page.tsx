@@ -1,15 +1,12 @@
 import Link from 'next/link';
+import AuthShell from '@/components/layout/AuthShell';
 
 export default function UnauthorizedPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
-                <h1 className="text-3xl font-bold text-red-600 mb-4">Unauthorized</h1>
-                <p className="text-gray-600 mb-6">You do not have permission to access this page.</p>
-                <Link href="/" className="bg-[#dbb457] text-white px-4 py-2 rounded font-bold hover:bg-[#c29d45]">
-                    Return to Home
-                </Link>
-            </div>
-        </div>
+        <AuthShell title="Unauthorized" subtitle="You do not have permission to access this page.">
+            <Link href="/" className="flex w-full rounded-xl bg-[#1a1a1a] px-4 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#dbb457] hover:text-[#1a1a1a] disabled:opacity-50 cursor-pointer justify-center">
+                Return to Home
+            </Link>
+        </AuthShell>
     );
 }

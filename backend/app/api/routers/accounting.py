@@ -69,7 +69,7 @@ def generate_invoice_pdf(invoice: Invoice, supplier: Supplier):
     c.setFont("Helvetica", 12)
     c.drawString(50, 710, f"Supplier: {supplier.name}")
     c.drawString(50, 690, f"Billing Period: {invoice.billing_month.strftime('%B %Y')}")
-    c.drawString(50, 670, f"Generated On: {invoice.generated_at.strftime('%Y-%m-%d %H:%M')}")
+    c.drawString(50, 670, f"Generated On: {qatar_time(invoice.generated_at)} (Qatar time)")
     
     c.line(50, 650, 550, 650)
     
@@ -338,7 +338,7 @@ def download_custom_invoice(
     c.drawString(50, 710, f"Supplier: {sup.name}")
     c.drawString(50, 690, f"Period: {req.start_date} to {req.end_date}")
     c.drawString(50, 670, f"Location: {site_name}")
-    c.drawString(50, 650, f"Generated On: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}")
+    c.drawString(50, 650, f"Generated On: {qatar_time(datetime.utcnow())} (Qatar time)")
     c.line(50, 630, 550, 630)
     c.drawString(50, 600, breakdown_text)
     c.drawString(50, 580, f"Agreed Billing Rate: QAR {effective_rate:,.2f} ({unit_label})")
