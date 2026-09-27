@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import AuthShell from '@/components/layout/AuthShell';
 import { API_URL } from '../../lib/api';
 
 function ResetPasswordForm() {
@@ -65,9 +66,9 @@ function ResetPasswordForm() {
   if (success) {
     return (
       <div className="text-center">
-        <div className="text-green-600 text-lg mb-4 font-semibold">Password Reset Successful</div>
-        <p className="text-gray-600 mb-6">Your password has been updated. All active sessions have been invalidated.</p>
-        <Link href="/login" className="w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+        <div className="mb-2 text-lg font-semibold text-emerald-700">Password Reset Successful</div>
+        <p className="mb-6 text-sm text-[#1a1a1a]/60">Your password has been updated. All active sessions have been invalidated.</p>
+        <Link href="/login" className="inline-flex w-full rounded-xl bg-[#1a1a1a] px-4 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#dbb457] hover:text-[#1a1a1a] disabled:opacity-50 cursor-pointer justify-center">
           Go to Login
         </Link>
       </div>
@@ -75,26 +76,26 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded">{error}</div>}
-      {!token && <div className="text-amber-600 text-sm bg-amber-50 p-3 rounded">No reset token found in URL.</div>}
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {!token && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">No reset token found in URL.</div>}
       
       <div>
-        <label className="block text-sm font-medium text-gray-700">New Password</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#1a1a1a]/70">New Password</label>
         <input
           type="password"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500"
+          className="w-full rounded-xl border border-[#1a1a1a]/15 bg-white px-4 py-3 text-sm focus:border-[#dbb457] focus:outline-none focus:ring-4 focus:ring-[#dbb457]/20"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#1a1a1a]/70">Confirm New Password</label>
         <input
           type="password"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500"
+          className="w-full rounded-xl border border-[#1a1a1a]/15 bg-white px-4 py-3 text-sm focus:border-[#dbb457] focus:outline-none focus:ring-4 focus:ring-[#dbb457]/20"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
@@ -103,7 +104,7 @@ function ResetPasswordForm() {
       <button
         type="submit"
         disabled={loading || !token}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+        className="w-full rounded-xl bg-[#1a1a1a] px-4 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#dbb457] hover:text-[#1a1a1a] disabled:opacity-50 cursor-pointer"
       >
         {loading ? 'Resetting...' : 'Reset Password'}
       </button>
@@ -113,13 +114,10 @@ function ResetPasswordForm() {
 
 export default function ResetPassword() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Set New Password</h1>
-        <Suspense fallback={<div>Loading...</div>}>
+    <AuthShell title="Set New Password" subtitle="At least 8 characters, with letters and numbers">
+        <Suspense fallback={<div className="mv-skeleton h-40" />}>
           <ResetPasswordForm />
         </Suspense>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

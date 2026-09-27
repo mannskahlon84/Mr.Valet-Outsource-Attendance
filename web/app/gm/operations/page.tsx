@@ -1,7 +1,9 @@
 "use client";
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { calendarDate, qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
-import { fetchApi, API_URL, downloadFile, tryFetch } from '@/lib/api';
+import { fetchApi, API_URL, tryFetch } from '@/lib/api';
+import ExportButtons from '@/components/ui/ExportButtons';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 
@@ -34,7 +36,7 @@ export default function GMOperations() {
 
     useEffect(() => { loadData(); }, []);
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading operations coverage...</div>;
+    if (loading) return <DashboardSkeleton />;
 
     const totalActive = locationShifts.reduce((acc, l) => acc + (l.active_on_site || 0), 0);
     const totalStarted = locationShifts.reduce((acc, l) => acc + (l.started_shift_count || 0), 0);
@@ -45,66 +47,62 @@ export default function GMOperations() {
             <LoadErrorBar message={loadError} onRetry={loadData} />
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900">Operational Coverage & Shifts</h1>
-                    <p className="text-sm text-gray-500">Company-wide valet dispatch requests and active location coverage</p>
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />General Manager</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a]">Operational Coverage & Shifts</h1>
+                    <p className="text-sm text-[#1a1a1a]/55">Company-wide valet dispatch requests and active location coverage</p>
                 </div>
-                <button 
-                    onClick={() => downloadFile('/reports/attendance/export/excel', `attendance-${qatarToday()}.xlsx`)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition-colors"
-                >
-                    Export Attendance Excel
-                </button>
+                <ExportButtons base="/reports/attendance/export" filename={`attendance-${qatarToday()}`} />
             </div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200 bg-emerald-50/20">
+                <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-emerald-200 bg-emerald-50/20">
                     <div className="text-xs font-bold uppercase text-emerald-700">Currently Active on Sites</div>
-                    <div className="text-3xl font-black text-emerald-700 mt-2">{totalActive} Drivers</div>
+                    <div className="text-3xl font-bold text-emerald-700 mt-2">{totalActive} Drivers</div>
                     <div className="text-xs text-emerald-600 mt-1">Live duty right now</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div className="text-xs font-bold uppercase text-gray-400">Started Shift Today</div>
-                    <div className="text-3xl font-black text-gray-900 mt-2">{totalStarted}</div>
-                    <div className="text-xs text-gray-500 mt-1">Drivers clocked in</div>
+                <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                    <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Started Shift Today</div>
+                    <div className="text-3xl font-bold text-[#1a1a1a] mt-2">{totalStarted}</div>
+                    <div className="text-xs text-[#1a1a1a]/55 mt-1">Drivers clocked in</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-200 bg-blue-50/20">
+                <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-blue-200 bg-blue-50/20">
                     <div className="text-xs font-bold uppercase text-blue-700">Ended Shift Today</div>
-                    <div className="text-3xl font-black text-blue-700 mt-2">{totalEnded}</div>
+                    <div className="text-3xl font-bold text-blue-700 mt-2">{totalEnded}</div>
                     <div className="text-xs text-blue-600 mt-1">Completed duty</div>
                 </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div className="text-xs font-bold uppercase text-gray-400">Geofenced Locations</div>
-                    <div className="text-3xl font-black text-gray-900 mt-2">{sites.length} Venues</div>
-                    <div className="text-xs text-gray-500 mt-1">Contract sites</div>
+                <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                    <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Geofenced Locations</div>
+                    <div className="text-3xl font-bold text-[#1a1a1a] mt-2">{sites.length} Venues</div>
+                    <div className="text-xs text-[#1a1a1a]/55 mt-1">Contract sites</div>
                 </div>
             </div>
 
             {/* Tab Controls */}
-            <div className="flex gap-4 border-b border-gray-200">
+            <div className="flex gap-4 border-b border-[#1a1a1a]/[0.08]">
                 <button
                     onClick={() => setActiveTab('locations')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'locations' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'locations' ? 'border-[#dbb457] text-[#a8842f]' : 'border-transparent text-[#1a1a1a]/55 hover:text-[#1a1a1a]/75'
                     }`}
                 >
-                    📍 Location Shift Tracking ({locationShifts.length} Locations)
+                    Location Shift Tracking ({locationShifts.length} Locations)
                 </button>
                 <button
                     onClick={() => setActiveTab('requests')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'requests' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'requests' ? 'border-[#dbb457] text-[#a8842f]' : 'border-transparent text-[#1a1a1a]/55 hover:text-[#1a1a1a]/75'
                     }`}
                 >
-                    📋 Shift Requests Log ({requests.length})
+                    Shift Requests Log ({requests.length})
                 </button>
             </div>
 
             {/* TAB 1: LOCATION SHIFTS */}
             {activeTab === 'locations' && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                        <h3 className="font-bold text-sm text-gray-800">
+                <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
+                    <div className="p-4 border-b border-[#1a1a1a]/[0.08] bg-[#f6f4ef]/60 flex items-center justify-between">
+                        <h3 className="font-bold text-sm text-[#1a1a1a]/85">
                             Location-Wise Live Manpower Attendance & Shift Completion
                         </h3>
                         <span className="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-mono">
@@ -112,8 +110,8 @@ export default function GMOperations() {
                         </span>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                        <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                            <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                                 <tr>
                                     <th className="px-5 py-3 text-left">Location / Site</th>
                                     <th className="px-5 py-3 text-left">Address</th>
@@ -123,15 +121,15 @@ export default function GMOperations() {
                                     <th className="px-5 py-3 text-center">Active Right Now</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
+                            <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                                 {locationShifts.map((loc) => (
-                                    <tr key={loc.site_id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-5 py-4 font-black text-gray-900">
+                                    <tr key={loc.site_id} className="hover:bg-[#f6f4ef]/60 transition-colors">
+                                        <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                             {loc.site_name}
-                                            <div className="text-[11px] text-gray-400 font-mono font-normal">Site #{loc.site_id}</div>
+                                            <div className="text-[11px] text-[#1a1a1a]/40 font-mono font-normal">Site #{loc.site_id}</div>
                                         </td>
-                                        <td className="px-5 py-4 text-gray-600 text-xs">{loc.site_address || 'Qatar'}</td>
-                                        <td className="px-5 py-4 text-center font-bold text-gray-800">{loc.total_scheduled}</td>
+                                        <td className="px-5 py-4 text-[#1a1a1a]/65 text-xs">{loc.site_address || 'Qatar'}</td>
+                                        <td className="px-5 py-4 text-center font-bold text-[#1a1a1a]/85">{loc.total_scheduled}</td>
                                         <td className="px-5 py-4 text-center">
                                             <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                                                 {loc.started_shift_count}
@@ -143,15 +141,15 @@ export default function GMOperations() {
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-center">
-                                            <span className="inline-flex px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                🟢 {loc.active_on_site}
+                                            <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                {loc.active_on_site}
                                             </span>
                                         </td>
                                     </tr>
                                 ))}
                                 {locationShifts.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-12 text-center text-gray-400">
+                                        <td colSpan={6} className="px-5 py-12 text-center text-[#1a1a1a]/40">
                                             No location shift records logged today.
                                         </td>
                                     </tr>
@@ -164,13 +162,13 @@ export default function GMOperations() {
 
             {/* TAB 2: SHIFT REQUESTS ARCHIVE */}
             {activeTab === 'requests' && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-200 font-bold text-sm text-gray-900">
+                <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
+                    <div className="p-4 border-b border-[#1a1a1a]/[0.08] font-bold text-sm text-[#1a1a1a]">
                         Company Shift Log
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                        <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                            <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                                 <tr>
                                     <th className="px-5 py-3 text-left">Req ID</th>
                                     <th className="px-5 py-3 text-left">Date</th>
@@ -180,22 +178,22 @@ export default function GMOperations() {
                                     <th className="px-5 py-3 text-left">Status</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
+                            <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                                 {requests.map(r => (
-                                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-5 py-4 font-bold text-gray-900">#{r.id}</td>
-                                        <td className="px-5 py-4 text-gray-600">
+                                    <tr key={r.id} className="hover:bg-[#f6f4ef]/60 transition-colors">
+                                        <td className="px-5 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
+                                        <td className="px-5 py-4 text-[#1a1a1a]/65">
                                             {r.required_date ? calendarDate(r.required_date) : '-'}
                                         </td>
-                                        <td className="px-5 py-4 font-mono text-xs text-gray-600">{r.start_time} - {r.end_time}</td>
-                                        <td className="px-5 py-4 font-bold text-gray-800">{r.total_required_workers} Drivers</td>
-                                        <td className="px-5 py-4 text-gray-500">{r.skill_category || 'Valet Driver'}</td>
+                                        <td className="px-5 py-4 font-mono text-xs text-[#1a1a1a]/65">{r.start_time} - {r.end_time}</td>
+                                        <td className="px-5 py-4 font-bold text-[#1a1a1a]/85">{r.total_required_workers} Drivers</td>
+                                        <td className="px-5 py-4 text-[#1a1a1a]/55">{r.skill_category || 'Valet Driver'}</td>
                                         <td className="px-5 py-4"><StatusBadge status={r.status} /></td>
                                     </tr>
                                 ))}
                                 {requests.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-8 text-center text-gray-400">No shift requests found.</td>
+                                        <td colSpan={6} className="px-5 py-8 text-center text-[#1a1a1a]/40">No shift requests found.</td>
                                     </tr>
                                 )}
                             </tbody>

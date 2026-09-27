@@ -1,4 +1,5 @@
 "use client";
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { qatarToday } from '@/lib/time';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
@@ -90,26 +91,27 @@ export default function CustomInvoicing() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading options...</div>;
+    if (loading) return <DashboardSkeleton />;
 
     const selectedSupplier = suppliers.find(s => s.id.toString() === supplierId);
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             <div>
-                <h1 className="text-2xl font-black text-gray-900">Custom Date Range Invoicing</h1>
-                <p className="text-sm text-gray-500">Generate on-demand billing reports and PDF statements with customizable supplier rates</p>
+                <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />Accounting</div>
+                <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a]">Custom Date Range Invoicing</h1>
+                <p className="text-sm text-[#1a1a1a]/55">Generate on-demand billing reports and PDF statements with customizable supplier rates</p>
             </div>
 
-            <form onSubmit={handleDownloadCustom} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-5">
+            <form onSubmit={handleDownloadCustom} className="bg-white p-6 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] space-y-5">
                 {/* 1. Supplier Agency Selector - ONLY Agency Name (No rates attached in label) */}
                 <div>
                     <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs font-bold uppercase text-gray-600">
+                        <label className="block text-xs font-bold uppercase text-[#1a1a1a]/65">
                             Target Supplier Agency *
                         </label>
                         {selectedSupplier && (
-                            <span className="text-[11px] text-gray-400 font-medium">
+                            <span className="text-[11px] text-[#1a1a1a]/40 font-medium">
                                 Agency Code: SUP-{selectedSupplier.id.toString().padStart(3, '0')}
                             </span>
                         )}
@@ -118,7 +120,7 @@ export default function CustomInvoicing() {
                         value={supplierId} 
                         onChange={e => handleSupplierChange(e.target.value)}
                         required
-                        className="w-full border border-gray-300 p-2.5 rounded-lg text-sm bg-white font-semibold text-gray-800 focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                        className="w-full border border-[#1a1a1a]/15 p-2.5 rounded-lg text-sm bg-white font-semibold text-[#1a1a1a]/85 focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                     >
                         {suppliers.map(s => (
                             <option key={s.id} value={s.id}>{s.name}</option>
@@ -127,13 +129,13 @@ export default function CustomInvoicing() {
                 </div>
 
                 {/* 2. Dedicated Price / Rate Box & Billing Unit Dropdown */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#f6f4ef]/60 p-4 rounded-2xl border border-[#1a1a1a]/[0.05]">
                     <div>
-                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                        <label className="block text-xs font-bold uppercase text-[#1a1a1a]/75 mb-1">
                             Price / Billing Rate (QAR) *
                         </label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-xs">QAR</span>
+                            <span className="absolute left-3 top-2.5 text-[#1a1a1a]/40 font-bold text-xs">QAR</span>
                             <input 
                                 type="number" 
                                 step="0.01"
@@ -142,61 +144,61 @@ export default function CustomInvoicing() {
                                 onChange={e => setPriceRate(e.target.value)}
                                 required
                                 placeholder="45.00"
-                                className="w-full border border-gray-300 bg-white pl-12 pr-3 py-2 rounded-lg text-sm font-bold text-gray-900 focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                                className="w-full border border-[#1a1a1a]/15 bg-white pl-12 pr-3 py-2 rounded-lg text-sm font-bold text-[#1a1a1a] focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                             />
                         </div>
-                        <span className="text-[10px] text-gray-400 mt-0.5 block">Customizable agreed invoice rate</span>
+                        <span className="text-[10px] text-[#1a1a1a]/40 mt-0.5 block">Customizable agreed invoice rate</span>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                        <label className="block text-xs font-bold uppercase text-[#1a1a1a]/75 mb-1">
                             Billing Frequency / Unit *
                         </label>
                         <select 
                             value={rateUnit} 
                             onChange={e => setRateUnit(e.target.value)}
                             required
-                            className="w-full border border-gray-300 bg-white p-2 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                            className="w-full border border-[#1a1a1a]/15 bg-white p-2 rounded-lg text-sm font-semibold text-[#1a1a1a]/85 focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                         >
                             <option value="PER_HOUR">Per Hour worked (QAR / hr)</option>
                             <option value="PER_DAY">Per Completed Shift (QAR / shift)</option>
                             <option value="PER_EMPLOYEE">Per Employee who worked (QAR / employee)</option>
                         </select>
-                        <span className="text-[10px] text-gray-400 mt-0.5 block">Calculation basis for this invoice</span>
+                        <span className="text-[10px] text-[#1a1a1a]/40 mt-0.5 block">Calculation basis for this invoice</span>
                     </div>
                 </div>
 
                 {/* 3. Date Range */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-1">From Date *</label>
+                        <label className="block text-xs font-bold uppercase text-[#1a1a1a]/65 mb-1">From Date *</label>
                         <input 
                             type="date" 
                             value={startDate} 
                             onChange={e => setStartDate(e.target.value)}
                             required
-                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                            className="w-full border border-[#1a1a1a]/15 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold uppercase text-gray-600 mb-1">To Date *</label>
+                        <label className="block text-xs font-bold uppercase text-[#1a1a1a]/65 mb-1">To Date *</label>
                         <input 
                             type="date" 
                             value={endDate} 
                             onChange={e => setEndDate(e.target.value)}
                             required
-                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                            className="w-full border border-[#1a1a1a]/15 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                         />
                     </div>
                 </div>
 
                 {/* 4. Site Filter */}
                 <div>
-                    <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Filter by Specific Location (Optional)</label>
+                    <label className="block text-xs font-bold uppercase text-[#1a1a1a]/65 mb-1">Filter by Specific Location (Optional)</label>
                     <select 
                         value={siteId} 
                         onChange={e => setSiteId(e.target.value)}
-                        className="w-full border border-gray-300 p-2.5 rounded-lg text-sm bg-white"
+                        className="w-full border border-[#1a1a1a]/15 p-2.5 rounded-lg text-sm bg-white"
                     >
                         <option value="">All Locations & Venues</option>
                         {sites.map(s => (
@@ -211,17 +213,17 @@ export default function CustomInvoicing() {
                         type="submit" 
                         value="pdf"
                         disabled={downloading}
-                        className="w-full bg-[#dbb457] text-white p-3.5 rounded-xl hover:bg-[#c29d45] font-black text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full bg-[#1a1a1a] text-white p-3.5 rounded-2xl hover:bg-[#dbb457] hover:text-[#1a1a1a] font-bold text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                        {downloading && format === 'pdf' ? 'Generating PDF...' : '📄 Download PDF Invoice'}
+                        {downloading && format === 'pdf' ? 'Generating PDF...' : 'Download PDF Invoice'}
                     </button>
                     <button 
                         type="submit" 
                         value="excel"
                         disabled={downloading}
-                        className="w-full bg-emerald-600 text-white p-3.5 rounded-xl hover:bg-emerald-700 font-black text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full bg-emerald-600 text-white p-3.5 rounded-2xl hover:bg-emerald-700 font-bold text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                        {downloading && format === 'excel' ? 'Generating Excel...' : '📊 Download Excel (shift by shift)'}
+                        {downloading && format === 'excel' ? 'Generating Excel...' : 'Download Excel (shift by shift)'}
                     </button>
                 </div>
             </form>

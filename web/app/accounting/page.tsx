@@ -74,11 +74,11 @@ export default function AccountingSummary() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                        <span>🧾</span> Accounting & Supplier Billing
+                    <div className="mv-eyebrow basis-full mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#a8842f]"><span className="h-px w-6 bg-[#dbb457]" />Accounting</div>
+                    <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-[#1a1a1a] flex items-center gap-2"> Accounting & Supplier Billing
                     </h1>
-                    <p className="text-sm text-gray-500">Track daily supplier workforce attendance, hours, and generate monthly contractor invoices</p>
-                    <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                    <p className="text-sm text-[#1a1a1a]/55">Track daily supplier workforce attendance, hours, and generate monthly contractor invoices</p>
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-[#1a1a1a]/55">
                         <span className="relative flex h-2 w-2">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -90,13 +90,13 @@ export default function AccountingSummary() {
 
                 {/* Period / Date Selectors based on tab */}
                 {activeTab === 'daily' ? (
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
-                        <span className="text-xs font-bold uppercase text-gray-400">Date:</span>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
+                        <span className="text-xs font-bold uppercase text-[#1a1a1a]/40">Date:</span>
                         <input
                             type="date"
                             value={selectedDate}
                             onChange={e => e.target.value && setSelectedDate(e.target.value)}
-                            className="text-xs font-bold text-gray-800 bg-transparent focus:outline-none"
+                            className="text-xs font-bold text-[#1a1a1a]/85 bg-transparent focus:outline-none"
                         />
                         {selectedDate !== qatarToday() && (
                             <button type="button" onClick={() => setSelectedDate(qatarToday())} className="text-[11px] font-bold text-[#a8842f] hover:underline cursor-pointer">
@@ -105,21 +105,21 @@ export default function AccountingSummary() {
                         )}
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-[#1a1a1a]/[0.08] shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
                         <select 
                             value={month} 
                             onChange={e => setMonth(e.target.value)}
-                            className="text-xs font-bold text-gray-700 bg-transparent p-1 focus:outline-none"
+                            className="text-xs font-bold text-[#1a1a1a]/75 bg-transparent p-1 focus:outline-none"
                         >
                             {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                                 <option key={m} value={m}>Month {m}</option>
                             ))}
                         </select>
-                        <span className="text-gray-300">/</span>
+                        <span className="text-[#1a1a1a]/25">/</span>
                         <select 
                             value={year} 
                             onChange={e => setYear(e.target.value)}
-                            className="text-xs font-bold text-gray-700 bg-transparent p-1 focus:outline-none"
+                            className="text-xs font-bold text-[#1a1a1a]/75 bg-transparent p-1 focus:outline-none"
                         >
                             <option value="2025">2025</option>
                             <option value="2026">2026</option>
@@ -130,22 +130,22 @@ export default function AccountingSummary() {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-4 border-b border-gray-200">
+            <div className="flex gap-4 border-b border-[#1a1a1a]/[0.08]">
                 <button
                     onClick={() => setActiveTab('daily')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'daily' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'daily' ? 'border-[#dbb457] text-[#a8842f]' : 'border-transparent text-[#1a1a1a]/55 hover:text-[#1a1a1a]/75'
                     }`}
                 >
-                    📅 Daily Supplier Tracking ({dailyData?.suppliers?.length || 0} Agencies)
+                    Daily Supplier Tracking ({dailyData?.suppliers?.length || 0} Agencies)
                 </button>
                 <button
                     onClick={() => setActiveTab('monthly')}
                     className={`pb-3 font-bold text-sm border-b-2 transition-colors ${
-                        activeTab === 'monthly' ? 'border-[#dbb457] text-[#dbb457]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        activeTab === 'monthly' ? 'border-[#dbb457] text-[#a8842f]' : 'border-transparent text-[#1a1a1a]/55 hover:text-[#1a1a1a]/75'
                     }`}
                 >
-                    📊 Monthly Invoicing ({billedAgencies} Agencies)
+                    Monthly Invoicing ({billedAgencies} Agencies)
                 </button>
             </div>
 
@@ -154,47 +154,47 @@ export default function AccountingSummary() {
                 <div className="space-y-6">
                     {/* Daily KPI Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Daily Payable</div>
-                            <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Daily Payable</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mt-2">
                                 QAR {(dailyData?.total_daily_payables || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">{dailyData?.total_completed || 0} completed shift(s) on {selectedDate}</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">{dailyData?.total_completed || 0} completed shift(s) on {selectedDate}</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200 bg-emerald-50/20">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-emerald-200 bg-emerald-50/20">
                             <div className="text-xs font-bold uppercase text-emerald-700">Drivers On Duty Now</div>
-                            <div className="text-2xl sm:text-3xl font-black text-emerald-700 mt-2">
+                            <div className="text-2xl sm:text-3xl font-bold text-emerald-700 mt-2">
                                 {dailyData?.total_on_duty || 0}
                             </div>
                             <div className="text-xs text-emerald-600 mt-1">{dailyData?.total_daily_workers || 0} started · {dailyData?.total_completed || 0} finished</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Drivers Confirmed</div>
-                            <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Drivers Confirmed</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mt-2">
                                 {dailyData?.total_scheduled || 0}
                             </div>
-                            <div className={`text-xs mt-1 ${(dailyData?.total_missing || 0) > 0 ? 'text-rose-600 font-bold' : 'text-gray-500'}`}>{dailyData?.total_missing || 0} missing (not checked in)</div>
+                            <div className={`text-xs mt-1 ${(dailyData?.total_missing || 0) > 0 ? 'text-rose-600 font-bold' : 'text-[#1a1a1a]/55'}`}>{dailyData?.total_missing || 0} missing (not checked in)</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Agencies Working</div>
-                            <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Agencies Working</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] mt-2">
                                 {dailyData?.suppliers?.length || 0}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">{dailyData?.total_duty_hours || 0} verified duty hours</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">{dailyData?.total_duty_hours || 0} verified duty hours</div>
                         </div>
                     </div>
 
                     {/* Daily Breakdown Table */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
-                            <h3 className="font-bold text-sm text-gray-800">
+                    <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
+                        <div className="p-4 border-b border-[#1a1a1a]/[0.08] bg-[#f6f4ef]/60 flex flex-wrap items-center justify-between gap-3">
+                            <h3 className="font-bold text-sm text-[#1a1a1a]/85">
                                 Agency Manpower Attendance Breakdown for {selectedDate}
                             </h3>
                             <ExportButtons base="/accounting/daily-breakdown/export" query={`target_date=${selectedDate}`} filename={`daily-supplier-tracking-${selectedDate}`} />
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                            <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                                <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                                     <tr>
                                         <th className="px-5 py-3 text-left">Supplier Agency</th>
                                         <th className="px-5 py-3 text-left">Deployed Locations</th>
@@ -206,27 +206,27 @@ export default function AccountingSummary() {
                                         <th className="px-5 py-3 text-right">Daily Payable</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-white">
+                                <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                                     {(dailyData?.suppliers || []).map((sup: any) => (
-                                        <tr key={sup.supplier_id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={sup.supplier_id} className="hover:bg-[#f6f4ef]/60 transition-colors">
                                             <td className="px-5 py-4">
-                                                <div className="font-black text-gray-900">{sup.supplier_name}</div>
-                                                <div className="text-xs text-gray-500">Contact: {sup.contact_person || 'Agency Head'}</div>
+                                                <div className="font-bold text-[#1a1a1a]">{sup.supplier_name}</div>
+                                                <div className="text-xs text-[#1a1a1a]/55">Contact: {sup.contact_person || 'Agency Head'}</div>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {(sup.locations || []).map((loc: any, lIdx: number) => (
-                                                        <span key={lIdx} className="inline-flex items-center gap-1 bg-gray-100 text-gray-800 text-xs px-2 py-0.5 rounded border border-gray-200">
+                                                        <span key={lIdx} className="inline-flex items-center gap-1 bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/85 text-xs px-2 py-0.5 rounded border border-[#1a1a1a]/[0.08]">
                                                             <span className="font-medium">{loc.site_name}</span>
                                                             <span className="font-bold text-emerald-700">({loc.started_shift}/{loc.workers_allocated})</span>
                                                         </span>
                                                     ))}
                                                     {(sup.locations || []).length === 0 && (
-                                                        <span className="text-xs text-gray-400">No locations allocated</span>
+                                                        <span className="text-xs text-[#1a1a1a]/40">No locations allocated</span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4 text-center font-bold text-gray-800">
+                                            <td className="px-5 py-4 text-center font-bold text-[#1a1a1a]/85">
                                                 {sup.total_workers_allocated} / {sup.started_shift_count}
                                                 {sup.missing_count > 0 && <div className="text-[11px] font-bold text-rose-600">{sup.missing_count} missing</div>}
                                             </td>
@@ -240,20 +240,20 @@ export default function AccountingSummary() {
                                                     {sup.ended_shift_count}
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-4 text-center font-mono font-bold text-gray-900">
+                                            <td className="px-5 py-4 text-center font-mono font-bold text-[#1a1a1a]">
                                                 {sup.total_duty_hours} hrs
                                             </td>
-                                            <td className="px-5 py-4 text-right font-mono text-xs text-gray-600">
+                                            <td className="px-5 py-4 text-right font-mono text-xs text-[#1a1a1a]/65">
                                                 QAR {sup.billing_rate?.toFixed(2)}/shift
                                             </td>
-                                            <td className="px-5 py-4 text-right font-black text-gray-900">
+                                            <td className="px-5 py-4 text-right font-bold text-[#1a1a1a]">
                                                 QAR {sup.daily_total_payable?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     ))}
                                     {(dailyData?.suppliers || []).length === 0 && !loading && (
                                         <tr>
-                                            <td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                                            <td colSpan={8} className="px-5 py-12 text-center text-[#1a1a1a]/40">
                                                 No confirmed agency shifts on {selectedDate}.
                                             </td>
                                         </tr>
@@ -270,34 +270,34 @@ export default function AccountingSummary() {
                 <div className="space-y-6">
                     {/* KPI Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Total Outsource Payables</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Total Outsource Payables</div>
+                            <div className="text-3xl font-bold text-[#1a1a1a] mt-2">
                                 QAR {totalPayable.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">Period: {month}/{year}</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">Period: {month}/{year}</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Total Confirmed Drivers</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">{totalWorkers} Drivers</div>
-                            <div className="text-xs text-gray-500 mt-1">Across all agency contracts</div>
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Total Confirmed Drivers</div>
+                            <div className="text-3xl font-bold text-[#1a1a1a] mt-2">{totalWorkers} Drivers</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">Across all agency contracts</div>
                         </div>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Active Agencies Billed</div>
-                            <div className="text-3xl font-black text-gray-900 mt-2">{billedAgencies} Agencies</div>
-                            <div className="text-xs text-gray-500 mt-1">With completed shifts, ready to invoice</div>
+                        <div className="bg-white p-5 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08]">
+                            <div className="text-xs font-bold uppercase text-[#1a1a1a]/40">Active Agencies Billed</div>
+                            <div className="text-3xl font-bold text-[#1a1a1a] mt-2">{billedAgencies} Agencies</div>
+                            <div className="text-xs text-[#1a1a1a]/55 mt-1">With completed shifts, ready to invoice</div>
                         </div>
                     </div>
 
                     {/* Summary Table */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
-                            <h3 className="font-bold text-sm text-gray-800">Completed shifts and payables for {month}/{year}</h3>
+                    <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] overflow-hidden">
+                        <div className="p-4 border-b border-[#1a1a1a]/[0.08] bg-[#f6f4ef]/60 flex flex-wrap items-center justify-between gap-3">
+                            <h3 className="font-bold text-sm text-[#1a1a1a]/85">Completed shifts and payables for {month}/{year}</h3>
                             <ExportButtons base="/accounting/summary/export" query={`month=${month}&year=${year}`} filename={`monthly-billing-${year}-${month.padStart(2, '0')}`} />
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                            <table className="min-w-full divide-y divide-[#1a1a1a]/[0.06] text-sm">
+                                <thead className="bg-[#f6f4ef]/60 text-[#1a1a1a]/55 text-xs uppercase font-semibold">
                                     <tr>
                                         <th className="px-5 py-3 text-left">Supplier Agency</th>
                                         <th className="px-5 py-3 text-left">Completed Shifts</th>
@@ -306,20 +306,20 @@ export default function AccountingSummary() {
                                         <th className="px-5 py-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-white">
+                                <tbody className="divide-y divide-[#1a1a1a]/[0.06] bg-white">
                                     {summary.map((item) => (
-                                        <tr key={item.supplier_id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-5 py-4 font-bold text-gray-900">{item.supplier_name}</td>
-                                            <td className="px-5 py-4 font-semibold text-gray-700">{item.workers_supplied} Shifts</td>
-                                            <td className="px-5 py-4 text-gray-600 font-mono">QAR {item.billing_rate?.toFixed(2)}</td>
-                                            <td className="px-5 py-4 font-black text-gray-900">
+                                        <tr key={item.supplier_id} className="hover:bg-[#f6f4ef]/60 transition-colors">
+                                            <td className="px-5 py-4 font-bold text-[#1a1a1a]">{item.supplier_name}</td>
+                                            <td className="px-5 py-4 font-semibold text-[#1a1a1a]/75">{item.workers_supplied} Shifts</td>
+                                            <td className="px-5 py-4 text-[#1a1a1a]/65 font-mono">QAR {item.billing_rate?.toFixed(2)}</td>
+                                            <td className="px-5 py-4 font-bold text-[#1a1a1a]">
                                                 QAR {item.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-5 py-4 text-right">
                                                 <button 
                                                     disabled={actionLoading}
                                                     onClick={() => handleGenerateInvoice(item.supplier_id, item.supplier_name)}
-                                                    className="bg-[#dbb457] hover:bg-[#c29d45] text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition-colors disabled:opacity-50"
+                                                    className="bg-[#1a1a1a] hover:bg-[#dbb457] hover:text-[#1a1a1a] text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition-colors disabled:opacity-50"
                                                 >
                                                     Generate Invoice
                                                 </button>
@@ -328,7 +328,7 @@ export default function AccountingSummary() {
                                     ))}
                                     {summary.length === 0 && !loading && (
                                         <tr>
-                                            <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                                            <td colSpan={5} className="px-5 py-8 text-center text-[#1a1a1a]/40">
                                                 No billable hours recorded for this period.
                                             </td>
                                         </tr>

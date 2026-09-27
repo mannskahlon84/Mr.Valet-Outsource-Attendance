@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AuthShell from '@/components/layout/AuthShell';
 import { API_URL } from '../../lib/api';
 
 export default function ForgotPassword() {
@@ -45,25 +46,22 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Forgot Password</h1>
-        
+    <AuthShell title="Forgot Password" subtitle="We'll email you a link to choose a new password">
         {success ? (
-          <div className="text-center">
-            <p className="text-green-600 mb-4">If an account exists for this email, you will receive a password reset link.</p>
-            <Link href="/login" className="text-blue-600 hover:underline">Return to Login</Link>
+          <div className="space-y-5 text-center">
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">If an account exists for this email, you will receive a password reset link.</p>
+            <Link href="/login" className="text-sm font-semibold text-[#a8842f] hover:text-[#1a1a1a] hover:underline">Return to Login</Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
             
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address</label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#1a1a1a]/70">Email Address</label>
               <input
                 type="email"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-xl border border-[#1a1a1a]/15 bg-white px-4 py-3 text-sm focus:border-[#dbb457] focus:outline-none focus:ring-4 focus:ring-[#dbb457]/20"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -72,16 +70,15 @@ export default function ForgotPassword() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-[#1a1a1a] px-4 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#dbb457] hover:text-[#1a1a1a] disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Sending...' : 'Send Reset Link'}
             </button>
-            <div className="text-center mt-4">
-              <Link href="/login" className="text-sm text-blue-600 hover:underline">Back to Login</Link>
+            <div className="text-center">
+              <Link href="/login" className="text-sm font-semibold text-[#a8842f] hover:text-[#1a1a1a] hover:underline">Back to Login</Link>
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </AuthShell>
   );
 }

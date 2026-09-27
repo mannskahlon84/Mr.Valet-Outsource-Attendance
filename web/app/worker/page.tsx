@@ -697,19 +697,19 @@ export default function WorkerPortal() {
     };
 
     if (loading) {
-        return <div className="p-8 text-center text-gray-500 text-sm">Loading worker portal...</div>;
+        return <div className="p-8 text-center text-[#1a1a1a]/55 text-sm">Loading worker portal...</div>;
     }
 
     return (
         <div className="space-y-4 max-w-lg mx-auto pb-10">
             {/* Status Messages */}
             {successMsg && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in">
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-[0_1px_2px_rgb(26_26_26/0.04)] animate-in fade-in">
                     <span className="text-base">✓</span> {successMsg}
                 </div>
             )}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-semibold shadow-sm">
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-xs font-semibold shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
                     {error}
                 </div>
             )}
@@ -717,37 +717,36 @@ export default function WorkerPortal() {
             {/* ========================================================================= */}
             {/* MAIN PORTAL HEADER & STATUS CARD */}
             {/* ========================================================================= */}
-            <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-200/80 space-y-4">
+            <div className="bg-white p-5 rounded-3xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-gray-200/80 space-y-4">
                 <div className="flex justify-between items-start">
                     <div className="space-y-0.5">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#dbb457]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#a8842f]">
                             Mr. Valet Parking • Field Attendance
                         </span>
-                        <h1 className="text-xl font-black text-gray-900">{workerName}</h1>
-                        <p className="text-xs text-gray-500 font-medium">Worker ID: {workerId} • Valet Driver</p>
+                        <h1 className="text-xl font-bold text-[#1a1a1a]">{workerName}</h1>
+                        <p className="text-xs text-[#1a1a1a]/55 font-medium">Worker ID: {workerId} • Valet Driver</p>
                     </div>
 
                     {/* Status Pill Badge */}
-                    <span className={`text-xs font-black px-3 py-1.5 rounded-full border shadow-sm ${
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-full border shadow-[0_1px_2px_rgb(26_26_26/0.04)] ${
                         attendanceStatus === 'CHECKED_IN'
                             ? 'bg-emerald-100 text-emerald-900 border-emerald-300 animate-pulse'
                             : attendanceStatus === 'CHECKED_OUT'
-                                ? 'bg-gray-100 text-gray-700 border-gray-300'
+                                ? 'bg-[#1a1a1a]/[0.05] text-[#1a1a1a]/75 border-[#1a1a1a]/15'
                                 : 'bg-amber-100 text-amber-900 border-amber-300'
                     }`}>
                         {attendanceStatus === 'CHECKED_IN'
-                            ? '🟢 ON DUTY (ACTIVE)'
+                            ? 'ON DUTY (ACTIVE)'
                             : attendanceStatus === 'CHECKED_OUT'
-                                ? '🏁 SHIFT COMPLETED'
-                                : '⏸️ SHIFT NOT STARTED'}
+                                ? 'SHIFT COMPLETED'
+                                : 'SHIFT NOT STARTED'}
                     </span>
                 </div>
 
                 {/* 1. STATE: BEFORE SHIFT STARTED (NO PRE-ASSIGNED VENUE OR TIME SHOWN) */}
                 {attendanceStatus === 'NOT_CHECKED_IN' && (
                     <div className="bg-amber-50/80 border border-amber-200/80 p-4 rounded-2xl text-xs text-amber-950 space-y-2">
-                        <div className="font-black flex items-center gap-1.5 text-amber-900 text-sm">
-                            <span>📍</span> Arrived at Your Work Venue?
+                        <div className="font-bold flex items-center gap-1.5 text-amber-900 text-sm"> Arrived at Your Work Venue?
                         </div>
                         <p className="text-[12px] leading-relaxed text-amber-900/90 font-medium">
                             Work locations and duty hours are verified automatically on-site. Scan the venue's physical QR code poster and take a live selfie below, then click <strong>"Start Shift"</strong>.
@@ -757,29 +756,29 @@ export default function WorkerPortal() {
 
                 {/* 2. STATE: ACTIVE SHIFT (NOW VENUE AND REAL-TIME DUTY TIMERS APPEAR) */}
                 {attendanceStatus === 'CHECKED_IN' && detectedSite && (
-                    <div className="space-y-3 pt-1 border-t border-gray-100">
+                    <div className="space-y-3 pt-1 border-t border-[#1a1a1a]/[0.05]">
                         <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
                                     Active Duty Venue
                                 </span>
-                                <span className="text-[10px] bg-emerald-200 text-emerald-950 font-black px-2 py-0.5 rounded-full">
+                                <span className="text-[10px] bg-emerald-200 text-emerald-950 font-bold px-2 py-0.5 rounded-full">
                                     GPS Verified ✓
                                 </span>
                             </div>
-                            <div className="text-xl font-black text-emerald-950">{detectedSite.name}</div>
+                            <div className="text-xl font-bold text-emerald-950">{detectedSite.name}</div>
                             <div className="text-xs text-emerald-800 font-medium">{detectedSite.address}</div>
                         </div>
 
                         {/* Live Ticking Duty Timer & Start Time */}
-                        <div className="bg-gray-900 text-white p-4 rounded-2xl text-center space-y-1 shadow-inner">
+                        <div className="bg-[#1a1a1a] text-white p-4 rounded-2xl text-center space-y-1 shadow-inner">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
                                 Live Duty Elapsed Time
                             </span>
-                            <div className="text-3xl font-mono font-black tracking-wider text-white">
+                            <div className="text-3xl font-mono font-bold tracking-wider text-white">
                                 {elapsedTime}
                             </div>
-                            <div className="text-xs text-gray-300 font-medium pt-1">
+                            <div className="text-xs text-white/70 font-medium pt-1">
                                 Shift Started at: <strong className="text-white">{shiftStartTime}</strong>
                             </div>
                         </div>
@@ -794,44 +793,43 @@ export default function WorkerPortal() {
                                 setCheckoutSelfie(null);
                                 setCheckoutQrError('');
                             }}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-black text-sm py-4 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            <span>🛑</span> End Shift / Clock Out (Requires QR & Selfie)
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-4 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
+                        > End Shift / Clock Out (Requires QR & Selfie)
                         </button>
                     </div>
                 )}
 
                 {/* 3. STATE: SHIFT COMPLETED */}
                 {attendanceStatus === 'CHECKED_OUT' && (
-                    <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl space-y-3">
-                        <div className="flex items-center gap-2 text-emerald-700 font-black text-sm">
+                    <div className="bg-[#f6f4ef]/60 border border-[#1a1a1a]/[0.08] p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
                             <span className="text-lg">✓</span> Duty Hours Logged Successfully
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="bg-white p-2.5 rounded-xl border">
-                                <span className="text-gray-400 block text-[10px] uppercase font-bold">Venue</span>
-                                <strong className="text-gray-900 font-black">{detectedSite?.name || 'your venue'}</strong>
+                            <div className="bg-white p-2.5 rounded-2xl border">
+                                <span className="text-[#1a1a1a]/40 block text-[10px] uppercase font-bold">Venue</span>
+                                <strong className="text-[#1a1a1a] font-bold">{detectedSite?.name || 'your venue'}</strong>
                             </div>
-                            <div className="bg-white p-2.5 rounded-xl border">
-                                <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Duty</span>
-                                <strong className="text-gray-900 font-black">{formatDuty(dutyHours)}</strong>
+                            <div className="bg-white p-2.5 rounded-2xl border">
+                                <span className="text-[#1a1a1a]/40 block text-[10px] uppercase font-bold">Total Duty</span>
+                                <strong className="text-[#1a1a1a] font-bold">{formatDuty(dutyHours)}</strong>
                             </div>
-                            <div className="bg-white p-2.5 rounded-xl border">
-                                <span className="text-gray-400 block text-[10px] uppercase font-bold">Shift Start</span>
-                                <span className="text-gray-800 font-bold">{shiftStartTime || '08:00 AM'}</span>
+                            <div className="bg-white p-2.5 rounded-2xl border">
+                                <span className="text-[#1a1a1a]/40 block text-[10px] uppercase font-bold">Shift Start</span>
+                                <span className="text-[#1a1a1a]/85 font-bold">{shiftStartTime || '08:00 AM'}</span>
                             </div>
-                            <div className="bg-white p-2.5 rounded-xl border">
-                                <span className="text-gray-400 block text-[10px] uppercase font-bold">Shift End</span>
-                                <span className="text-gray-800 font-bold">{shiftEndTime || '05:00 PM'}</span>
+                            <div className="bg-white p-2.5 rounded-2xl border">
+                                <span className="text-[#1a1a1a]/40 block text-[10px] uppercase font-bold">Shift End</span>
+                                <span className="text-[#1a1a1a]/85 font-bold">{shiftEndTime || '05:00 PM'}</span>
                             </div>
                         </div>
 
                         <button
                             type="button"
                             onClick={handleStartNewShift}
-                            className="w-full bg-[#dbb457] hover:bg-[#c29d45] text-white font-black text-xs py-3 rounded-xl transition-colors shadow"
+                            className="w-full bg-[#1a1a1a] hover:bg-[#dbb457] hover:text-[#1a1a1a] text-white font-bold text-xs py-3 rounded-2xl transition-colors shadow"
                         >
-                            🔄 Start New Shift / Next Venue
+                            Start New Shift / Next Venue
                         </button>
                     </div>
                 )}
@@ -841,10 +839,10 @@ export default function WorkerPortal() {
             {/* 2-STEP CHECK-IN VERIFICATION STATION (BEFORE STARTING SHIFT) */}
             {/* ========================================================================= */}
             {attendanceStatus === 'NOT_CHECKED_IN' && (
-                <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-200/80 space-y-5">
+                <div className="bg-white p-5 rounded-3xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-gray-200/80 space-y-5">
                     <div>
-                        <h2 className="text-base font-black text-gray-900">Shift Check-In Verification</h2>
-                        <p className="text-xs text-gray-500 font-medium">
+                        <h2 className="text-base font-bold text-[#1a1a1a]">Shift Check-In Verification</h2>
+                        <p className="text-xs text-[#1a1a1a]/55 font-medium">
                             Scan the venue poster to detect your location, then capture a live selfie
                         </p>
                     </div>
@@ -853,26 +851,26 @@ export default function WorkerPortal() {
                     {/* STEP 1: SCAN LOCATION QR CODE */}
                     {/* ----------------------------------------------------------------- */}
                     <div className={`p-4 rounded-2xl border-2 transition-all ${
-                        qrVerified ? 'bg-emerald-50/70 border-emerald-400' : 'bg-gray-50/60 border-gray-200'
+                        qrVerified ? 'bg-emerald-50/70 border-emerald-400' : 'bg-gray-50/60 border-[#1a1a1a]/[0.08]'
                     }`}>
                         <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2.5">
-                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${
-                                    qrVerified ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white'
+                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    qrVerified ? 'bg-emerald-600 text-white' : 'bg-[#1a1a1a] text-white'
                                 }`}>
                                     {qrVerified ? '✓' : '1'}
                                 </span>
                                 <div>
-                                    <h3 className="text-xs font-black uppercase tracking-wide text-gray-900">
+                                    <h3 className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">
                                         Step 1: Scan Venue Location QR Code
                                     </h3>
-                                    <p className="text-[11px] text-gray-500">
+                                    <p className="text-[11px] text-[#1a1a1a]/55">
                                         Point camera at the venue QR poster to detect your assigned location
                                     </p>
                                 </div>
                             </div>
                             {qrVerified && (
-                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-300">
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
                                     Detected ✓
                                 </span>
                             )}
@@ -880,18 +878,17 @@ export default function WorkerPortal() {
 
                         {/* Error Message */}
                         {qrScanError && (
-                            <div className="mt-3 bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200 font-semibold">
+                            <div className="mt-3 bg-red-50 text-red-700 text-xs p-3 rounded-2xl border border-red-200 font-semibold">
                                 {qrScanError}
                             </div>
                         )}
 
                         {/* Verified Location Box */}
                         {qrVerified && detectedSite && (
-                            <div className="mt-3 bg-white p-3.5 rounded-xl border border-emerald-200 text-xs space-y-1.5 shadow-sm">
-                                <div className="text-emerald-950 font-black text-sm flex items-center gap-1.5">
-                                    <span>📍</span> Location Detected: {detectedSite.name}
+                            <div className="mt-3 bg-white p-3.5 rounded-2xl border border-emerald-200 text-xs space-y-1.5 shadow-[0_1px_2px_rgb(26_26_26/0.04)]">
+                                <div className="text-emerald-950 font-bold text-sm flex items-center gap-1.5"> Location Detected: {detectedSite.name}
                                 </div>
-                                <div className="text-gray-600 text-[11px]">
+                                <div className="text-[#1a1a1a]/65 text-[11px]">
                                     {detectedSite.address} • GPS Geofence: <strong>Within venue zone ({userDistance !== null ? `${userDistance}m` : '<100m'})</strong>
                                 </div>
                             </div>
@@ -902,8 +899,8 @@ export default function WorkerPortal() {
                             <div className="mt-3 space-y-2">
                                 <div className="relative bg-black rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-2 border-[#dbb457]">
                                     <video ref={qrVideoRef} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 border-2 border-dashed border-white/70 m-8 rounded-xl pointer-events-none flex items-center justify-center">
-                                        <span className="text-xs text-white font-bold bg-black/60 px-3 py-1 rounded-lg">
+                                    <div className="absolute inset-0 border-2 border-dashed border-white/70 m-8 rounded-2xl pointer-events-none flex items-center justify-center">
+                                        <span className="text-xs text-white font-bold bg-[#1a1a1a]/60 px-3 py-1 rounded-lg">
                                             Align Venue QR Code in frame
                                         </span>
                                     </div>
@@ -912,7 +909,7 @@ export default function WorkerPortal() {
                                 <button
                                     type="button"
                                     onClick={stopQrScanner}
-                                    className="w-full text-xs font-bold text-red-600 border border-red-200 py-2.5 rounded-xl hover:bg-red-50"
+                                    className="w-full text-xs font-bold text-red-600 border border-red-200 py-2.5 rounded-2xl hover:bg-red-50"
                                 >
                                     Cancel Scanning
                                 </button>
@@ -926,12 +923,10 @@ export default function WorkerPortal() {
                                     <button
                                         type="button"
                                         onClick={startQrScanner}
-                                        className="bg-gray-900 hover:bg-black text-white py-3 px-3 rounded-xl font-black text-xs shadow flex items-center justify-center gap-1.5 transition-colors"
-                                    >
-                                        <span>📷</span> Live QR Camera Scan
+                                        className="bg-[#1a1a1a] hover:bg-black text-white py-3 px-3 rounded-2xl font-bold text-xs shadow flex items-center justify-center gap-1.5 transition-colors"
+                                    > Live QR Camera Scan
                                     </button>
-                                    <label className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 py-3 px-3 rounded-xl font-black text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer text-center transition-colors">
-                                        <span>📸</span> Snap QR Photo
+                                    <label className="bg-white border border-[#1a1a1a]/15 hover:bg-[#f6f4ef]/60 text-[#1a1a1a]/85 py-3 px-3 rounded-2xl font-bold text-xs shadow-[0_1px_2px_rgb(26_26_26/0.04)] flex items-center justify-center gap-1.5 cursor-pointer text-center transition-colors"> Snap QR Photo
                                         <input 
                                             type="file" 
                                             accept="image/*" 
@@ -944,8 +939,8 @@ export default function WorkerPortal() {
 
                                 {/* Development only: appears when the backend runs with ENVIRONMENT=development */}
                                 {testVenues.length > 0 && (
-                                    <div className="bg-gray-100/70 p-2 rounded-xl text-[11px] text-gray-600">
-                                        <div className="font-bold text-[10px] uppercase text-gray-500 mb-1">Test venues (development only)</div>
+                                    <div className="bg-gray-100/70 p-2 rounded-2xl text-[11px] text-[#1a1a1a]/65">
+                                        <div className="font-bold text-[10px] uppercase text-[#1a1a1a]/55 mb-1">Test venues (development only)</div>
                                         <div className="flex flex-wrap gap-1">
                                             {testVenues.map(v => (
                                                 <button
@@ -955,7 +950,7 @@ export default function WorkerPortal() {
                                                         simulatedCoords.current = { lat: v.lat, lng: v.lng, accuracy: 10 };
                                                         processCheckInQr(v.qr_data || '');
                                                     }}
-                                                    className="px-2 py-1 bg-white hover:bg-amber-50 border rounded text-[11px] font-bold text-gray-800"
+                                                    className="px-2 py-1 bg-white hover:bg-amber-50 border rounded text-[11px] font-bold text-[#1a1a1a]/85"
                                                 >
                                                     {v.name}
                                                 </button>
@@ -971,7 +966,7 @@ export default function WorkerPortal() {
                                 <button
                                     type="button"
                                     onClick={() => { setQrVerified(false); setDetectedSite(null); }}
-                                    className="text-[11px] text-gray-500 hover:text-gray-900 font-bold underline"
+                                    className="text-[11px] text-[#1a1a1a]/55 hover:text-[#1a1a1a] font-bold underline"
                                 >
                                     Rescan Different Location QR
                                 </button>
@@ -983,26 +978,26 @@ export default function WorkerPortal() {
                     {/* STEP 2: LIVE FACE SELFIE PHOTO */}
                     {/* ----------------------------------------------------------------- */}
                     <div className={`p-4 rounded-2xl border-2 transition-all ${
-                        selfieVerified ? 'bg-emerald-50/70 border-emerald-400' : 'bg-gray-50/60 border-gray-200'
+                        selfieVerified ? 'bg-emerald-50/70 border-emerald-400' : 'bg-gray-50/60 border-[#1a1a1a]/[0.08]'
                     }`}>
                         <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2.5">
-                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${
-                                    selfieVerified ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white'
+                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    selfieVerified ? 'bg-emerald-600 text-white' : 'bg-[#1a1a1a] text-white'
                                 }`}>
                                     {selfieVerified ? '✓' : '2'}
                                 </span>
                                 <div>
-                                    <h3 className="text-xs font-black uppercase tracking-wide text-gray-900">
+                                    <h3 className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">
                                         Step 2: Live Face Selfie Photo
                                     </h3>
-                                    <p className="text-[11px] text-gray-500">
+                                    <p className="text-[11px] text-[#1a1a1a]/55">
                                         Capture a live selfie to verify employee biometric identity
                                     </p>
                                 </div>
                             </div>
                             {selfieVerified && (
-                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-300">
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
                                     Selfie Ready ✓
                                 </span>
                             )}
@@ -1026,8 +1021,7 @@ export default function WorkerPortal() {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="text-center p-4 space-y-1 text-gray-400">
-                                        <span className="text-3xl block">🤳</span>
+                                    <div className="text-center p-4 space-y-1 text-white/55">
                                         <div className="text-xs font-semibold">Front Selfie Camera Ready</div>
                                     </div>
                                 )}
@@ -1039,25 +1033,25 @@ export default function WorkerPortal() {
                                     <button 
                                         type="button"
                                         onClick={startSelfieCamera}
-                                        className="flex-1 bg-gray-900 hover:bg-black text-white font-black text-xs py-3 rounded-xl shadow transition-colors"
+                                        className="flex-1 bg-[#1a1a1a] hover:bg-black text-white font-bold text-xs py-3 rounded-2xl shadow transition-colors"
                                     >
-                                        📷 Open Front Camera for Selfie
+                                        Open Front Camera for Selfie
                                     </button>
                                 )}
                                 {isCameraActive && (
                                     <button 
                                         type="button"
                                         onClick={captureSelfieSnapshot}
-                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3 rounded-xl shadow transition-colors"
+                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-2xl shadow transition-colors"
                                     >
-                                        📸 Take Live Selfie Now
+                                        Take Live Selfie Now
                                     </button>
                                 )}
                                 {capturedSelfie && (
                                     <button 
                                         type="button"
                                         onClick={startSelfieCamera}
-                                        className="flex-1 border border-gray-300 text-gray-700 font-bold text-xs py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                                        className="flex-1 border border-[#1a1a1a]/15 text-[#1a1a1a]/75 font-bold text-xs py-2.5 rounded-2xl hover:bg-[#f6f4ef]/60 transition-colors"
                                     >
                                         Retake Selfie Photo
                                     </button>
@@ -1074,21 +1068,21 @@ export default function WorkerPortal() {
                             type="button"
                             disabled={!qrVerified || !selfieVerified || actionLoading}
                             onClick={handleStartShift}
-                            className={`w-full py-4 rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                            className={`w-full py-4 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
                                 qrVerified && selfieVerified
-                                    ? 'bg-[#dbb457] hover:bg-[#c29d45] text-white cursor-pointer transform hover:-translate-y-0.5 active:scale-95 shadow-amber-200'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    ? 'bg-[#1a1a1a] hover:bg-[#dbb457] hover:text-[#1a1a1a] text-white cursor-pointer transform hover:-translate-y-0.5 active:scale-95 shadow-amber-200'
+                                    : 'bg-[#1a1a1a]/[0.08] text-[#1a1a1a]/40 cursor-not-allowed'
                             }`}
                         >
                             {actionLoading ? (
                                 'Verifying Location & Starting Shift...'
                             ) : qrVerified && selfieVerified ? (
-                                `🚀 Start Shift at ${detectedSite?.name || 'Location'}`
+                                `Start Shift at ${detectedSite?.name || 'Location'}`
                             ) : (
                                 `Scan Location QR & Take Selfie to Start Shift`
                             )}
                         </button>
-                        <p className="text-[11px] text-gray-400 text-center mt-2 font-medium">
+                        <p className="text-[11px] text-[#1a1a1a]/40 text-center mt-2 font-medium">
                             Anti-proxy biometric verification active. Shift time and venue start upon clock-in.
                         </p>
                     </div>
@@ -1103,8 +1097,8 @@ export default function WorkerPortal() {
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center border-b pb-3">
                             <div>
-                                <h3 className="font-black text-base text-gray-900">Shift Clock-Out Verification</h3>
-                                <p className="text-xs text-gray-500 font-medium">Scan venue QR & take selfie to end shift</p>
+                                <h3 className="font-bold text-base text-[#1a1a1a]">Shift Clock-Out Verification</h3>
+                                <p className="text-xs text-[#1a1a1a]/55 font-medium">Scan venue QR & take selfie to end shift</p>
                             </div>
                             <button 
                                 onClick={() => {
@@ -1112,7 +1106,7 @@ export default function WorkerPortal() {
                                     stopCheckoutQrScanner();
                                     stopCheckoutSelfieCamera();
                                 }} 
-                                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold"
+                                className="w-8 h-8 rounded-full bg-[#1a1a1a]/[0.05] hover:bg-[#1a1a1a]/[0.08] flex items-center justify-center text-[#1a1a1a]/65 font-bold"
                             >
                                 ✕
                             </button>
@@ -1124,36 +1118,36 @@ export default function WorkerPortal() {
 
                         {/* CHECKOUT STEP 1: SCAN VENUE QR CODE */}
                         <div className={`p-3.5 rounded-2xl border-2 ${
-                            checkoutQrVerified ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50 border-gray-200'
+                            checkoutQrVerified ? 'bg-emerald-50 border-emerald-400' : 'bg-[#f6f4ef]/60 border-[#1a1a1a]/[0.08]'
                         }`}>
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2">
-                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
-                                        checkoutQrVerified ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white'
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                        checkoutQrVerified ? 'bg-emerald-600 text-white' : 'bg-[#1a1a1a] text-white'
                                     }`}>
                                         {checkoutQrVerified ? '✓' : '1'}
                                     </span>
-                                    <span className="text-xs font-black uppercase text-gray-900">Step 1: Scan Venue QR Code</span>
+                                    <span className="text-xs font-bold uppercase text-[#1a1a1a]">Step 1: Scan Venue QR Code</span>
                                 </div>
                                 {checkoutQrVerified && (
-                                    <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
                                         Venue Matched ✓
                                     </span>
                                 )}
                             </div>
 
                             {checkoutQrError && (
-                                <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-xl border border-red-200 mb-2 font-semibold">
+                                <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-2xl border border-red-200 mb-2 font-semibold">
                                     {checkoutQrError}
                                 </div>
                             )}
 
                             {isCheckoutQrScanning && (
                                 <div className="space-y-2">
-                                    <div className="relative bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+                                    <div className="relative bg-black rounded-2xl overflow-hidden aspect-video flex items-center justify-center">
                                         <video ref={checkoutQrVideoRef} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 border-2 border-dashed border-white/70 m-6 rounded-xl flex items-center justify-center pointer-events-none">
-                                            <span className="text-xs text-white font-bold bg-black/60 px-2 py-1 rounded">
+                                        <div className="absolute inset-0 border-2 border-dashed border-white/70 m-6 rounded-2xl flex items-center justify-center pointer-events-none">
+                                            <span className="text-xs text-white font-bold bg-[#1a1a1a]/60 px-2 py-1 rounded">
                                                 Align Venue QR Code
                                             </span>
                                         </div>
@@ -1162,7 +1156,7 @@ export default function WorkerPortal() {
                                     <button
                                         type="button"
                                         onClick={stopCheckoutQrScanner}
-                                        className="w-full text-xs font-bold text-red-600 border py-2 rounded-xl"
+                                        className="w-full text-xs font-bold text-red-600 border py-2 rounded-2xl"
                                     >
                                         Cancel Scanning
                                     </button>
@@ -1175,12 +1169,10 @@ export default function WorkerPortal() {
                                         <button
                                             type="button"
                                             onClick={startCheckoutQrScanner}
-                                            className="bg-gray-900 text-white py-2.5 rounded-xl text-xs font-black shadow flex items-center justify-center gap-1"
-                                        >
-                                            <span>📷</span> Scan QR Camera
+                                            className="bg-[#1a1a1a] text-white py-2.5 rounded-2xl text-xs font-bold shadow flex items-center justify-center gap-1"
+                                        > Scan QR Camera
                                         </button>
-                                        <label className="bg-white border text-gray-800 py-2.5 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-1 cursor-pointer text-center">
-                                            <span>📸</span> Snap QR Photo
+                                        <label className="bg-white border text-[#1a1a1a]/85 py-2.5 rounded-2xl text-xs font-bold shadow-[0_1px_2px_rgb(26_26_26/0.04)] flex items-center justify-center gap-1 cursor-pointer text-center"> Snap QR Photo
                                             <input 
                                                 type="file" 
                                                 accept="image/*" 
@@ -1200,7 +1192,7 @@ export default function WorkerPortal() {
                                                 simulatedCoords.current = { lat: v.lat, lng: v.lng, accuracy: 10 };
                                                 processCheckoutQr(v.qr_data);
                                             }}
-                                            className="w-full py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold"
+                                            className="w-full py-1.5 bg-[#1a1a1a]/[0.05] hover:bg-[#1a1a1a]/[0.08] text-[#1a1a1a]/65 rounded-lg text-[10px] font-bold"
                                         >
                                             Test: verify {detectedSite?.name} QR (development only)
                                         </button>
@@ -1211,25 +1203,25 @@ export default function WorkerPortal() {
 
                         {/* CHECKOUT STEP 2: TAKE LIVE FACE SELFIE */}
                         <div className={`p-3.5 rounded-2xl border-2 ${
-                            checkoutSelfieVerified ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50 border-gray-200'
+                            checkoutSelfieVerified ? 'bg-emerald-50 border-emerald-400' : 'bg-[#f6f4ef]/60 border-[#1a1a1a]/[0.08]'
                         }`}>
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2">
-                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
-                                        checkoutSelfieVerified ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white'
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                        checkoutSelfieVerified ? 'bg-emerald-600 text-white' : 'bg-[#1a1a1a] text-white'
                                     }`}>
                                         {checkoutSelfieVerified ? '✓' : '2'}
                                     </span>
-                                    <span className="text-xs font-black uppercase text-gray-900">Step 2: Live Checkout Selfie</span>
+                                    <span className="text-xs font-bold uppercase text-[#1a1a1a]">Step 2: Live Checkout Selfie</span>
                                 </div>
                                 {checkoutSelfieVerified && (
-                                    <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
                                         Selfie Ready ✓
                                     </span>
                                 )}
                             </div>
 
-                            <div className="relative bg-gray-950 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+                            <div className="relative bg-gray-950 rounded-2xl overflow-hidden aspect-video flex items-center justify-center">
                                 {isCheckoutCameraActive ? (
                                     <video 
                                         ref={checkoutVideoRef} 
@@ -1245,8 +1237,7 @@ export default function WorkerPortal() {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="text-center p-3 text-gray-400">
-                                        <span className="text-2xl block">🤳</span>
+                                    <div className="text-center p-3 text-white/55">
                                         <span className="text-[11px] font-semibold">Front Camera Idle</span>
                                     </div>
                                 )}
@@ -1258,25 +1249,25 @@ export default function WorkerPortal() {
                                     <button 
                                         type="button"
                                         onClick={startCheckoutSelfieCamera}
-                                        className="flex-1 bg-gray-900 text-white font-black text-xs py-2.5 rounded-xl shadow"
+                                        className="flex-1 bg-[#1a1a1a] text-white font-bold text-xs py-2.5 rounded-2xl shadow"
                                     >
-                                        📷 Open Camera for Checkout Selfie
+                                        Open Camera for Checkout Selfie
                                     </button>
                                 )}
                                 {isCheckoutCameraActive && (
                                     <button 
                                         type="button"
                                         onClick={captureCheckoutSelfieSnapshot}
-                                        className="flex-1 bg-emerald-600 text-white font-black text-xs py-2.5 rounded-xl shadow"
+                                        className="flex-1 bg-emerald-600 text-white font-bold text-xs py-2.5 rounded-2xl shadow"
                                     >
-                                        📸 Capture Selfie Now
+                                        Capture Selfie Now
                                     </button>
                                 )}
                                 {checkoutSelfie && (
                                     <button 
                                         type="button"
                                         onClick={startCheckoutSelfieCamera}
-                                        className="flex-1 border text-gray-700 font-bold text-xs py-2 rounded-xl"
+                                        className="flex-1 border text-[#1a1a1a]/75 font-bold text-xs py-2 rounded-2xl"
                                     >
                                         Retake Selfie
                                     </button>
@@ -1289,7 +1280,7 @@ export default function WorkerPortal() {
                             <button
                                 type="button"
                                 onClick={() => setShowCheckoutStation(false)}
-                                className="flex-1 border py-3 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50"
+                                className="flex-1 border py-3 rounded-2xl text-xs font-bold text-[#1a1a1a]/65 hover:bg-[#f6f4ef]/60"
                             >
                                 Cancel
                             </button>
@@ -1297,13 +1288,13 @@ export default function WorkerPortal() {
                                 type="button"
                                 disabled={!checkoutQrVerified || !checkoutSelfieVerified || actionLoading}
                                 onClick={handleConfirmClockOut}
-                                className={`flex-1 py-3 rounded-xl text-xs font-black shadow transition-all ${
+                                className={`flex-1 py-3 rounded-2xl text-xs font-bold shadow transition-all ${
                                     checkoutQrVerified && checkoutSelfieVerified
                                         ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-[#1a1a1a]/[0.08] text-[#1a1a1a]/40 cursor-not-allowed'
                                 }`}
                             >
-                                {actionLoading ? 'Clocking Out...' : '🏁 Confirm Clock Out'}
+                                {actionLoading ? 'Clocking Out...' : 'Confirm Clock Out'}
                             </button>
                         </div>
                     </div>
@@ -1314,7 +1305,7 @@ export default function WorkerPortal() {
             <div className="text-center pt-1">
                 <button 
                     onClick={() => setShowExceptionModal(true)}
-                    className="text-xs text-gray-500 font-semibold hover:text-[#dbb457] underline"
+                    className="text-xs text-[#1a1a1a]/55 font-semibold hover:text-[#a8842f] underline"
                 >
                     Having issues checking in or out? Request an Attendance Exception
                 </button>
@@ -1322,36 +1313,36 @@ export default function WorkerPortal() {
 
             {/* EXCEPTION MODAL */}
             {showExceptionModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1a1a]/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-5 space-y-4">
                         <div className="flex justify-between items-center border-b pb-2">
-                            <h3 className="font-black text-sm text-gray-900">Attendance Exception Request</h3>
-                            <button onClick={() => setShowExceptionModal(false)} className="text-gray-400 font-bold text-lg">✕</button>
+                            <h3 className="font-bold text-sm text-[#1a1a1a]">Attendance Exception Request</h3>
+                            <button onClick={() => setShowExceptionModal(false)} className="text-[#1a1a1a]/40 font-bold text-lg">✕</button>
                         </div>
                         <form onSubmit={handleSubmitException} className="space-y-3">
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Reason for Clock-In / Clock-Out Issue</label>
+                                <label className="block text-xs font-bold text-[#1a1a1a]/65 mb-1">Reason for Clock-In / Clock-Out Issue</label>
                                 <textarea 
                                     rows={3}
                                     value={exceptionReason} 
                                     onChange={e => setExceptionReason(e.target.value)}
                                     placeholder="e.g. Venue QR code poster damaged or GPS unavailable in underground valet parking"
                                     required
-                                    className="w-full border p-3 rounded-2xl text-xs focus:ring-2 focus:ring-[#dbb457] focus:outline-none"
+                                    className="w-full border p-3 rounded-2xl text-xs focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                                 />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button 
                                     type="button" 
                                     onClick={() => setShowExceptionModal(false)}
-                                    className="px-3 py-2 border rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50"
+                                    className="px-3 py-2 border rounded-2xl text-xs font-bold text-[#1a1a1a]/65 hover:bg-[#f6f4ef]/60"
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit" 
                                     disabled={submittingException}
-                                    className="px-4 py-2 bg-[#dbb457] hover:bg-[#c29d45] text-white rounded-xl text-xs font-black shadow"
+                                    className="px-4 py-2 bg-[#1a1a1a] hover:bg-[#dbb457] hover:text-[#1a1a1a] text-white rounded-2xl text-xs font-bold shadow"
                                 >
                                     {submittingException ? 'Submitting...' : 'Submit Exception'}
                                 </button>
