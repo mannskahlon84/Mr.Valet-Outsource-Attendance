@@ -58,7 +58,7 @@ def seed_suppliers():
                 else:
                     new_user = User(
                         email=item["email"],
-                        password_hash=get_password_hash("Supplier123!"),
+                        password_hash=get_password_hash("devpass123"),
                         role=RoleEnum.SUPPLIER_HEAD,
                         name=item["contact"],
                         supplier_id=sup.id,
@@ -66,7 +66,7 @@ def seed_suppliers():
                     )
                     db.add(new_user)
                     db.commit()
-                    print(f"  -> Created Supplier Head User: {item['email']} (Password: Supplier123!)")
+                    print(f"  -> Created Supplier Head User: {item['email']} (Password: devpass123)")
             else:
                 print(f"  -> Linked User: {sup_user.email}")
 

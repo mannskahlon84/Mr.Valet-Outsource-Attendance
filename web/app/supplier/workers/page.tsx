@@ -16,7 +16,7 @@ export default function SupplierWorkers() {
     const [internalId, setInternalId] = useState('');
     const [qid, setQid] = useState('');
     const [phone, setPhone] = useState('');
-    const [password, setPassword] = useState('devpass123');
+    const [password, setPassword] = useState('');
 
     const qidValidation = qid ? validateQatarIdClient(qid) : null;
 
@@ -35,7 +35,7 @@ export default function SupplierWorkers() {
         setInternalId('Loading series ID...');
         setQid('');
         setPhone('');
-        setPassword('devpass123');
+        setPassword('');
         setError('');
         setShowModal(true);
 
@@ -343,6 +343,8 @@ export default function SupplierWorkers() {
                                         value={password} 
                                         onChange={e => setPassword(e.target.value)} 
                                         required 
+                                        minLength={8}
+                                        placeholder="At least 8 characters, letters and numbers"
                                         className="w-full border p-2 rounded"
                                     />
                                 </div>

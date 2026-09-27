@@ -9,7 +9,8 @@ from app.core.security import get_password_hash
 
 def seed_db():
     print("Creating tables...")
-    Base.metadata.create_all(bind=engine)
+    from app.db.bootstrap import ensure_tables
+    ensure_tables()
     print("Tables created.")
     
     Session = sessionmaker(bind=engine)

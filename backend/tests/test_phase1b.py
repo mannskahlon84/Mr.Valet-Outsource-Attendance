@@ -22,7 +22,7 @@ def get_auth_token(client, db, email="admin@example.com", password="password"):
 
 
 def test_suppliers_crud(client, db):
-    token = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers = {"Authorization": f"Bearer " + token}
     
     # Create
@@ -40,7 +40,7 @@ def test_suppliers_crud(client, db):
     assert res.json()["status"] == "inactive"
 
 def test_workers_crud(client, db):
-    token = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers = {"Authorization": f"Bearer " + token}
     
     sup = client.post("/api/v1/suppliers/", json={"name": "Active Sup"}, headers=headers).json()
@@ -51,7 +51,7 @@ def test_workers_crud(client, db):
         "supplier_id": sup["id"],
         "first_name": "John",
         "last_name": "Smith"
-    , "qid": "29563410001", "password": "password123", "whatsapp_number": "+97455010001"}, headers=headers)
+    , "qid": "29563410001", "password": "Str0ngPass123", "whatsapp_number": "+97455010001"}, headers=headers)
     assert res.status_code == 200
     w_id = res.json()["id"]
     
@@ -65,17 +65,17 @@ def test_workers_crud(client, db):
     assert res.json()["status"] == "inactive"
 
 def test_bulk_import(client, db):
-    token = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers = {"Authorization": f"Bearer " + token}
     
     sup = client.post("/api/v1/suppliers/", json={"name": "Bulk Sup"}, headers=headers).json()
     s_id = sup["id"]
     
     csv_content = (
-        "internal_worker_id,supplier_id,first_name,last_name,qid,whatsapp_number\n"
-        f"B-1,{s_id},A,B,29535611001,+97455611001\n"
-        f"B-1,{s_id},C,D,29535611002,+97455611002\n"
-        "B-2,9999,E,F,29535611003,+97455611003"
+        "internal_worker_id,supplier_id,first_name,last_name,qid,whatsapp_number,password\n"
+        f"B-1,{s_id},A,B,29535611001,+97455611001,Str0ngPass123\n"
+        f"B-1,{s_id},C,D,29535611002,+97455611002,Str0ngPass123\n"
+        "B-2,9999,E,F,29535611003,+97455611003,Str0ngPass123"
     )
     files = {"file": ("test.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")}
     
@@ -94,11 +94,11 @@ def test_bulk_import(client, db):
     assert res.json()["skipped"] == 2
 
     # Imported workers can sign in with their QID
-    res = client.post("/api/v1/auth/login", data={"username": "29535611001", "password": "devpass123", "client_id": "bulk-device"})
+    res = client.post("/api/v1/auth/login", data={"username": "29535611001", "password": "Str0ngPass123", "client_id": "bulk-device"})
     assert res.status_code == 200, res.text
 
 def test_sites_crud(client, db):
-    token = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers = {"Authorization": f"Bearer " + token}
     
     res = client.post("/api/v1/sites/", json={"name": "Test Site", "latitude": 12.34, "longitude": 56.78, "geofence_radius_meters": 150}, headers=headers)
@@ -109,7 +109,7 @@ def test_sites_crud(client, db):
     assert res.status_code == 422
 def test_rbac_supplier_head(client, db):
     # Setup admin to create suppliers and workers
-    token_admin = get_auth_token(client, db, "admin@example.com", "devpass123")
+    token_admin = get_auth_token(client, db, "admin@example.com", "Str0ngPass123")
     headers_admin = {"Authorization": f"Bearer " + token_admin}
     
     # Create 2 suppliers
@@ -117,16 +117,16 @@ def test_rbac_supplier_head(client, db):
     sup2 = client.post("/api/v1/suppliers/", json={"name": "Supplier B"}, headers=headers_admin).json()
     
     # Create a worker for sup2
-    client.post("/api/v1/workers/", json={"internal_worker_id": "W-SUP2", "supplier_id": sup2["id"], "first_name": "Sup", "last_name": "Two", "qid": "29563410002", "password": "password123", "whatsapp_number": "+97455010002"}, headers=headers_admin)
+    client.post("/api/v1/workers/", json={"internal_worker_id": "W-SUP2", "supplier_id": sup2["id"], "first_name": "Sup", "last_name": "Two", "qid": "29563410002", "password": "Str0ngPass123", "whatsapp_number": "+97455010002"}, headers=headers_admin)
     
     # Create Supplier Head user for sup1
     from app.models.all_models import User, RoleEnum
     from app.core.security import get_password_hash
-    head_user = User(email="head@suppliera.com", password_hash=get_password_hash("pass"), role=RoleEnum.SUPPLIER_HEAD, supplier_id=sup1["id"])
+    head_user = User(email="head@suppliera.com", password_hash=get_password_hash("Str0ngPass1"), role=RoleEnum.SUPPLIER_HEAD, supplier_id=sup1["id"])
     db.add(head_user)
     db.commit()
     
-    token_head = get_auth_token(client, db, "head@suppliera.com", "pass")
+    token_head = get_auth_token(client, db, "head@suppliera.com", "Str0ngPass1")
     headers_head = {"Authorization": f"Bearer " + token_head}
     
     # Supplier head fetches workers

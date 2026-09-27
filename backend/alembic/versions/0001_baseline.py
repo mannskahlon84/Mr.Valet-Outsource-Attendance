@@ -1,8 +1,11 @@
-"""Initial schema
+"""baseline schema
 
-Revision ID: 0e5c7af7d294
+The schema exactly as Base.metadata.create_all() built it before migrations were used.
+Databases created that way are stamped at this revision instead of running it (app/db/migrate.py).
+
+Revision ID: 0001_baseline
 Revises: 
-Create Date: 2026-09-01 09:07:15.701507
+Create Date: 2026-09-26 20:07:19.688368
 
 """
 from typing import Sequence, Union
@@ -12,7 +15,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0e5c7af7d294'
+revision: str = '0001_baseline'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,7 +33,9 @@ def upgrade() -> None:
     sa.Column('failure_reason', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_attendance_audit_id'), 'attendance_audit', ['id'], unique=False)
+    with op.batch_alter_table('attendance_audit', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_attendance_audit_id'), ['id'], unique=False)
+
     op.create_table('otp_sessions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('whatsapp_number', sa.String(), nullable=False),
@@ -44,8 +49,10 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_otp_sessions_id'), 'otp_sessions', ['id'], unique=False)
-    op.create_index(op.f('ix_otp_sessions_whatsapp_number'), 'otp_sessions', ['whatsapp_number'], unique=False)
+    with op.batch_alter_table('otp_sessions', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_otp_sessions_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_otp_sessions_whatsapp_number'), ['whatsapp_number'], unique=False)
+
     op.create_table('suppliers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
@@ -61,22 +68,12 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_suppliers_id'), 'suppliers', ['id'], unique=False)
-    op.create_index(op.f('ix_suppliers_qid'), 'suppliers', ['qid'], unique=True)
-    op.create_index(op.f('ix_suppliers_qr_token'), 'suppliers', ['qr_token'], unique=True)
-    op.create_index(op.f('ix_suppliers_whatsapp_number'), 'suppliers', ['whatsapp_number'], unique=True)
-    op.create_table('notifications',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('supplier_id', sa.Integer(), nullable=False),
-    sa.Column('message', sa.Text(), nullable=False),
-    sa.Column('is_read', sa.Boolean(), nullable=True),
-    sa.Column('entity_type', sa.String(), nullable=True),
-    sa.Column('entity_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['supplier_id'], ['suppliers.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_notifications_id'), 'notifications', ['id'], unique=False)
+    with op.batch_alter_table('suppliers', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_suppliers_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_suppliers_qid'), ['qid'], unique=True)
+        batch_op.create_index(batch_op.f('ix_suppliers_qr_token'), ['qr_token'], unique=True)
+        batch_op.create_index(batch_op.f('ix_suppliers_whatsapp_number'), ['whatsapp_number'], unique=True)
+
     op.create_table('workers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('internal_worker_id', sa.String(), nullable=False),
@@ -96,11 +93,13 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['supplier_id'], ['suppliers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_workers_id'), 'workers', ['id'], unique=False)
-    op.create_index(op.f('ix_workers_internal_worker_id'), 'workers', ['internal_worker_id'], unique=True)
-    op.create_index(op.f('ix_workers_qid'), 'workers', ['qid'], unique=True)
-    op.create_index(op.f('ix_workers_qr_token'), 'workers', ['qr_token'], unique=True)
-    op.create_index(op.f('ix_workers_whatsapp_number'), 'workers', ['whatsapp_number'], unique=True)
+    with op.batch_alter_table('workers', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_workers_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_workers_internal_worker_id'), ['internal_worker_id'], unique=True)
+        batch_op.create_index(batch_op.f('ix_workers_qid'), ['qid'], unique=True)
+        batch_op.create_index(batch_op.f('ix_workers_qr_token'), ['qr_token'], unique=True)
+        batch_op.create_index(batch_op.f('ix_workers_whatsapp_number'), ['whatsapp_number'], unique=True)
+
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
@@ -119,9 +118,11 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['worker_id'], ['workers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
-    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
-    op.create_index(op.f('ix_users_qr_token'), 'users', ['qr_token'], unique=True)
+    with op.batch_alter_table('users', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_users_email'), ['email'], unique=True)
+        batch_op.create_index(batch_op.f('ix_users_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_users_qr_token'), ['qr_token'], unique=True)
+
     op.create_table('audit_logs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
@@ -136,7 +137,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['actor_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_audit_logs_id'), 'audit_logs', ['id'], unique=False)
+    with op.batch_alter_table('audit_logs', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_audit_logs_id'), ['id'], unique=False)
+
     op.create_table('invoices',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('invoice_number', sa.String(), nullable=False),
@@ -153,8 +156,29 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['supplier_id'], ['suppliers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_invoices_id'), 'invoices', ['id'], unique=False)
-    op.create_index(op.f('ix_invoices_invoice_number'), 'invoices', ['invoice_number'], unique=True)
+    with op.batch_alter_table('invoices', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_invoices_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_invoices_invoice_number'), ['invoice_number'], unique=True)
+
+    op.create_table('notifications',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('supplier_id', sa.Integer(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('worker_id', sa.Integer(), nullable=True),
+    sa.Column('title', sa.String(), nullable=True),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('is_read', sa.Boolean(), nullable=True),
+    sa.Column('entity_type', sa.String(), nullable=True),
+    sa.Column('entity_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['supplier_id'], ['suppliers.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['worker_id'], ['workers.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('notifications', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_notifications_id'), ['id'], unique=False)
+
     op.create_table('password_resets',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -165,7 +189,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_password_resets_id'), 'password_resets', ['id'], unique=False)
+    with op.batch_alter_table('password_resets', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_password_resets_id'), ['id'], unique=False)
+
     op.create_table('sites',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
@@ -180,8 +206,24 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['manager_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_sites_id'), 'sites', ['id'], unique=False)
-    op.create_index(op.f('ix_sites_qr_token'), 'sites', ['qr_token'], unique=True)
+    with op.batch_alter_table('sites', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_sites_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_sites_qr_token'), ['qr_token'], unique=True)
+
+    op.create_table('user_devices',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('push_token', sa.String(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('user_devices', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_user_devices_id'), ['id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_user_devices_push_token'), ['push_token'], unique=True)
+
     op.create_table('manpower_requests',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('ops_manager_id', sa.Integer(), nullable=True),
@@ -198,20 +240,46 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['site_id'], ['sites.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_manpower_requests_id'), 'manpower_requests', ['id'], unique=False)
+    with op.batch_alter_table('manpower_requests', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_manpower_requests_id'), ['id'], unique=False)
+
+    op.create_table('request_messages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('manpower_request_id', sa.Integer(), nullable=False),
+    sa.Column('sender_id', sa.Integer(), nullable=False),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['manpower_request_id'], ['manpower_requests.id'], ),
+    sa.ForeignKeyConstraint(['sender_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('request_messages', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_request_messages_id'), ['id'], unique=False)
+
     op.create_table('supplier_responses',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('manpower_request_id', sa.Integer(), nullable=True),
     sa.Column('supplier_id', sa.Integer(), nullable=True),
     sa.Column('requested_quantity', sa.Integer(), nullable=False),
     sa.Column('confirmed_quantity', sa.Integer(), nullable=True),
+    sa.Column('proposed_start_time', sa.String(), nullable=True),
+    sa.Column('proposed_end_time', sa.String(), nullable=True),
+    sa.Column('supplier_message', sa.Text(), nullable=True),
+    sa.Column('response_type', sa.String(), nullable=True),
     sa.Column('status', sa.String(), nullable=True),
     sa.Column('responded_at', sa.DateTime(), nullable=True),
+    sa.Column('confirmed_start_time', sa.String(), nullable=True),
+    sa.Column('confirmed_end_time', sa.String(), nullable=True),
+    sa.Column('confirmed_at', sa.DateTime(), nullable=True),
+    sa.Column('confirmed_by_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['confirmed_by_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['manpower_request_id'], ['manpower_requests.id'], ),
     sa.ForeignKeyConstraint(['supplier_id'], ['suppliers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_supplier_responses_id'), 'supplier_responses', ['id'], unique=False)
+    with op.batch_alter_table('supplier_responses', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_supplier_responses_id'), ['id'], unique=False)
+
     op.create_table('worker_assignments',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('supplier_response_id', sa.Integer(), nullable=True),
@@ -222,7 +290,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['worker_id'], ['workers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_worker_assignments_id'), 'worker_assignments', ['id'], unique=False)
+    with op.batch_alter_table('worker_assignments', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_worker_assignments_id'), ['id'], unique=False)
+
     op.create_table('attendance',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('worker_assignment_id', sa.Integer(), nullable=True),
@@ -242,13 +312,16 @@ def upgrade() -> None:
     sa.Column('check_out_verification_method', sa.String(), nullable=True),
     sa.Column('check_in_qr_id', sa.Integer(), nullable=True),
     sa.Column('check_out_qr_id', sa.Integer(), nullable=True),
+    sa.Column('check_in_face_embedding', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['check_in_qr_id'], ['sites.id'], ),
     sa.ForeignKeyConstraint(['check_out_qr_id'], ['sites.id'], ),
     sa.ForeignKeyConstraint(['worker_assignment_id'], ['worker_assignments.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('worker_assignment_id')
     )
-    op.create_index(op.f('ix_attendance_id'), 'attendance', ['id'], unique=False)
+    with op.batch_alter_table('attendance', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_attendance_id'), ['id'], unique=False)
+
     op.create_table('attendance_exceptions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('attendance_id', sa.Integer(), nullable=True),
@@ -266,52 +339,93 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['worker_assignment_id'], ['worker_assignments.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_attendance_exceptions_id'), 'attendance_exceptions', ['id'], unique=False)
+    with op.batch_alter_table('attendance_exceptions', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_attendance_exceptions_id'), ['id'], unique=False)
+
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_attendance_exceptions_id'), table_name='attendance_exceptions')
+    with op.batch_alter_table('attendance_exceptions', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_attendance_exceptions_id'))
+
     op.drop_table('attendance_exceptions')
-    op.drop_index(op.f('ix_attendance_id'), table_name='attendance')
+    with op.batch_alter_table('attendance', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_attendance_id'))
+
     op.drop_table('attendance')
-    op.drop_index(op.f('ix_worker_assignments_id'), table_name='worker_assignments')
+    with op.batch_alter_table('worker_assignments', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_worker_assignments_id'))
+
     op.drop_table('worker_assignments')
-    op.drop_index(op.f('ix_supplier_responses_id'), table_name='supplier_responses')
+    with op.batch_alter_table('supplier_responses', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_supplier_responses_id'))
+
     op.drop_table('supplier_responses')
-    op.drop_index(op.f('ix_manpower_requests_id'), table_name='manpower_requests')
+    with op.batch_alter_table('request_messages', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_request_messages_id'))
+
+    op.drop_table('request_messages')
+    with op.batch_alter_table('manpower_requests', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_manpower_requests_id'))
+
     op.drop_table('manpower_requests')
-    op.drop_index(op.f('ix_sites_qr_token'), table_name='sites')
-    op.drop_index(op.f('ix_sites_id'), table_name='sites')
+    with op.batch_alter_table('user_devices', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_user_devices_push_token'))
+        batch_op.drop_index(batch_op.f('ix_user_devices_id'))
+
+    op.drop_table('user_devices')
+    with op.batch_alter_table('sites', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_sites_qr_token'))
+        batch_op.drop_index(batch_op.f('ix_sites_id'))
+
     op.drop_table('sites')
-    op.drop_index(op.f('ix_password_resets_id'), table_name='password_resets')
+    with op.batch_alter_table('password_resets', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_password_resets_id'))
+
     op.drop_table('password_resets')
-    op.drop_index(op.f('ix_invoices_invoice_number'), table_name='invoices')
-    op.drop_index(op.f('ix_invoices_id'), table_name='invoices')
-    op.drop_table('invoices')
-    op.drop_index(op.f('ix_audit_logs_id'), table_name='audit_logs')
-    op.drop_table('audit_logs')
-    op.drop_index(op.f('ix_users_qr_token'), table_name='users')
-    op.drop_index(op.f('ix_users_id'), table_name='users')
-    op.drop_index(op.f('ix_users_email'), table_name='users')
-    op.drop_table('users')
-    op.drop_index(op.f('ix_workers_whatsapp_number'), table_name='workers')
-    op.drop_index(op.f('ix_workers_qr_token'), table_name='workers')
-    op.drop_index(op.f('ix_workers_qid'), table_name='workers')
-    op.drop_index(op.f('ix_workers_internal_worker_id'), table_name='workers')
-    op.drop_index(op.f('ix_workers_id'), table_name='workers')
-    op.drop_table('workers')
-    op.drop_index(op.f('ix_notifications_id'), table_name='notifications')
+    with op.batch_alter_table('notifications', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_notifications_id'))
+
     op.drop_table('notifications')
-    op.drop_index(op.f('ix_suppliers_whatsapp_number'), table_name='suppliers')
-    op.drop_index(op.f('ix_suppliers_qr_token'), table_name='suppliers')
-    op.drop_index(op.f('ix_suppliers_qid'), table_name='suppliers')
-    op.drop_index(op.f('ix_suppliers_id'), table_name='suppliers')
+    with op.batch_alter_table('invoices', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_invoices_invoice_number'))
+        batch_op.drop_index(batch_op.f('ix_invoices_id'))
+
+    op.drop_table('invoices')
+    with op.batch_alter_table('audit_logs', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_audit_logs_id'))
+
+    op.drop_table('audit_logs')
+    with op.batch_alter_table('users', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_users_qr_token'))
+        batch_op.drop_index(batch_op.f('ix_users_id'))
+        batch_op.drop_index(batch_op.f('ix_users_email'))
+
+    op.drop_table('users')
+    with op.batch_alter_table('workers', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_workers_whatsapp_number'))
+        batch_op.drop_index(batch_op.f('ix_workers_qr_token'))
+        batch_op.drop_index(batch_op.f('ix_workers_qid'))
+        batch_op.drop_index(batch_op.f('ix_workers_internal_worker_id'))
+        batch_op.drop_index(batch_op.f('ix_workers_id'))
+
+    op.drop_table('workers')
+    with op.batch_alter_table('suppliers', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_suppliers_whatsapp_number'))
+        batch_op.drop_index(batch_op.f('ix_suppliers_qr_token'))
+        batch_op.drop_index(batch_op.f('ix_suppliers_qid'))
+        batch_op.drop_index(batch_op.f('ix_suppliers_id'))
+
     op.drop_table('suppliers')
-    op.drop_index(op.f('ix_otp_sessions_whatsapp_number'), table_name='otp_sessions')
-    op.drop_index(op.f('ix_otp_sessions_id'), table_name='otp_sessions')
+    with op.batch_alter_table('otp_sessions', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_otp_sessions_whatsapp_number'))
+        batch_op.drop_index(batch_op.f('ix_otp_sessions_id'))
+
     op.drop_table('otp_sessions')
-    op.drop_index(op.f('ix_attendance_audit_id'), table_name='attendance_audit')
+    with op.batch_alter_table('attendance_audit', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_attendance_audit_id'))
+
     op.drop_table('attendance_audit')
     # ### end Alembic commands ###

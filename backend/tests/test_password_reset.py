@@ -8,10 +8,10 @@ def test_password_reset_flow(client: TestClient, db):
     
     u = db.query(User).filter(User.email == "admin@example.com").first()
     if not u:
-        u = User(email="admin@example.com", password_hash=get_password_hash("newpass"), role=RoleEnum.SUPER_ADMIN, status="active")
+        u = User(email="admin@example.com", password_hash=get_password_hash("N3wPassword1"), role=RoleEnum.SUPER_ADMIN, status="active")
         db.add(u)
     else:
-        u.password_hash = get_password_hash("newpass")
+        u.password_hash = get_password_hash("N3wPassword1")
         u.status = "active"
     db.commit()
 
@@ -26,7 +26,7 @@ def test_password_reset_flow(client: TestClient, db):
     assert pr.used == False
     
     # Try invalid token
-    req2 = client.post("/api/v1/auth/reset-password", json={"token": "invalid_token", "new_password": "newpass"})
+    req2 = client.post("/api/v1/auth/reset-password", json={"token": "invalid_token", "new_password": "N3wPassword1"})
     assert req2.status_code == 400
     
     # We can't easily get the raw token in tests since it's hashed and printed to console.
@@ -38,16 +38,16 @@ def test_password_reset_flow(client: TestClient, db):
     db.commit()
     
     # Success reset
-    req3 = client.post("/api/v1/auth/reset-password", json={"token": raw_token, "new_password": "newpass"})
+    req3 = client.post("/api/v1/auth/reset-password", json={"token": raw_token, "new_password": "N3wPassword1"})
     assert req3.status_code == 200
     
     # Reuse token
-    req4 = client.post("/api/v1/auth/reset-password", json={"token": raw_token, "new_password": "newpass2"})
+    req4 = client.post("/api/v1/auth/reset-password", json={"token": raw_token, "new_password": "N3wPassword2"})
     assert req4.status_code == 400
     assert "Invalid or expired" in req4.json()["detail"]
     
     # Login with new password
-    req5 = client.post("/api/v1/auth/login", data={"username": "admin@example.com", "password": "newpass"})
+    req5 = client.post("/api/v1/auth/login", data={"username": "admin@example.com", "password": "N3wPassword1"})
     assert req5.status_code == 200
     
     # Session invalidation tested implicitly via refresh_token_version increment
@@ -59,15 +59,15 @@ def test_last_super_admin_protection(client: TestClient, db):
     
     u = db.query(User).filter(User.email == "admin@example.com").first()
     if not u:
-        u = User(email="admin@example.com", password_hash=get_password_hash("newpass"), role=RoleEnum.SUPER_ADMIN, status="active")
+        u = User(email="admin@example.com", password_hash=get_password_hash("N3wPassword1"), role=RoleEnum.SUPER_ADMIN, status="active")
         db.add(u)
     else:
-        u.password_hash = get_password_hash("newpass")
+        u.password_hash = get_password_hash("N3wPassword1")
         u.status = "active"
     db.commit()
 
     # Login as admin
-    req = client.post("/api/v1/auth/login", data={"username": "admin@example.com", "password": "newpass"})
+    req = client.post("/api/v1/auth/login", data={"username": "admin@example.com", "password": "N3wPassword1"})
     token = req.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -78,7 +78,7 @@ def test_last_super_admin_protection(client: TestClient, db):
     assert "Cannot deactivate your own account" in req2.json()["detail"]
     
     # Create another admin
-    req3 = client.post("/api/v1/users/", json={"email": "admin2@example.com", "password": "pass", "role": "Super Admin", "name": "A2"}, headers=headers)
+    req3 = client.post("/api/v1/users/", json={"email": "admin2@example.com", "password": "Str0ngPass1", "role": "Super Admin", "name": "A2"}, headers=headers)
     assert req3.status_code == 200
     a2_id = req3.json()["id"]
     

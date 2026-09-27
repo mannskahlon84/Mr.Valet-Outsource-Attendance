@@ -44,7 +44,7 @@ export default function Workers() {
         setLastName(''); 
         setQid(''); 
         setMobile(''); 
-        setPassword('devpass123'); 
+        setPassword(''); 
         setSupplierId(''); 
         setStatus('active');
         setError('');
@@ -403,7 +403,7 @@ export default function Workers() {
                                         required={!editingWorker} 
                                         value={password} 
                                         onChange={e=>setPassword(e.target.value)} 
-                                        placeholder={editingWorker ? "••••••••" : "Default: devpass123"}
+                                        placeholder={editingWorker ? "••••••••" : "At least 8 characters, letters and numbers"}
                                         className="w-full border p-2.5 rounded-lg text-sm" 
                                     />
                                 </div>

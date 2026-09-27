@@ -8,15 +8,15 @@ def test_master_data_crud(client: TestClient, db):
     
     u = db.query(User).filter(User.email == "admin@example.com").first()
     if not u:
-        u = User(email="admin@example.com", password_hash=get_password_hash("newpass"), role=RoleEnum.SUPER_ADMIN, status="active")
+        u = User(email="admin@example.com", password_hash=get_password_hash("N3wPassword1"), role=RoleEnum.SUPER_ADMIN, status="active")
         db.add(u)
     else:
-        u.password_hash = get_password_hash("newpass")
+        u.password_hash = get_password_hash("N3wPassword1")
         u.status = "active"
     db.commit()
 
 
-    req = client.post("/api/v1/auth/login", data={"username": "admin@example.com", "password": "newpass"})
+    req = client.post("/api/v1/auth/login", data={"username": "admin@example.com", "password": "N3wPassword1"})
     token = req.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -44,7 +44,7 @@ def test_master_data_crud(client: TestClient, db):
     
     # Create Worker
     client.put(f"/api/v1/suppliers/{sup_id}", json={"status": "active"}, headers=headers)
-    r5 = client.post("/api/v1/workers/", json={"internal_worker_id": "W123", "first_name": "W", "last_name": "1", "qid": "29563412345", "whatsapp_number": "+123456", "password": "pass", "supplier_id": sup_id}, headers=headers)
+    r5 = client.post("/api/v1/workers/", json={"internal_worker_id": "W123", "first_name": "W", "last_name": "1", "qid": "29563412345", "whatsapp_number": "+123456", "password": "Str0ngPass1", "supplier_id": sup_id}, headers=headers)
     print("r5:", r5.json())
     w_id = r5.json()["id"]
     

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -7,6 +8,8 @@ from app.models.all_models import User, RoleEnum
 from app.schemas.token import Token
 from app.api.deps import get_current_user, require_role, account_is_active
 from app.services.audit import log_audit_event
+from app.core.config import settings
+from app.core.passwords import require_strong_password
 
 router = APIRouter()
 
@@ -41,12 +44,52 @@ def find_login_user(db: Session, username: str):
     return None
 
 
+def client_ip(request: Request) -> str:
+    """The caller's address. Behind the web proxy or Nginx the real one is the first X-Forwarded-For hop."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()[:64]
+    return request.client.host if request.client else "unknown"
+
+
+def failures_since_last_success(db: Session, since, **match) -> int:
+    from app.models.all_models import LoginAttempt
+    attempts = db.query(LoginAttempt).filter_by(**match).filter(LoginAttempt.created_at >= since)
+    last_success = attempts.filter(LoginAttempt.success == True).order_by(LoginAttempt.created_at.desc()).first()
+    failures = attempts.filter(LoginAttempt.success == False)
+    if last_success:
+        failures = failures.filter(LoginAttempt.created_at > last_success.created_at)
+    return failures.count()
+
+
+def ensure_not_locked_out(db: Session, username_key: str, ip: str):
+    """Stop password guessing: too many recent failures for this login name, or from this address."""
+    since = datetime.utcnow() - timedelta(minutes=settings.LOGIN_LOCKOUT_MINUTES)
+    if (failures_since_last_success(db, since, username=username_key) >= settings.LOGIN_MAX_FAILURES_PER_USER
+            or failures_since_last_success(db, since, ip_address=ip) >= settings.LOGIN_MAX_FAILURES_PER_IP):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many failed sign-in attempts. Please wait {settings.LOGIN_LOCKOUT_MINUTES} minutes and try again.",
+        )
+
+
+def record_login_attempt(db: Session, username_key: str, ip: str, success: bool):
+    from app.models.all_models import LoginAttempt
+    db.add(LoginAttempt(username=username_key, ip_address=ip, success=success))
+    db.commit()
+
+
 @router.post("/login", response_model=Token)
-def login_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+def login_access_token(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+    username_key = form_data.username.strip().lower()[:255]
+    ip = client_ip(request)
+    ensure_not_locked_out(db, username_key, ip)
+
     user = find_login_user(db, form_data.username)
-    
-    if not user or not (form_data.password in ["devpass123", "Supplier123!"] or verify_password(form_data.password, user.password_hash)):
+    if not user or not verify_password(form_data.password, user.password_hash):
+        record_login_attempt(db, username_key, ip, success=False)
         raise HTTPException(status_code=400, detail="Incorrect credentials")
+    record_login_attempt(db, username_key, ip, success=True)
     if not account_is_active(db, user):
         raise HTTPException(status_code=403, detail="This account has been deactivated. Contact your administrator.")
         
@@ -111,6 +154,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.models.all_models import PasswordReset, User
+from app.services.email import send_password_reset_email
 
 class ForgotPasswordRequest(BaseModel):
     email: str
@@ -140,10 +184,8 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
             )
             db.add(reset_req)
             db.commit()
-            
-            # Simulated Email delivery for Dev environment
-            print(f"\n{'='*50}\nPASSWORD RESET LINK FOR {user.email}:\nhttp://localhost:3000/reset-password?token={raw_token}\n{'='*50}\n")
-            
+            send_password_reset_email(user.email, raw_token)
+
     return {"message": "If an account exists for this email, you will receive a password reset link."}
 
 @router.post("/reset-password")
@@ -157,6 +199,7 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     
     if not reset_entry:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    require_strong_password(req.new_password)
         
     user = db.query(User).filter(User.id == reset_entry.user_id).first()
     if not user or user.status == 'inactive':

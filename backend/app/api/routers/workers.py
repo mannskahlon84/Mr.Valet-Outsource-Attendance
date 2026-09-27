@@ -9,6 +9,7 @@ from app.api.deps import get_current_user, require_role
 from app.services.audit import log_audit_event
 from app.services.qid_validator import validate_qatar_id
 from app.core.security import get_password_hash, verify_password
+from app.core.passwords import password_problem, require_strong_password
 from typing import List, Optional
 from pydantic import BaseModel
 import csv
@@ -38,8 +39,6 @@ def generate_internal_worker_id(db: Session) -> str:
 # Deleted workers who have past shifts are kept (for billing history) under this status
 ARCHIVED = "archived"
 
-# Same default the supplier's Enroll Driver form pre-fills; replaced when passwords are issued at launch
-DEFAULT_WORKER_PASSWORD = "devpass123"
 
 
 def ensure_worker_login(db: Session, worker: Worker, password: str) -> User:
@@ -155,6 +154,7 @@ def get_next_worker_id(db: Session = Depends(get_db), current_user: User = Depen
 def request_registration_otp(worker_in: WorkerCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN, RoleEnum.SUPPLIER_HEAD]))):
     if current_user.role == RoleEnum.SUPPLIER_HEAD and worker_in.supplier_id != current_user.supplier_id:
         raise HTTPException(403, "Cannot create worker for another supplier")
+    require_strong_password(worker_in.password)
         
     if worker_in.internal_worker_id:
         if db.query(Worker).filter(Worker.internal_worker_id == worker_in.internal_worker_id).first():
@@ -326,6 +326,7 @@ def create_worker(
     if not db.query(Supplier).filter(Supplier.id == worker_in.supplier_id, Supplier.status == "active").first():
         raise HTTPException(status_code=400, detail="Invalid or inactive supplier")
         
+    require_strong_password(worker_in.password)
     worker_data = worker_in.model_dump()
     password = worker_data.pop("password")
     
@@ -444,6 +445,8 @@ async def bulk_import_preview(file: UploadFile = File(...), db: Session = Depend
                 check_worker_registration_constraints(db=db, qid=qid, first_name=fname, last_name=lname, whatsapp_number=whatsapp)
             except HTTPException as e:
                 errors.append(e.detail)
+        if password_problem((row.get("password") or "").strip()):
+            errors.append(f"password: {password_problem((row.get('password') or '').strip())}")
             
         if i_id:
             if i_id in seen_ids: errors.append(f"Duplicate internal_worker_id in file: {i_id}")
@@ -491,12 +494,15 @@ async def bulk_import_commit(file: UploadFile = File(...), db: Session = Depends
             lname = (row.get("last_name") or "").strip()
             qid = (row.get("qid") or "").strip()
             whatsapp = (row.get("whatsapp_number") or row.get("phone") or "").strip()
-            password = (row.get("password") or "").strip() or DEFAULT_WORKER_PASSWORD
+            password = (row.get("password") or "").strip()
             
             if current_user.role == RoleEnum.SUPPLIER_HEAD and not s_id:
                 s_id = str(current_user.supplier_id)
             if not s_id or not fname or not lname or not qid or not whatsapp:
                 skip("supplier_id, first_name, last_name, qid and whatsapp_number are required")
+                continue
+            if password_problem(password):
+                skip(f"password: {password_problem(password)}")
                 continue
             
             final_i_id = i_id or generate_internal_worker_id(db)
@@ -594,6 +600,7 @@ def update_worker(worker_id: int, worker_in: WorkerUpdate, db: Session = Depends
     if worker_in.first_name is not None: worker.first_name = worker_in.first_name.strip()
     if worker_in.last_name is not None: worker.last_name = worker_in.last_name.strip()
     if worker_in.password is not None and worker_in.password.strip():
+        require_strong_password(worker_in.password.strip())
         if login:
             login.password_hash = get_password_hash(worker_in.password.strip())
         else:
