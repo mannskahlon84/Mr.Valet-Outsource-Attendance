@@ -167,40 +167,6 @@ export default function NotificationBell() {
         }
     };
 
-    const triggerTestPush = async () => {
-        try {
-            setLoading(true);
-            const res = await fetchApi('/notifications/test-push', { method: 'POST' });
-            playChimeSound();
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                navigator.vibrate([150, 80, 150]);
-            }
-            if (res?.notification_id) {
-                const testItem: NotificationItem = {
-                    id: res.notification_id,
-                    title: res.title,
-                    message: res.message,
-                    is_read: false,
-                    created_at: res.created_at
-                };
-                setActiveToast(testItem);
-                setNotifications(prev => [testItem, ...prev]);
-                setUnreadCount(c => c + 1);
-                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                    new Notification(res.title || "In-App Push Test", {
-                        body: res.message,
-                        icon: "/logo.jpg"
-                    });
-                }
-            }
-        } catch (e: any) {
-            alert(e.message || "Failed to trigger test push");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
     const timeAgo = (dateStr: string) => {
         try {
             const date = new Date(dateStr);
@@ -350,17 +316,6 @@ export default function NotificationBell() {
                             )}
                         </div>
 
-                        {/* Footer with Test Push Alert button */}
-                        <div className="p-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                            <button
-                                onClick={triggerTestPush}
-                                disabled={loading}
-                                className="text-[11px] font-bold text-gray-600 hover:text-gray-900 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors shadow-sm"
-                            >
-                                <span>⚡</span> Test Push Alert
-                            </button>
-                            <span className="text-[10px] text-gray-400">100% In-App • Zero API Cost</span>
-                        </div>
                     </div>
                 </>
             )}

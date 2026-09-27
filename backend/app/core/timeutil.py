@@ -16,3 +16,10 @@ def shift_is_current(required_date: datetime, start_time: str, end_time: str, to
         return True
     overnight = bool(start_time and end_time and end_time < start_time)
     return overnight and shift_day == today - timedelta(days=1)
+
+
+def utc_iso(value):
+    """ISO text for a stored UTC time, marked as UTC so browsers show it in local (Qatar) time."""
+    if value is None:
+        return None
+    return (value if value.tzinfo else value.replace(tzinfo=timezone.utc)).isoformat()

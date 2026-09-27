@@ -24,55 +24,6 @@ def shifts_overlap(start_a: str, end_a: str, start_b: str, end_b: str) -> bool:
     return a0 < b1 and b0 < a1
 
 
-def own_response(db: Session, response_id: int, current_user: User) -> SupplierResponse:
-    sr = db.query(SupplierResponse).filter(SupplierResponse.id == response_id).first()
-    if not sr:
-        raise HTTPException(404, "Response not found")
-    if current_user.role == RoleEnum.SUPPLIER_HEAD and sr.supplier_id != current_user.supplier_id:
-        raise HTTPException(403, "Not your response")
-    return sr
-
-
-@router.get("/{response_id}")
-def list_assigned_workers(response_id: int, db: Session = Depends(get_db),
-                          current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD, RoleEnum.SUPER_ADMIN]))):
-    """The drivers currently assigned to one agency response, with their attendance state."""
-    from app.models.all_models import Attendance
-    sr = own_response(db, response_id, current_user)
-    rows = db.query(WorkerAssignment, Worker).join(Worker, WorkerAssignment.worker_id == Worker.id).filter(
-        WorkerAssignment.supplier_response_id == sr.id, WorkerAssignment.status == "ASSIGNED"
-    ).order_by(Worker.first_name).all()
-    result = []
-    for wa, w in rows:
-        att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()
-        state = "SHIFT_ENDED" if att and att.check_out_time else ("ON_DUTY" if att and att.check_in_time else "NOT_STARTED")
-        result.append({"assignment_id": wa.id, "worker_id": w.id, "name": f"{w.first_name} {w.last_name}",
-                       "internal_worker_id": w.internal_worker_id, "qid": w.qid, "attendance": state})
-    return {"response_id": sr.id, "confirmed_quantity": sr.confirmed_quantity or 0, "status": sr.status, "assigned": result}
-
-
-@router.post("/{response_id}/unassign/{assignment_id}")
-def unassign_worker(response_id: int, assignment_id: int, db: Session = Depends(get_db),
-                    current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
-    """Take a driver off a shift, as long as they have not clocked in."""
-    from app.models.all_models import Attendance
-    sr = own_response(db, response_id, current_user)
-    wa = db.query(WorkerAssignment).filter(WorkerAssignment.id == assignment_id, WorkerAssignment.supplier_response_id == sr.id,
-                                           WorkerAssignment.status == "ASSIGNED").first()
-    if not wa:
-        raise HTTPException(404, "Assignment not found")
-    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()
-    if att and att.check_in_time:
-        raise HTTPException(400, "This driver has already clocked in for the shift and cannot be removed.")
-    wa.status = "CANCELLED"
-    db.add(Notification(worker_id=wa.worker_id, title="Shift assignment removed",
-                        message="Your agency removed you from an upcoming shift. Please check your assignments.",
-                        entity_type="SHIFT_ASSIGNMENT", entity_id=wa.id))
-    db.commit()
-    log_audit_event(db, current_user.id, current_user.role.value, "worker_unassigned", "worker_assignments", wa.id,
-                    {"status": "ASSIGNED"}, {"status": "CANCELLED"})
-    return {"status": "success"}
-
 @router.post("/{response_id}/allocate-workers")
 def allocate_workers(response_id: int, req: WorkerAllocation, db: Session = Depends(get_db), current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
     sr = db.query(SupplierResponse).filter(SupplierResponse.id == response_id).first()

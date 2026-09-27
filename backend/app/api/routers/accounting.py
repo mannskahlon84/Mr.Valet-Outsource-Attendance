@@ -7,7 +7,7 @@ from app.models.all_models import Supplier, User, RoleEnum, SupplierResponse, Ma
 from app.api.deps import get_current_user, require_role
 from app.services.audit import log_audit_event
 from datetime import datetime, date
-from app.core.timeutil import qatar_today
+from app.core.timeutil import qatar_today, utc_iso
 from typing import List, Literal, Optional
 from app.services.exports import export_response, qatar_time
 from pydantic import BaseModel
@@ -435,8 +435,8 @@ def compute_daily_breakdown(db: Session, current_user: User, filter_date: date, 
                 "internal_worker_id": wrk.internal_worker_id,
                 "qid": wrk.qid or "",
                 "site_name": site.name,
-                "check_in_time": att.check_in_time.isoformat() if att and att.check_in_time else None,
-                "check_out_time": att.check_out_time.isoformat() if att and att.check_out_time else None,
+                "check_in_time": utc_iso(att.check_in_time) if att and att.check_in_time else None,
+                "check_out_time": utc_iso(att.check_out_time) if att and att.check_out_time else None,
                 "check_in_qatar": qatar_time(att.check_in_time, "%H:%M") if att else "",
                 "check_out_qatar": qatar_time(att.check_out_time, "%H:%M") if att else "",
                 "duty_hours": duty_hours,
@@ -458,6 +458,7 @@ def compute_daily_breakdown(db: Session, current_user: User, filter_date: date, 
             "started_shift_count": started_count,
             "ended_shift_count": ended_count,
             "on_duty_count": started_count - ended_count,
+            "missing_count": max(0, total_scheduled - started_count),
             "locations": list(locations.values()),
             "total_duty_hours": round(total_duty_hours, 2),
             "daily_total_payable": estimated_cost,
@@ -472,6 +473,7 @@ def compute_daily_breakdown(db: Session, current_user: User, filter_date: date, 
         "total_assigned": sum(r["assigned_workers_count"] for r in results),
         "total_on_duty": sum(r["on_duty_count"] for r in results),
         "total_completed": sum(r["ended_shift_count"] for r in results),
+        "total_missing": sum(r["missing_count"] for r in results),
         "total_duty_hours": round(sum(r["total_duty_hours"] for r in results), 2),
         "total_daily_payables": round(sum(r["daily_total_payable"] for r in results), 2),
         "suppliers": results
@@ -513,8 +515,8 @@ def export_daily_breakdown(
                   for s in data["suppliers"]]
     summary = [
         ("Drivers confirmed by agencies", data["total_scheduled"]),
-        ("Drivers assigned", data["total_assigned"]),
-        ("Started shift", data["total_daily_workers"]),
+        ("Checked in", data["total_daily_workers"]),
+        ("Missing (confirmed but not checked in)", data["total_missing"]),
         ("Completed shift", data["total_completed"]),
         ("Verified duty hours", data["total_duty_hours"]),
         ("Daily payable (QAR)", f"{data['total_daily_payables']:,.2f}"),

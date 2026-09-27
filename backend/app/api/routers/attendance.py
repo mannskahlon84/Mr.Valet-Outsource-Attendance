@@ -14,7 +14,7 @@ from app.services.duplicate_identity import check_duplicate_identity
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from app.core.config import settings
-from app.core.timeutil import qatar_today, shift_is_current
+from app.core.timeutil import qatar_today, shift_is_current, utc_iso
 import math
 
 router = APIRouter()
@@ -68,6 +68,40 @@ def find_current_assignment(db: Session, worker_id: int, site_id: int = None):
     return sorted(candidates, key=rank)[0]
 
 
+def checked_in_count(db: Session, response_id: int) -> int:
+    """Places of an agency's confirmed shift already taken: drivers who clocked in on it."""
+    return db.query(WorkerAssignment).join(Attendance, Attendance.worker_assignment_id == WorkerAssignment.id).filter(
+        WorkerAssignment.supplier_response_id == response_id,
+        WorkerAssignment.status == "ASSIGNED",
+        Attendance.check_in_time.isnot(None),
+    ).count()
+
+
+def find_agency_shift(db: Session, worker: Worker, site_id: int):
+    """(supplier response, request) for today's confirmed shift of the worker's agency at this venue
+    that still has a free place. Agencies commit to a number of drivers, not to named people: any of
+    their active drivers may fill a place by checking in at the venue."""
+    if not worker.supplier_id:
+        raise HTTPException(403, "You are not linked to an agency. Ask your agency to add you to their roster.")
+    today = qatar_today()
+    rows = db.query(SupplierResponse, ManpowerRequest).join(
+        ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id
+    ).filter(
+        SupplierResponse.supplier_id == worker.supplier_id,
+        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES),
+        ManpowerRequest.site_id == site_id,
+        ManpowerRequest.status != "CANCELLED",
+    ).order_by(ManpowerRequest.start_time.asc()).all()
+    shifts = [(sr, mr) for sr, mr in rows if shift_is_current(mr.required_date, mr.start_time, mr.end_time, today)]
+    if not shifts:
+        raise HTTPException(403, "Your agency does not have a confirmed shift at this location today.")
+    for sr, mr in shifts:
+        if checked_in_count(db, sr.id) < (sr.confirmed_quantity or 0):
+            return sr, mr
+    total = sum(sr.confirmed_quantity or 0 for sr, _ in shifts)
+    raise HTTPException(403, f"All {total} place(s) your agency confirmed at this location today are already checked in.")
+
+
 def site_summary(site: Site) -> dict:
     return {
         "id": site.id,
@@ -99,15 +133,15 @@ def test_venues(db: Session = Depends(get_db), current_user: User = Depends(requ
     if not worker:
         return []
     venues = []
-    rows = db.query(WorkerAssignment, SupplierResponse, ManpowerRequest).join(
-        SupplierResponse, WorkerAssignment.supplier_response_id == SupplierResponse.id
-    ).join(ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id).filter(
-        WorkerAssignment.worker_id == worker.id, WorkerAssignment.status == "ASSIGNED",
+    rows = db.query(SupplierResponse, ManpowerRequest).join(
+        ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id
+    ).filter(
+        SupplierResponse.supplier_id == worker.supplier_id,
         SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES), ManpowerRequest.status != "CANCELLED",
     ).all()
     today = qatar_today()
     seen = set()
-    for _, _, m in rows:
+    for _, m in rows:
         if m.site_id in seen or not shift_is_current(m.required_date, m.start_time, m.end_time, today):
             continue
         site = db.query(Site).filter(Site.id == m.site_id, Site.qr_status == "ACTIVE").first()
@@ -133,11 +167,15 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
     if not worker:
         raise HTTPException(400, "Worker profile missing.")
 
-    # The worker's own assignment to a confirmed shift at this venue, today (Qatar time)
+    # A shift this worker already holds here today, else a free place on their agency's confirmed shift.
+    # The place is only claimed once every check below has passed.
     wa, sr, mr = find_current_assignment(db, worker.id, assignment_site.id)
     if not wa:
-        log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "not_assigned"})
-        raise HTTPException(403, "You are not assigned to a shift at this location today. Ask your agency to assign you to the shift.")
+        try:
+            sr, mr = find_agency_shift(db, worker, assignment_site.id)
+        except HTTPException as e:
+            log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "no_agency_place"})
+            raise e
     
     # Check Geofence
     if assignment_site.latitude is not None and assignment_site.longitude is not None:
@@ -148,7 +186,7 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
             raise HTTPException(400, f"Geolocation mismatch: You are {int(dist)}m away from {assignment_site.name} (allowed: {int(allowed_radius)}m). You must be physically at the location to check in.")
         
     # Duplicate attendance
-    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first()
+    att = db.query(Attendance).filter(Attendance.worker_assignment_id == wa.id).first() if wa else None
     if att and att.check_in_time:
         raise HTTPException(400, "Already checked in for this shift.")
         
@@ -196,6 +234,16 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
     if not is_unique:
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "duplicate_identity"})
         raise HTTPException(400, dup_msg or "Attendance has already been recorded for this identity today under another worker profile.")
+
+    # Claim the agency place now that every check passed. Lock the response row so two drivers
+    # arriving together can't both take the last place.
+    if not wa:
+        db.query(SupplierResponse).with_for_update().filter(SupplierResponse.id == sr.id).first()
+        if checked_in_count(db, sr.id) >= (sr.confirmed_quantity or 0):
+            raise HTTPException(403, "Your agency's confirmed places for this shift have just been filled.")
+        wa = WorkerAssignment(supplier_response_id=sr.id, worker_id=worker.id, status="ASSIGNED")
+        db.add(wa)
+        db.flush()
 
     # Atomically create attendance
     if not att:
@@ -419,8 +467,8 @@ def get_location_shifts(
                 "worker_name": f"{wrk.first_name} {wrk.last_name}",
                 "internal_worker_id": wrk.internal_worker_id,
                 "supplier_name": sup.name,
-                "check_in_time": a.check_in_time.isoformat() if a and a.check_in_time else None,
-                "check_out_time": a.check_out_time.isoformat() if a and a.check_out_time else None,
+                "check_in_time": utc_iso(a.check_in_time) if a and a.check_in_time else None,
+                "check_out_time": utc_iso(a.check_out_time) if a and a.check_out_time else None,
                 "status": a.status if a else "SCHEDULED"
             })
 
@@ -461,6 +509,7 @@ def get_supplier_live_attendance(
         .outerjoin(Attendance, Attendance.worker_assignment_id == WorkerAssignment.id)\
         .filter(
             SupplierResponse.supplier_id == current_user.supplier_id,
+            WorkerAssignment.status == "ASSIGNED",
             func.date(ManpowerRequest.required_date) == filter_date
         ).all()
 
@@ -486,13 +535,90 @@ def get_supplier_live_attendance(
             "phone": wrk.whatsapp_number or wrk.phone or "",
             "site_name": site.name,
             "shift_window": f"{mr.start_time} - {mr.end_time}",
-            "check_in_time": a.check_in_time.isoformat() if a and a.check_in_time else None,
-            "check_out_time": a.check_out_time.isoformat() if a and a.check_out_time else None,
+            "check_in_time": utc_iso(a.check_in_time) if a and a.check_in_time else None,
+            "check_out_time": utc_iso(a.check_out_time) if a and a.check_out_time else None,
             "duty_hours": duty_hours,
             "status": status_label
         })
 
     return results
+
+
+def shift_headcount(db: Session, sr: SupplierResponse) -> dict:
+    """Confirmed places of one agency shift against the drivers who actually showed up."""
+    rows = db.query(WorkerAssignment, Attendance, Worker).join(
+        Attendance, Attendance.worker_assignment_id == WorkerAssignment.id
+    ).join(Worker, WorkerAssignment.worker_id == Worker.id).filter(
+        WorkerAssignment.supplier_response_id == sr.id,
+        WorkerAssignment.status == "ASSIGNED",
+        Attendance.check_in_time.isnot(None),
+    ).order_by(Attendance.check_in_time.asc()).all()
+    confirmed = sr.confirmed_quantity or 0
+    finished = sum(1 for _, a, _ in rows if a.check_out_time)
+    drivers = [{
+        "worker_id": w.id,
+        "name": f"{w.first_name} {w.last_name}",
+        "internal_worker_id": w.internal_worker_id,
+        "qid": w.qid,
+        "check_in_time": a.check_in_time.replace(tzinfo=timezone.utc).isoformat(),
+        "check_out_time": a.check_out_time.replace(tzinfo=timezone.utc).isoformat() if a.check_out_time else None,
+        "status": "SHIFT_ENDED" if a.check_out_time else "ON_DUTY",
+    } for _, a, w in rows]
+    return {
+        "response_id": sr.id,
+        "confirmed": confirmed,
+        "checked_in": len(rows),
+        "on_duty": len(rows) - finished,
+        "finished": finished,
+        "missing": max(0, confirmed - len(rows)),
+        "drivers": drivers,
+    }
+
+
+@router.get("/response/{response_id}/headcount")
+def get_response_headcount(response_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """How many of an agency's confirmed drivers checked in for one shift, and who."""
+    sr = db.query(SupplierResponse).filter(SupplierResponse.id == response_id).first()
+    if not sr:
+        raise HTTPException(404, "Response not found")
+    if current_user.role == RoleEnum.SUPPLIER_HEAD:
+        if sr.supplier_id != current_user.supplier_id:
+            raise HTTPException(403, "Not your response")
+    elif current_user.role == RoleEnum.OPS_MANAGER:
+        mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
+        site = db.query(Site).filter(Site.id == mr.site_id).first() if mr else None
+        if not ops_can_see_request(current_user, mr, site):
+            raise HTTPException(403, "Forbidden")
+    elif current_user.role not in [RoleEnum.SUPER_ADMIN, RoleEnum.GENERAL_MANAGER, RoleEnum.ACCOUNTING]:
+        raise HTTPException(403, "Forbidden")
+    return shift_headcount(db, sr)
+
+
+@router.get("/supplier-shifts")
+def get_supplier_shift_headcounts(
+    target_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))
+):
+    """The agency's confirmed shifts for a day: places confirmed, checked in, on duty, finished and missing."""
+    try:
+        filter_date = datetime.strptime(target_date, "%Y-%m-%d").date() if target_date else qatar_today()
+    except ValueError:
+        raise HTTPException(400, "Date must be in YYYY-MM-DD format.")
+    rows = db.query(SupplierResponse, ManpowerRequest, Site).join(
+        ManpowerRequest, SupplierResponse.manpower_request_id == ManpowerRequest.id
+    ).join(Site, ManpowerRequest.site_id == Site.id).filter(
+        SupplierResponse.supplier_id == current_user.supplier_id,
+        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES),
+        ManpowerRequest.status != "CANCELLED",
+        func.date(ManpowerRequest.required_date) == filter_date,
+    ).order_by(ManpowerRequest.start_time.asc()).all()
+    return [{
+        "request_id": mr.id,
+        "site_name": site.name,
+        "shift_window": f"{mr.start_time} - {mr.end_time}",
+        **shift_headcount(db, sr),
+    } for sr, mr, site in rows]
 
 
 # ---------------------------------------------------------------------------

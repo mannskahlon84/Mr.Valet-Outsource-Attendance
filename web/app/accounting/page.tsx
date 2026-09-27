@@ -169,11 +169,11 @@ export default function AccountingSummary() {
                             <div className="text-xs text-emerald-600 mt-1">{dailyData?.total_daily_workers || 0} started · {dailyData?.total_completed || 0} finished</div>
                         </div>
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                            <div className="text-xs font-bold uppercase text-gray-400">Drivers Scheduled</div>
+                            <div className="text-xs font-bold uppercase text-gray-400">Drivers Confirmed</div>
                             <div className="text-2xl sm:text-3xl font-black text-gray-900 mt-2">
                                 {dailyData?.total_scheduled || 0}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">{dailyData?.total_assigned || 0} named drivers assigned</div>
+                            <div className={`text-xs mt-1 ${(dailyData?.total_missing || 0) > 0 ? 'text-rose-600 font-bold' : 'text-gray-500'}`}>{dailyData?.total_missing || 0} missing (not checked in)</div>
                         </div>
                         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                             <div className="text-xs font-bold uppercase text-gray-400">Agencies Working</div>
@@ -198,7 +198,7 @@ export default function AccountingSummary() {
                                     <tr>
                                         <th className="px-5 py-3 text-left">Supplier Agency</th>
                                         <th className="px-5 py-3 text-left">Deployed Locations</th>
-                                        <th className="px-5 py-3 text-center">Scheduled / Assigned</th>
+                                        <th className="px-5 py-3 text-center">Confirmed / Checked in</th>
                                         <th className="px-5 py-3 text-center">Started Shift</th>
                                         <th className="px-5 py-3 text-center">Ended Shift</th>
                                         <th className="px-5 py-3 text-center">Duty Hours</th>
@@ -227,7 +227,8 @@ export default function AccountingSummary() {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-center font-bold text-gray-800">
-                                                {sup.total_workers_allocated} / {sup.assigned_workers_count}
+                                                {sup.total_workers_allocated} / {sup.started_shift_count}
+                                                {sup.missing_count > 0 && <div className="text-[11px] font-bold text-rose-600">{sup.missing_count} missing</div>}
                                             </td>
                                             <td className="px-5 py-4 text-center">
                                                 <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">

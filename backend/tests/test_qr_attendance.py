@@ -79,7 +79,7 @@ def test_qr_security_checks(client, db):
     # c. QR from another location -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.0, "longitude": 30.0, "accuracy": 10, "qr_data": qr_token_1, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
     assert res.status_code == 403
-    assert "not assigned to a shift at this location" in res.json()["detail"]
+    assert "does not have a confirmed shift at this location today" in res.json()["detail"]
     
     # d. Correct QR + GPS outside geofence -> rejected
     res = client.post("/api/v1/attendance/check-in", json={"assignment_id": assign_id, "latitude": 30.01, "longitude": 30.01, "accuracy": 10, "qr_data": qr_token_2, "live_face_image": "FAKE_BASE64_IMAGE"}, headers=w_headers)
