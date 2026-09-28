@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Mr. Valet Manpower Control — one-time server setup for Ubuntu 24.04 (Contabo VPS).
 #
-#   curl -fsSLO https://raw.githubusercontent.com/mannskahlon84/Mr.Valet-Outsource-Attendance/ui-redesign/deploy/setup.sh
+#   curl -fsSLO https://raw.githubusercontent.com/mannskahlon84/Mr.Valet-Outsource-Attendance/main/deploy/setup.sh
 #   sudo bash setup.sh
 #
 # Installs and configures, all on this one server:

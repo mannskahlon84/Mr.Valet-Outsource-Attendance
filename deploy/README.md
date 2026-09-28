@@ -18,7 +18,7 @@ At your DNS provider, create an **A record** for the app's domain (e.g. `app.mrv
 ## 2. Run the setup (on the server, as root)
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/mannskahlon84/Mr.Valet-Outsource-Attendance/ui-redesign/deploy/setup.sh
+curl -fsSLO https://raw.githubusercontent.com/mannskahlon84/Mr.Valet-Outsource-Attendance/main/deploy/setup.sh
 sudo bash setup.sh
 ```
 
