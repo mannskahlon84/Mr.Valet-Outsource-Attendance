@@ -52,6 +52,8 @@ if ! command -v psql >/dev/null || ! psql --version | grep -q " 17"; then
         > /etc/apt/sources.list.d/pgdg.list
     apt-get update -y
     apt-get install -y postgresql-17 postgresql-client-17
+    # Newest client tools too, to copy data from newer hosted databases (Render runs PostgreSQL 18)
+    apt-get install -y postgresql-client-18 || true
 fi
 
 if ! command -v node >/dev/null || [ "$(node -v | sed 's/v\([0-9]*\).*/\1/')" -lt 20 ]; then
@@ -273,15 +275,18 @@ set -euo pipefail
 SRC="\$1"
 case "\$SRC" in *sslmode=*) ;; *\?*) SRC="\$SRC&sslmode=require" ;; *) SRC="\$SRC?sslmode=require" ;; esac
 DUMP=/tmp/render-\$(date +%s).dump
-echo "Downloading from Render..."
-pg_dump -Fc --no-owner --no-acl "\$SRC" -f "\$DUMP"
+# Use the newest installed PostgreSQL tools: pg_dump refuses to copy from a newer server
+# (Render runs PostgreSQL 18), and Ubuntu's default wrapper picks the local server's version.
+PGBIN="\$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
+echo "Downloading from Render (tools: \$PGBIN)..."
+"\$PGBIN/pg_dump" -Fc --no-owner --no-acl "\$SRC" -f "\$DUMP"
 /usr/local/bin/mrvalet-backup
 systemctl stop mrvalet-web mrvalet-backend
 echo "Replacing local data..."
 sudo -u postgres dropdb --if-exists ${DB_NAME}
 sudo -u postgres createdb -O ${DB_USER} ${DB_NAME}
 chmod 644 "\$DUMP"
-sudo -u postgres pg_restore --no-owner --role=${DB_USER} -d ${DB_NAME} "\$DUMP" || echo "(pg_restore reported warnings; checking the result below)"
+sudo -u postgres "\$PGBIN/pg_restore" --no-owner --role=${DB_USER} -d ${DB_NAME} "\$DUMP" || echo "(pg_restore reported warnings; checking the result below)"
 rm -f "\$DUMP"
 systemctl start mrvalet-backend mrvalet-web
 sleep 3
