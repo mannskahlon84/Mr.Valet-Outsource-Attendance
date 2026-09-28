@@ -241,7 +241,8 @@ cat > /usr/local/bin/mrvalet-backup <<EOF
 #!/usr/bin/env bash
 # Daily database backup, kept for 14 days
 set -euo pipefail
-install -d -m 700 ${BACKUP_DIR}
+# Owned by postgres: the dump runs as the postgres user
+install -d -m 700 -o postgres -g postgres ${BACKUP_DIR}
 sudo -u postgres pg_dump -Fc ${DB_NAME} -f "${BACKUP_DIR}/${DB_NAME}-\$(date +%F-%H%M).dump"
 find ${BACKUP_DIR} -name '*.dump' -mtime +14 -delete
 echo "Backup written to ${BACKUP_DIR}"
