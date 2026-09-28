@@ -48,5 +48,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!api|_next/static|_next/image|favicon.ico|logo.*|file.svg|globe.svg|window.svg).*)'],
+    // Icons and the link-preview image are public: browsers and link previews fetch them signed out
+    matcher: ['/((?!api|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image|logo.*|file.svg|globe.svg|window.svg).*)'],
 };
