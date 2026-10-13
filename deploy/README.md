@@ -15,7 +15,18 @@ Only SSH, HTTP and HTTPS are open in the firewall. The database is backed up dai
 At your DNS provider, create an **A record** for the app's domain (e.g. `app.mrvalet.com`) pointing to
 `207.180.209.178`. HTTPS is required: phones only allow the camera (selfie, QR scan) and GPS on `https://` sites.
 
-## 2. Run the setup (on the server, as root)
+## 2. Add your SSH key (from your own computer)
+
+The setup switches SSH to key-only logins, so put your public key on the server first
+(create one with `ssh-keygen -t ed25519` if you have none):
+
+```bash
+ssh-copy-id -i ~/.ssh/id_ed25519.pub root@207.180.209.178
+```
+
+Without a key the setup still works but leaves password logins on (it prints a warning).
+
+## 3. Run the setup (on the server, as root)
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/mannskahlon84/Mr.Valet-Outsource-Attendance/main/deploy/setup.sh
@@ -25,7 +36,7 @@ sudo bash setup.sh
 It asks for the domain, an email for certificate notices, and the branch (`main` or `ui-redesign`).
 It takes about 10 minutes, mostly the web build. Running it again is safe: secrets and data are kept.
 
-## 3. Copy the data from Render
+## 4. Copy the data from Render
 
 In the Render dashboard open the PostgreSQL database → **Connect** → copy the **External Database URL**, then:
 
