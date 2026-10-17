@@ -2,6 +2,7 @@
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api';
+import { X } from 'lucide-react';
 import { validateQatarIdClient } from '@/lib/qidValidator';
 
 export default function SupplierWorkers() {
@@ -227,7 +228,7 @@ export default function SupplierWorkers() {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 my-8">
                         <div className="flex justify-between items-center border-b pb-3">
                             <h3 className="font-bold text-lg text-[#1a1a1a]">Enroll New Valet Driver</h3>
-                            <button onClick={() => setShowModal(false)} className="text-[#1a1a1a]/40 hover:text-[#1a1a1a]/65 text-xl font-bold p-1"></button>
+                            <button type="button" onClick={() => setShowModal(false)} aria-label="Close" className="rounded-lg p-1 text-[#1a1a1a]/40 hover:bg-[#1a1a1a]/5 hover:text-[#1a1a1a]/65"><X className="h-5 w-5" /></button>
                         </div>
 
                         {error && (

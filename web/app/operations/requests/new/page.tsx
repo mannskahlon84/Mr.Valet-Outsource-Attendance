@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchApi } from '@/lib/api';
+import { Trash2, X } from 'lucide-react';
 
 interface RouteAllocation {
     supplier_id: string;
@@ -316,7 +317,7 @@ export default function NewShiftRequest() {
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-medium flex items-center justify-between">
                     <span>{error}</span>
-                    <button onClick={() => setError('')} className="text-red-500 font-bold ml-2"></button>
+                    <button type="button" onClick={() => setError('')} aria-label="Dismiss" className="ml-2 rounded p-1 text-red-500 hover:bg-red-100 hover:text-red-700"><X className="h-4 w-4" /></button>
                 </div>
             )}
 
@@ -554,9 +555,9 @@ export default function NewShiftRequest() {
                                             {shift.routes.map((rt, rIdx) => (
                                                 <div 
                                                     key={rIdx} 
-                                                    className="flex items-center gap-3 bg-[#f6f4ef]/60 p-3 rounded-lg border border-[#1a1a1a]/[0.08]"
+                                                    className="flex items-center gap-2 sm:gap-3 bg-[#f6f4ef]/60 p-3 rounded-lg border border-[#1a1a1a]/[0.08]"
                                                 >
-                                                    <div className="flex-1">
+                                                    <div className="min-w-0 flex-1">
                                                         <select 
                                                             value={rt.supplier_id} 
                                                             onChange={e => updateRoute(sIdx, rIdx, 'supplier_id', e.target.value)}
@@ -573,7 +574,7 @@ export default function NewShiftRequest() {
                                                         </select>
                                                     </div>
 
-                                                    <div className="w-36">
+                                                    <div className="w-20 shrink-0 sm:w-36">
                                                         <input 
                                                             type="number" 
                                                             min="1" 
@@ -589,10 +590,12 @@ export default function NewShiftRequest() {
                                                         <button 
                                                             type="button" 
                                                             onClick={() => removeRoute(sIdx, rIdx)} 
-                                                            className="text-red-500 hover:text-red-700 p-1.5 text-xs font-bold rounded hover:bg-red-50 transition-colors"
-                                                            title="Remove Agency"
+                                                            className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+                                                            title="Remove this agency"
+                                                            aria-label="Remove this agency"
                                                         >
-                                                            
+                                                            <Trash2 className="h-4 w-4" />
+                                                            <span className="hidden sm:inline">Remove</span>
                                                         </button>
                                                     )}
                                                 </div>

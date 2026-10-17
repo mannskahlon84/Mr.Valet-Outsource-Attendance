@@ -2,6 +2,7 @@
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { calendarDate, qatarTime } from '@/lib/time';
 import { useEffect, useState, use } from 'react';
+import { X } from 'lucide-react';
 import Link from 'next/link';
 import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
@@ -307,7 +308,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-[#1a1a1a]/[0.05]">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-bold text-[#1a1a1a]">Decline Shift Request</h3>
-                            <button onClick={() => setShowRejectModal(false)} className="text-[#1a1a1a]/40 hover:text-[#1a1a1a]/65 font-bold text-lg"></button>
+                            <button type="button" onClick={() => setShowRejectModal(false)} aria-label="Close" className="rounded-lg p-1 text-[#1a1a1a]/40 hover:bg-[#1a1a1a]/5 hover:text-[#1a1a1a]/65"><X className="h-5 w-5" /></button>
                         </div>
                         <p className="text-xs text-[#1a1a1a]/55">
                             Let Operations know why your agency cannot supply staff for this shift. This will instantly notify the Operations Manager.
