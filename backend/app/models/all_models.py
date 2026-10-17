@@ -256,3 +256,18 @@ class LoginAttempt(Base):
     ip_address = Column(String, nullable=True, index=True)
     success = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SupplierTopUpOffer(Base):
+    """Extra drivers an agency offers after Operations already finalized its answer
+    (e.g. 7 of 10 accepted, then the agency finds 3 more). Operations accepts or declines."""
+    __tablename__ = "supplier_topup_offers"
+    id = Column(Integer, primary_key=True, index=True)
+    supplier_response_id = Column(Integer, ForeignKey("supplier_responses.id"), nullable=False, index=True)
+    extra_quantity = Column(Integer, nullable=False)
+    message = Column(Text, nullable=True)
+    status = Column(String, nullable=False, default="PENDING")  # PENDING, ACCEPTED, DECLINED, WITHDRAWN
+    decision_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    decided_at = Column(DateTime, nullable=True)
+    decided_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)

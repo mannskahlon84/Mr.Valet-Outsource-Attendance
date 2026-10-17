@@ -117,10 +117,20 @@ def alembic_revision(engine):
         return conn.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
 
 
+def head_revision():
+    """The newest migration, so these tests don't need editing each time one is added."""
+    from alembic.script import ScriptDirectory
+    from app.db.migrate import BACKEND_DIR, alembic_config
+    import os
+    cfg = alembic_config(None)
+    cfg.set_main_option("script_location", os.path.join(BACKEND_DIR, "alembic"))
+    return ScriptDirectory.from_config(cfg).get_current_head()
+
+
 def test_migrations_build_a_new_database(monkeypatch, tmp_path):
     engine = migrate(monkeypatch, f"sqlite:///{tmp_path}/fresh.db")
     assert set(Base.metadata.tables) <= set(inspect(engine).get_table_names())
-    assert alembic_revision(engine) == "0002_login_attempts_indexes"
+    assert alembic_revision(engine) == head_revision()
 
 
 def test_migrations_upgrade_a_pre_migration_production_database(monkeypatch, tmp_path):
@@ -138,7 +148,7 @@ def test_migrations_upgrade_a_pre_migration_production_database(monkeypatch, tmp
 
     engine = migrate(monkeypatch, url)
     assert "login_attempts" in inspect(engine).get_table_names()
-    assert alembic_revision(engine) == "0002_login_attempts_indexes"
+    assert alembic_revision(engine) == head_revision()
     # Running again on every restart is a no-op
     migrate(monkeypatch, url)
-    assert alembic_revision(engine) == "0002_login_attempts_indexes"
+    assert alembic_revision(engine) == head_revision()

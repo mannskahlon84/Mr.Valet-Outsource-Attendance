@@ -285,6 +285,14 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
             confirmed_by_req[sr.manpower_request_id] = confirmed_by_req.get(sr.manpower_request_id, 0) + (sr.confirmed_quantity or 0)
         elif sr.status in ("COUNTER_PROPOSED", "PARTIAL"):
             offered_by_req[sr.manpower_request_id] = offered_by_req.get(sr.manpower_request_id, 0) + (sr.confirmed_quantity or 0)
+    # Extra drivers offered after finalization also wait for the ops manager's answer
+    if responses:
+        from app.models.all_models import SupplierTopUpOffer
+        req_by_response = {sr.id: sr.manpower_request_id for sr in responses}
+        for o in db.query(SupplierTopUpOffer).filter(SupplierTopUpOffer.supplier_response_id.in_(req_by_response),
+                                                     SupplierTopUpOffer.status == "PENDING").all():
+            rid = req_by_response[o.supplier_response_id]
+            offered_by_req[rid] = offered_by_req.get(rid, 0) + o.extra_quantity
 
     responses_by_req = {}
     for sr in responses:
@@ -505,6 +513,14 @@ def respond_to_request(request_id: int, update: SupplierResponseUpdate, db: Sess
     
     mr = db.query(ManpowerRequest).filter(ManpowerRequest.id == sr.manpower_request_id).first()
     ensure_supplier_can_respond(sr, mr, update)
+    if update.confirmed_quantity > (mr.total_required_workers or 0):
+        raise HTTPException(400, f"This request only needs {mr.total_required_workers} drivers.")
+    # Sending the same answer again would only re-notify Operations
+    same_times = ((update.proposed_start_time or mr.start_time) == (sr.proposed_start_time or mr.start_time)
+                  and (update.proposed_end_time or mr.end_time) == (sr.proposed_end_time or mr.end_time))
+    if (sr.status == update.status and sr.confirmed_quantity == update.confirmed_quantity and same_times
+            and (update.supplier_message or "") == (sr.supplier_message or "")):
+        raise HTTPException(400, "This response was already sent to Operations. Change the headcount, times or note to send a new one.")
     
     old_state = {"status": sr.status, "confirmed": sr.confirmed_quantity}
     sr.status = update.status
@@ -686,3 +702,182 @@ def check_shortfalls(db: Session = Depends(get_db), current_user: User = Depends
 
     db.commit()
     return {"status": "Shortfall check completed", "shortfalls_detected": len(details), "details": details}
+
+
+# --- Extra drivers after Operations finalized an agency's answer -------------------------------
+# An agency approved for 7 of 10 can later offer the 3 it found; Operations accepts or declines.
+from app.models.all_models import SupplierTopUpOffer
+from app.schemas.request import TopUpOfferCreate, TopUpOfferDecision
+from app.core.timeutil import qatar_today
+
+
+def open_places(db: Session, mr: ManpowerRequest) -> int:
+    """Drivers still needed: required minus every agency's confirmed drivers."""
+    from app.api.routers.attendance import CONFIRMED_RESPONSE_STATUSES
+    confirmed = sum((sr.confirmed_quantity or 0) for sr in db.query(SupplierResponse).filter(
+        SupplierResponse.manpower_request_id == mr.id,
+        SupplierResponse.status.in_(CONFIRMED_RESPONSE_STATUSES),
+    ).all())
+    return max(0, (mr.total_required_workers or 0) - confirmed)
+
+
+def topup_json(o: SupplierTopUpOffer, sr: SupplierResponse, supplier_name: str) -> dict:
+    return {
+        "id": o.id,
+        "supplier_response_id": o.supplier_response_id,
+        "supplier_id": sr.supplier_id,
+        "supplier_name": supplier_name,
+        "extra_quantity": o.extra_quantity,
+        "message": o.message,
+        "status": o.status,
+        "decision_note": o.decision_note,
+        "created_at": o.created_at.isoformat() if o.created_at else None,
+        "decided_at": o.decided_at.isoformat() if o.decided_at else None,
+    }
+
+
+def load_request_for(db: Session, request_id: int, user: User, lock: bool = False) -> ManpowerRequest:
+    q = db.query(ManpowerRequest)
+    if lock:
+        q = q.with_for_update()
+    mr = q.filter(ManpowerRequest.id == request_id).first()
+    if not mr:
+        raise HTTPException(404, "Request not found")
+    ensure_request_access(db, user, mr)
+    return mr
+
+
+def site_label(db: Session, mr: ManpowerRequest) -> str:
+    site = db.query(Site).filter(Site.id == mr.site_id).first()
+    return site.name if site else f"Location #{mr.site_id}"
+
+
+@router.get("/{request_id}/topups")
+def list_topup_offers(request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    mr = load_request_for(db, request_id, current_user)
+    q = db.query(SupplierTopUpOffer, SupplierResponse).join(
+        SupplierResponse, SupplierTopUpOffer.supplier_response_id == SupplierResponse.id
+    ).filter(SupplierResponse.manpower_request_id == mr.id)
+    if current_user.role == RoleEnum.SUPPLIER_HEAD:
+        q = q.filter(SupplierResponse.supplier_id == current_user.supplier_id)
+    rows = q.order_by(SupplierTopUpOffer.id.desc()).all()
+    names = {s.id: s.name for s in db.query(Supplier).filter(Supplier.id.in_({sr.supplier_id for _, sr in rows})).all()} if rows else {}
+    return {
+        "open_places": open_places(db, mr),
+        "shift_passed": bool(mr.required_date and mr.required_date.date() < qatar_today()),
+        "offers": [topup_json(o, sr, names.get(sr.supplier_id, f"Supplier #{sr.supplier_id}")) for o, sr in rows],
+    }
+
+
+@router.post("/{request_id}/topups")
+def create_topup_offer(request_id: int, payload: TopUpOfferCreate, db: Session = Depends(get_db),
+                       current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
+    mr = load_request_for(db, request_id, current_user, lock=True)
+    if mr.status == "CANCELLED":
+        raise HTTPException(400, "This request was cancelled.")
+    if mr.required_date and mr.required_date.date() < qatar_today():
+        raise HTTPException(400, "This shift date has already passed.")
+    sr = db.query(SupplierResponse).filter(
+        SupplierResponse.manpower_request_id == mr.id,
+        SupplierResponse.supplier_id == current_user.supplier_id,
+    ).first()
+    if not sr:
+        raise HTTPException(404, "Your agency has no response on this request.")
+    if sr.status != "ACCEPTED_BY_OM":
+        raise HTTPException(400, "Operations hasn't finalized your answer yet, so change your proposal instead.")
+    pending = db.query(SupplierTopUpOffer).filter(
+        SupplierTopUpOffer.supplier_response_id == sr.id, SupplierTopUpOffer.status == "PENDING"
+    ).first()
+    if pending:
+        raise HTTPException(400, f"You already offered {pending.extra_quantity} more driver(s) and Operations hasn't answered yet. Withdraw that offer to change the number.")
+    still_needed = open_places(db, mr)
+    if still_needed == 0:
+        raise HTTPException(400, "This request is already fully staffed.")
+    if payload.extra_quantity > still_needed:
+        raise HTTPException(400, f"Only {still_needed} more driver(s) are still needed on this request.")
+
+    offer = SupplierTopUpOffer(supplier_response_id=sr.id, extra_quantity=payload.extra_quantity,
+                               message=(payload.message or "").strip() or None, status="PENDING")
+    db.add(offer)
+    db.flush()
+    sup = db.query(Supplier).filter(Supplier.id == sr.supplier_id).first()
+    sup_name = sup.name if sup else f"Agency #{sr.supplier_id}"
+    if mr.ops_manager_id:
+        db.add(Notification(
+            user_id=mr.ops_manager_id,
+            title=f"➕ Extra drivers offered: {site_label(db, mr)}",
+            message=f"{sup_name} can supply {offer.extra_quantity} more driver(s) on Request #{mr.id} (now {sr.confirmed_quantity}). Accept or decline the offer on the request.",
+            entity_type="MANPOWER_REQUEST",
+            entity_id=mr.id,
+        ))
+    db.commit()
+    log_audit_event(db, current_user.id, current_user.role.value, "topup_offered", "supplier_topup_offers", offer.id,
+                    None, {"request_id": mr.id, "extra_quantity": offer.extra_quantity})
+    return topup_json(offer, sr, sup_name)
+
+
+@router.post("/{request_id}/topups/{offer_id}/withdraw")
+def withdraw_topup_offer(request_id: int, offer_id: int, db: Session = Depends(get_db),
+                         current_user: User = Depends(require_role([RoleEnum.SUPPLIER_HEAD]))):
+    mr = load_request_for(db, request_id, current_user)
+    offer = db.query(SupplierTopUpOffer).with_for_update().filter(SupplierTopUpOffer.id == offer_id).first()
+    sr = db.query(SupplierResponse).filter(SupplierResponse.id == offer.supplier_response_id).first() if offer else None
+    if not offer or sr.manpower_request_id != mr.id or sr.supplier_id != current_user.supplier_id:
+        raise HTTPException(404, "Offer not found")
+    if offer.status != "PENDING":
+        raise HTTPException(400, f"Operations already {offer.status.lower()} this offer.")
+    offer.status = "WITHDRAWN"
+    offer.decided_at = datetime.utcnow()
+    if mr.ops_manager_id:
+        sup = db.query(Supplier).filter(Supplier.id == sr.supplier_id).first()
+        db.add(Notification(
+            user_id=mr.ops_manager_id,
+            title=f"↩️ Extra-driver offer withdrawn: {site_label(db, mr)}",
+            message=f"{sup.name if sup else 'The agency'} withdrew its offer of {offer.extra_quantity} more driver(s) on Request #{mr.id}.",
+            entity_type="MANPOWER_REQUEST",
+            entity_id=mr.id,
+        ))
+    db.commit()
+    log_audit_event(db, current_user.id, current_user.role.value, "topup_withdrawn", "supplier_topup_offers", offer.id,
+                    {"status": "PENDING"}, {"status": "WITHDRAWN"})
+    return {"message": "Offer withdrawn"}
+
+
+@router.post("/{request_id}/topups/{offer_id}/decide")
+def decide_topup_offer(request_id: int, offer_id: int, payload: TopUpOfferDecision, db: Session = Depends(get_db),
+                       current_user: User = Depends(require_role([RoleEnum.OPS_MANAGER, RoleEnum.SUPER_ADMIN]))):
+    mr = load_request_for(db, request_id, current_user, lock=True)
+    offer = db.query(SupplierTopUpOffer).with_for_update().filter(SupplierTopUpOffer.id == offer_id).first()
+    sr = db.query(SupplierResponse).with_for_update().filter(SupplierResponse.id == offer.supplier_response_id).first() if offer else None
+    if not offer or sr.manpower_request_id != mr.id:
+        raise HTTPException(404, "Offer not found")
+    if offer.status != "PENDING":
+        raise HTTPException(400, f"This offer was already {offer.status.lower()}.")
+    if mr.status == "CANCELLED":
+        raise HTTPException(400, "This request was cancelled.")
+
+    site_name = site_label(db, mr)
+    old_state = {"status": offer.status, "confirmed": sr.confirmed_quantity}
+    if payload.accept:
+        if sr.status != "ACCEPTED_BY_OM":
+            raise HTTPException(400, "The agency's answer is no longer finalized, so this offer can't be added.")
+        still_needed = open_places(db, mr)
+        if offer.extra_quantity > still_needed:
+            raise HTTPException(409, f"Only {still_needed} more driver(s) are needed now (another agency may have filled places). Decline this offer or ask the agency for a smaller number.")
+        sr.confirmed_quantity = (sr.confirmed_quantity or 0) + offer.extra_quantity
+        offer.status = "ACCEPTED"
+        mr.status = "CONFIRMED" if still_needed - offer.extra_quantity == 0 else "PARTIALLY_CONFIRMED"
+        title = f"✅ Extra drivers accepted: {site_name}"
+        message = f"Operations accepted your {offer.extra_quantity} extra driver(s) on Request #{mr.id}. You now supply {sr.confirmed_quantity}; assign the new drivers to the shift."
+    else:
+        offer.status = "DECLINED"
+        title = f"❌ Extra drivers declined: {site_name}"
+        message = f"Operations declined your offer of {offer.extra_quantity} more driver(s) on Request #{mr.id}." + (f" Reason: {payload.note.strip()}" if payload.note and payload.note.strip() else "")
+    offer.decision_note = (payload.note or "").strip() or None
+    offer.decided_at = datetime.utcnow()
+    offer.decided_by_id = current_user.id
+    db.add(Notification(supplier_id=sr.supplier_id, title=title, message=message, entity_type="MANPOWER_REQUEST", entity_id=mr.id))
+    db.commit()
+    log_audit_event(db, current_user.id, current_user.role.value, f"topup_{offer.status.lower()}", "supplier_topup_offers", offer.id,
+                    old_state, {"status": offer.status, "confirmed": sr.confirmed_quantity})
+    return {"message": f"Offer {offer.status.lower()}", "confirmed_quantity": sr.confirmed_quantity, "request_status": mr.status}

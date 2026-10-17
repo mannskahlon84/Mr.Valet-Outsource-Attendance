@@ -51,3 +51,15 @@ class FinalizeResponseRequest(BaseModel):
     accepted_start_time: str
     accepted_end_time: str
     last_seen_responded_at: Optional[datetime] = None
+
+
+class TopUpOfferCreate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    extra_quantity: int = Field(..., ge=1)
+    message: Optional[str] = None
+
+
+class TopUpOfferDecision(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    accept: bool
+    note: Optional[str] = None

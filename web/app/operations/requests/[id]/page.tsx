@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
 import StatusBadge from '@/components/ui/StatusBadge';
+import TopUpOfferReview from '@/components/operations/TopUpOfferReview';
+import type { TopUpState } from '@/components/supplier/TopUpOfferPanel';
 
 export default function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
@@ -13,6 +15,7 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
 
     const [request, setRequest] = useState<any>(null);
     const [responses, setResponses] = useState<any[]>([]);
+    const [topups, setTopups] = useState<TopUpState | null>(null);
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [sites, setSites] = useState<any[]>([]);
     const [messages, setMessages] = useState<any[]>([]);
@@ -37,6 +40,8 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                 tryFetch(`/requests/${requestId}/messages`),
                 tryFetch(`/requests/${requestId}/responses`, onError)
             ]);
+            const extra = await tryFetch<TopUpState>(`/requests/${requestId}/topups`);
+            if (extra) setTopups(extra);
 
             // Only a successful answer can change what is shown; a failed refresh keeps the request
             if (Array.isArray(allReqs)) {
@@ -340,6 +345,12 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
                                         )}
                                     </div>
                                 </div>
+                                <TopUpOfferReview
+                                    requestId={requestId}
+                                    offers={(topups?.offers || []).filter(o => o.supplier_response_id === resp.id)}
+                                    openPlaces={topups?.open_places ?? 0}
+                                    onDecided={loadData}
+                                />
                             </div>
                         );
                     })}

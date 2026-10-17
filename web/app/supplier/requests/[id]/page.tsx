@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import Link from 'next/link';
 import { fetchApi, tryFetch, broadcastPortalEvent } from '@/lib/api';
 import LoadErrorBar from '@/components/ui/LoadErrorBar';
+import TopUpOfferPanel from '@/components/supplier/TopUpOfferPanel';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function SupplierRequestDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const [agencyNotes, setAgencyNotes] = useState('');
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [editingResponse, setEditingResponse] = useState(false);
 
     // Drivers who checked in against this agency's confirmed places
     const [headcount, setHeadcount] = useState<any>(null);
@@ -139,7 +141,10 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
             });
 
             setShowRejectModal(false);
-            alert(`Request successfully marked as ${status}! Operations has been notified.`);
+            setEditingResponse(false);
+            alert(status === 'REJECTED' ? 'Request declined. Operations has been notified.'
+                : status === 'ACCEPTED' ? `Accepted: ${qty} drivers. Operations has been notified.`
+                : `Counter-proposal sent: ${qty} drivers. Operations has been notified.`);
             loadData();
         } catch (err: any) {
             alert(err.message);
@@ -187,6 +192,17 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
     const isFinalized = myResponse?.status === 'ACCEPTED_BY_OM';
     const isCancelled = request.status === 'CANCELLED';
     const responseLocked = isFinalized || isCancelled;
+    // Once the agency has answered, the form stays closed until it deliberately chooses to change the answer
+    const answered = !!myResponse && myResponse.status !== 'PENDING';
+    const showResponseForm = !responseLocked && (!answered || editingResponse);
+    const startChangingResponse = () => {
+        if (!confirm('Change the response you already sent? Operations will be notified of the new one.')) return;
+        setEditingResponse(true);
+        setActiveTab('response');
+    };
+    const RESPONSE_LABEL: Record<string, string> = {
+        ACCEPTED: 'Accepted', COUNTER_PROPOSED: 'Counter-proposal sent', PARTIAL: 'Partial offer sent', REJECTED: 'Declined',
+    };
     const hasPlaces = !isCancelled && ['ACCEPTED', 'ACCEPTED_BY_OM'].includes(myResponse?.status);
 
     return (
@@ -275,7 +291,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     'bg-blue-50 border-blue-200 text-blue-900'
                 }`}>
                     <div className="text-sm">
-                        <b>{isFinalized ? 'Finalized by Operations' : `Current Response: ${myResponse.status}`}</b>
+                        <b>{isFinalized ? 'Finalized by Operations' : `${RESPONSE_LABEL[myResponse.status] || myResponse.status}, waiting for Operations`}</b>
                         {isFinalized && ` • ${myResponse.confirmed_quantity} drivers confirmed. Your response is locked; your drivers check in at the venue.`}
                         {myResponse.status === 'ACCEPTED' && ` • Supplying ${myResponse.confirmed_quantity} drivers.`}
                         {myResponse.status === 'REJECTED' && ` • Reason: ${myResponse.supplier_message || 'Shift declined by agency'}`}
@@ -290,13 +306,13 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         >
                             View Driver Attendance
                         </button>
-                    ) : (
+                    ) : !editingResponse && (
                         <button
                             type="button"
-                            onClick={() => setActiveTab('response')}
+                            onClick={startChangingResponse}
                             className="text-xs font-bold underline hover:opacity-80"
                         >
-                            Modify Response
+                            Change my response
                         </button>
                     )}
                 </div>
@@ -396,11 +412,32 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     <p className="mt-1 text-[#1a1a1a]/55">
                         {isCancelled
                             ? 'Operations cancelled this shift, so it no longer takes responses.'
-                            : `Operations accepted your offer of ${myResponse?.confirmed_quantity} drivers. The response can no longer be changed; message Operations in the chat if something must change.`}
+                            : `Operations accepted your offer of ${myResponse?.confirmed_quantity} drivers. That answer can no longer be changed. If you can supply more drivers, offer them below; for anything else, message Operations in the chat.`}
                     </p>
+                    {isFinalized && !isCancelled && (
+                        <TopUpOfferPanel requestId={requestId} confirmedQuantity={myResponse?.confirmed_quantity || 0} onChanged={loadData} />
+                    )}
                 </div>
             )}
-            {activeTab === 'response' && !responseLocked && (
+            {activeTab === 'response' && answered && !responseLocked && !editingResponse && (
+                <div className="bg-white p-6 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] text-sm text-[#1a1a1a]/75">
+                    <div className="font-bold text-[#1a1a1a]">Response sent to Operations</div>
+                    <p className="mt-1 text-[#1a1a1a]/55">
+                        {myResponse.status === 'REJECTED'
+                            ? `You declined this request${myResponse.supplier_message ? `: "${myResponse.supplier_message}"` : '.'}`
+                            : `You offered ${myResponse.confirmed_quantity} driver(s), ${myResponse.proposed_start_time || request.start_time} - ${myResponse.proposed_end_time || request.end_time}${myResponse.supplier_message ? ` · "${myResponse.supplier_message}"` : ''}.`}
+                        {' '}Operations will confirm it, and you will get a notification.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={startChangingResponse}
+                        className="mt-4 rounded-lg border border-[#1a1a1a]/15 px-4 py-2 text-xs font-bold text-[#1a1a1a] hover:border-[#dbb457] hover:bg-[#dbb457]/10"
+                    >
+                        Change my response
+                    </button>
+                </div>
+            )}
+            {activeTab === 'response' && showResponseForm && (
                 <form onSubmit={handleSendProposal} className="bg-white p-6 rounded-2xl shadow-[0_1px_2px_rgb(26_26_26/0.04)] border border-[#1a1a1a]/[0.08] space-y-5">
                     <div className="flex items-center justify-between">
                         <div>
@@ -459,14 +496,14 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                     </div>
 
                     <div className="flex flex-wrap gap-3 pt-2">
-                        <button 
+                        {myResponse?.status !== 'ACCEPTED' && <button 
                             type="button" 
                             onClick={() => handleActionResponse('ACCEPTED')}
                             disabled={submittingResp || counterInProgress}
                             title={counterInProgress ? acceptLockedHint : undefined}
                             className="bg-emerald-600 enabled:hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                         > One-Click Accept Requested Quota
-                        </button>
+                        </button>}
                         <button 
                             type="submit" 
                             disabled={submittingResp}
@@ -482,8 +519,18 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         >
                             Reject Request
                         </button>
+                        {editingResponse && (
+                            <button
+                                type="button"
+                                onClick={() => { setEditingResponse(false); loadData(); }}
+                                disabled={submittingResp}
+                                className="px-5 py-2.5 rounded-lg font-bold text-sm text-[#1a1a1a]/60 hover:text-[#1a1a1a] disabled:opacity-50"
+                            >
+                                Keep my current response
+                            </button>
+                        )}
                     </div>
-                    {counterInProgress && (
+                    {counterInProgress && myResponse?.status !== 'ACCEPTED' && (
                         <p className="text-xs text-amber-700">
                             Headcount entered, so this will be sent as a counter-proposal. One-click accept is disabled until you clear the headcount.
                         </p>
