@@ -1,10 +1,26 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 from app.core.config import settings
 from app.api.routers import auth, health
 from fastapi.middleware.cors import CORSMiddleware
+from app.services.face_retention import purge_enabled, purge_loop
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Wipe each day's check-in face data every morning at 05:00 Qatar time (registered faces stay)
+    task = asyncio.create_task(purge_loop()) if purge_enabled() else None
+    yield
+    if task:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
 
 # The interactive API docs map every endpoint for an attacker; serve them only outside production
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.PROJECT_NAME,
     openapi_url=None if settings.is_production else f"{settings.API_V1_STR}/openapi.json",
     docs_url=None if settings.is_production else "/docs",

@@ -1,3 +1,6 @@
+import os
+# The daily face-data clean-up must never run against the developer's real database
+os.environ.setdefault("FACE_DATA_PURGE", "false")
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
