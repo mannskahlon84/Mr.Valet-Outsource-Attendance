@@ -395,7 +395,8 @@ def get_workers(
             "created_at": w.created_at,
             "supplier_name": sup.name if sup else "Direct / Unassigned",
             "supplier_head_name": head_name,
-            "device_id": w.device_id
+            "device_id": w.device_id,
+            "face_registered": bool(w.face_embedding)
         }
         result.append(WorkerResponse(**w_dict))
 
@@ -634,6 +635,27 @@ def reset_worker_device(
     from app.services.audit import log_audit_event
     log_audit_event(db, current_user.id, current_user.role.value, "worker_device_reset", "workers", worker.id, old_state, {"device_id": None})
     return {"message": "Device binding has been successfully reset."}
+
+
+@router.post("/{worker_id}/reset-face")
+def reset_worker_face(
+    worker_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([RoleEnum.SUPER_ADMIN]))
+):
+    """Super Admin: forget the worker's registered face, e.g. when the wrong person's selfie was
+    registered. Their next successful check-in registers the face again."""
+    worker = db.query(Worker).filter(Worker.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    had_face = bool(worker.face_embedding)
+    worker.face_embedding = None
+    db.commit()
+
+    from app.services.audit import log_audit_event
+    log_audit_event(db, current_user.id, current_user.role.value, "worker_face_reset", "workers", worker.id,
+                    {"face_registered": had_face}, {"face_registered": False})
+    return {"message": "Registered face cleared. The next check-in selfie will be registered as this worker's face."}
 
 @router.delete("/{worker_id}")
 def delete_worker(

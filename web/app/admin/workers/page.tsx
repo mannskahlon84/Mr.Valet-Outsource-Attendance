@@ -10,7 +10,7 @@ import Modal from '@/components/ui/Modal';
 import StatCard from '@/components/ui/StatCard';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { ui } from '@/lib/ui';
-import { AlertTriangle, Ban, Building2, CheckCircle2, Pencil, Smartphone, SmartphoneNfc, Trash2, UserPlus, Users } from 'lucide-react';
+import { AlertTriangle, Ban, Building2, CheckCircle2, Pencil, ScanFace, Smartphone, SmartphoneNfc, Trash2, UserPlus, Users } from 'lucide-react';
 export default function Workers() {
     const [workers, setWorkers] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -109,6 +109,21 @@ export default function Workers() {
             loadData();
         } catch (err: any) {
             alert(err.message || 'Failed to reset device binding.');
+        }
+    };
+
+    const handleResetFace = async (worker: { id: number; first_name: string; last_name: string }) => {
+        const workerName = `${worker.first_name} ${worker.last_name}`.trim();
+        if (!window.confirm(
+            `Clear the registered face for "${workerName}"?\n\nUse this when the wrong person's selfie was registered. ` +
+            `Their next successful check-in selfie becomes their registered face.`
+        )) return;
+        try {
+            const res = await fetchApi(`/workers/${worker.id}/reset-face`, { method: 'POST' });
+            alert(res.message || 'Registered face cleared.');
+            loadData();
+        } catch (err) {
+            alert((err instanceof Error && err.message) || 'Failed to clear the registered face.');
         }
     };
 
@@ -223,6 +238,15 @@ export default function Workers() {
                     >
                         <Smartphone className="h-3.5 w-3.5" /> Reset Device
                     </button>
+                    {row.face_registered && (
+                        <button
+                            onClick={() => handleResetFace(row)}
+                            className={ui.action}
+                            title="Clear the registered face, e.g. when the wrong person's selfie was registered"
+                        >
+                            <ScanFace className="h-3.5 w-3.5" /> Reset Face
+                        </button>
+                    )}
                     <button 
                         onClick={() => handleDelete(row)} 
                         className={ui.actionDanger}

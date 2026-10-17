@@ -30,6 +30,7 @@ class WorkerResponse(WorkerBase):
     supplier_name: Optional[str] = None
     supplier_head_name: Optional[str] = None
     device_id: Optional[str] = None
+    face_registered: Optional[bool] = None  # whether a face is on file; the face data itself is never sent
 
     class Config:
         from_attributes = True

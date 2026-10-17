@@ -208,14 +208,12 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         log_audit_event(db, current_user.id, current_user.role.value, "attendance_rejected", "attendance", 0, None, {"reason": "face_extraction_failed"})
         raise HTTPException(400, f"Face detection failed: {str(e)}")
         
-    # 3. 1:1 Match against enrolled identity (skipped when no face engine is installed)
-    if live_embedding is None:
+    # 3. 1:1 Match against enrolled identity (skipped when no face engine is installed).
+    # A first face is only registered once every check has passed (below): a refused attempt
+    # must never become the driver's identity, or the real driver is later rejected as a proxy.
+    enroll_face = live_embedding is not None and not worker.face_embedding
+    if live_embedding is None or enroll_face:
         pass
-    elif not worker.face_embedding:
-        # Enrolls this face identity for this worker on initial check-in
-        worker.face_embedding = json.dumps(live_embedding)
-        db.add(worker)
-        db.flush()
     else:
         try:
             enrolled_embedding = json.loads(worker.face_embedding)
@@ -244,6 +242,10 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), current_user: U
         wa = WorkerAssignment(supplier_response_id=sr.id, worker_id=worker.id, status="ASSIGNED")
         db.add(wa)
         db.flush()
+
+    if enroll_face:
+        worker.face_embedding = json.dumps(live_embedding)
+        db.add(worker)
 
     # Atomically create attendance
     if not att:
