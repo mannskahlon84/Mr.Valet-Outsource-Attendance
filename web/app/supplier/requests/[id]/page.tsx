@@ -64,15 +64,17 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
             setMyResponse(resp);
             if (resp && ['ACCEPTED', 'ACCEPTED_BY_OM'].includes(resp.status)) loadHeadcount(resp.id);
 
-            const defaultQuota = resp?.requested_quantity || current?.requested_quantity || current?.total_required_workers || '1';
-
+            // Headcount starts empty on an unanswered request: typing a number is what turns the
+            // response into a counter-proposal (and locks one-click accept). An earlier counter-proposal
+            // keeps its number so the supplier can see and adjust it.
+            const answered = resp && resp.status !== 'PENDING';
             if (resp) {
-                setConfirmedQty(resp.confirmed_quantity !== null && resp.confirmed_quantity !== undefined ? resp.confirmed_quantity.toString() : defaultQuota.toString());
+                setConfirmedQty(answered && resp.confirmed_quantity !== null && resp.confirmed_quantity !== undefined ? resp.confirmed_quantity.toString() : '');
                 setProposedStart(resp.proposed_start_time || current?.start_time || '08:00');
                 setProposedEnd(resp.proposed_end_time || current?.end_time || '17:00');
                 setAgencyNotes(resp.supplier_message || '');
             } else if (current) {
-                setConfirmedQty(defaultQuota.toString());
+                setConfirmedQty('');
                 setProposedStart(current.start_time || '08:00');
                 setProposedEnd(current.end_time || '17:00');
             }
@@ -98,7 +100,13 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
         };
     }, [requestId]);
 
+    // A typed headcount means the supplier is making a counter-proposal, so the
+    // one-click accept (which always sends the full requested quota) is locked until it's cleared
+    const counterInProgress = confirmedQty.trim() !== '';
+    const acceptLockedHint = 'Clear the headcount to use one-click accept';
+
     const handleActionResponse = async (status: 'ACCEPTED' | 'REJECTED' | 'COUNTER_PROPOSED') => {
+        if (status === 'ACCEPTED' && counterInProgress) return;
         setSubmittingResp(true);
         try {
             const quotaNeeded = request?.requested_quantity || request?.total_required_workers || 1;
@@ -242,8 +250,9 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         <button
                             type="button"
                             onClick={() => handleActionResponse('ACCEPTED')}
-                            disabled={submittingResp}
-                            className="flex-1 md:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-5 py-2.5 rounded-lg shadow transition-colors flex items-center justify-center gap-2"
+                            disabled={submittingResp || counterInProgress}
+                            title={counterInProgress ? acceptLockedHint : undefined}
+                            className="flex-1 md:flex-initial bg-emerald-600 enabled:hover:bg-emerald-700 text-white font-bold text-sm px-5 py-2.5 rounded-lg shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         > Approve Quota ({request.requested_quantity || request.total_required_workers} Drivers)
                         </button>
                         <button
@@ -411,6 +420,7 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                                 max={request.total_required_workers}
                                 value={confirmedQty} 
                                 onChange={e => setConfirmedQty(e.target.value)} 
+                                placeholder={`Requested ${request.requested_quantity || request.total_required_workers}`}
                                 required
                                 className="w-full border border-[#1a1a1a]/15 p-2.5 rounded-lg text-sm font-bold text-[#1a1a1a] focus:ring-2 focus:ring-[#dbb457]/40 focus:outline-none"
                             />
@@ -451,8 +461,9 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                         <button 
                             type="button" 
                             onClick={() => handleActionResponse('ACCEPTED')}
-                            disabled={submittingResp}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow transition-colors disabled:opacity-50 flex items-center gap-2"
+                            disabled={submittingResp || counterInProgress}
+                            title={counterInProgress ? acceptLockedHint : undefined}
+                            className="bg-emerald-600 enabled:hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                         > One-Click Accept Requested Quota
                         </button>
                         <button 
@@ -471,6 +482,11 @@ export default function SupplierRequestDetail({ params }: { params: Promise<{ id
                             Reject Request
                         </button>
                     </div>
+                    {counterInProgress && (
+                        <p className="text-xs text-amber-700">
+                            Headcount entered, so this will be sent as a counter-proposal. One-click accept is disabled until you clear the headcount.
+                        </p>
+                    )}
                 </form>
             )}
 
