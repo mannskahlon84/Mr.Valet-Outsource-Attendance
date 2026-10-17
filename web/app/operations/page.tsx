@@ -8,7 +8,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
-import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, Clock, Hourglass, MapPin, Plus, Users } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, Clock, Hourglass, MapPin, Plus } from 'lucide-react';
 
 export default function OperationsDashboard() {
     const [requests, setRequests] = useState<any[]>([]);
@@ -90,8 +90,8 @@ export default function OperationsDashboard() {
                     </Link>
                 </div>
 
-                {/* Mobile Cards View (Phones) */}
-                <div className="md:hidden space-y-2 p-3">
+                {/* Cards below 1280px: the eight-column table needs ~920px of width */}
+                <div className="xl:hidden grid gap-2 p-3 md:grid-cols-2">
                     {requests.slice(0, 5).map((r) => (
                         <div key={r.id} className="space-y-3 rounded-xl border border-[#1a1a1a]/[0.06] bg-[#f6f4ef]/60 p-4">
                             <div className="flex items-center justify-between">
@@ -106,9 +106,20 @@ export default function OperationsDashboard() {
                                 <div className="flex items-center gap-1.5">
                                     <Clock className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
                                     <span className="tabular-nums">{r.start_time} - {r.end_time}</span>
-                                    <span className="text-[#1a1a1a]/30">•</span>
-                                    <Users className="h-3.5 w-3.5 text-[#1a1a1a]/40" />
-                                    <strong className="font-semibold text-[#1a1a1a]">{r.total_required_workers} Drivers</strong>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 rounded-lg bg-white p-2.5 text-center">
+                                <div>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[#1a1a1a]/40">Requested</div>
+                                    <div className="text-sm font-bold tabular-nums text-[#1a1a1a]">{r.total_required_workers}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[#1a1a1a]/40">Confirmed</div>
+                                    <div className="text-sm font-bold tabular-nums text-[#1a1a1a]">{r.confirmed_workers ?? 0}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[#1a1a1a]/40">Remaining</div>
+                                    <RemainingCell r={r} centered />
                                 </div>
                             </div>
                             <Link 
@@ -120,40 +131,48 @@ export default function OperationsDashboard() {
                         </div>
                     ))}
                     {requests.length === 0 && (
-                        <EmptyRequests />
+                        <div className="md:col-span-2"><EmptyRequests /></div>
                     )}
                 </div>
 
                 {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden xl:block overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-[#1a1a1a]/40">
-                                <th className="px-6 py-3">Req ID</th>
-                                <th className="px-6 py-3">Date</th>
-                                <th className="px-6 py-3">Shift Window</th>
-                                <th className="px-6 py-3">Headcount</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
+                                <th className="px-4 py-3">Req ID</th>
+                                <th className="px-4 py-3">Date</th>
+                                <th className="px-4 py-3">Shift Window</th>
+                                <th className="px-4 py-3">Requested</th>
+                                <th className="px-4 py-3">Confirmed</th>
+                                <th className="px-4 py-3">Remaining</th>
+                                <th className="px-4 py-3">Status</th>
+                                <th className="px-4 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1a1a1a]/[0.05]">
                             {requests.slice(0, 5).map((r) => (
                                 <tr key={r.id} className="group transition-colors hover:bg-[#f6f4ef]/70">
-                                    <td className="px-6 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
-                                    <td className="px-6 py-4 text-[#1a1a1a]/65">
+                                    <td className="px-4 py-4 font-bold text-[#1a1a1a]">#{r.id}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-[#1a1a1a]/65">
                                         {r.required_date ? calendarDate(r.required_date) : '-'}
                                     </td>
-                                    <td className="px-6 py-4 font-medium tabular-nums text-[#1a1a1a]/65">
+                                    <td className="px-4 py-4 whitespace-nowrap font-medium tabular-nums text-[#1a1a1a]/65">
                                         {r.start_time} - {r.end_time}
                                     </td>
-                                    <td className="px-6 py-4 font-semibold text-[#1a1a1a]">
-                                        {r.total_required_workers} Drivers
+                                    <td className="px-4 py-4 font-semibold tabular-nums text-[#1a1a1a]">
+                                        {r.total_required_workers}
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-4 py-4 font-semibold tabular-nums text-[#1a1a1a]">
+                                        {r.confirmed_workers ?? 0}
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <RemainingCell r={r} />
+                                    </td>
+                                    <td className="px-4 py-4">
                                         <StatusBadge status={r.status} />
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td className="px-4 py-4 text-right">
                                         <Link 
                                             href={`/operations/requests/${r.id}`}
                                             className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a1a1a]/10 px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] transition-all hover:border-[#dbb457] hover:bg-[#dbb457]/10"
@@ -166,7 +185,7 @@ export default function OperationsDashboard() {
                             ))}
                             {requests.length === 0 && (
                                 <tr>
-                                    <td colSpan={6}>
+                                    <td colSpan={8}>
                                         <EmptyRequests />
                                     </td>
                                 </tr>
@@ -175,6 +194,28 @@ export default function OperationsDashboard() {
                     </table>
                 </div>
             </section>
+        </div>
+    );
+}
+
+// Drivers still to find for a request; a supplier counter-offer waiting for approval is shown
+// under it so the ops manager doesn't ask another agency for drivers that are already on offer
+type FillCounts = { status?: string; total_required_workers?: number; confirmed_workers?: number; remaining_workers?: number; offered_workers?: number };
+
+function RemainingCell({ r, centered = false }: { r: FillCounts; centered?: boolean }) {
+    const remaining = r.remaining_workers ?? Math.max(0, (r.total_required_workers || 0) - (r.confirmed_workers || 0));
+    const offered = r.offered_workers || 0;
+    if (r.status === 'CANCELLED') return <span className="text-sm text-[#1a1a1a]/30">-</span>;
+    return (
+        <div className={centered ? 'text-center' : ''}>
+            <span className={`text-sm font-bold tabular-nums ${remaining > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                {remaining}
+            </span>
+            {remaining > 0 && offered > 0 && (
+                <div className="whitespace-nowrap text-[11px] font-medium leading-tight text-amber-700">
+                    {offered} offered,<br />awaiting approval
+                </div>
+            )}
         </div>
     );
 }

@@ -276,6 +276,16 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
         suppliers_list = db.query(Supplier).filter(Supplier.id.in_(supplier_ids)).all()
         suppliers_map = {s.id: s.name for s in suppliers_list}
         
+    # Drivers per request: confirmed (counts the same way as attendance and shortfall checks)
+    # and offered (supplier counter-proposals still waiting for the ops manager's approval)
+    from app.api.routers.attendance import CONFIRMED_RESPONSE_STATUSES
+    confirmed_by_req, offered_by_req = {}, {}
+    for sr in responses:
+        if sr.status in CONFIRMED_RESPONSE_STATUSES:
+            confirmed_by_req[sr.manpower_request_id] = confirmed_by_req.get(sr.manpower_request_id, 0) + (sr.confirmed_quantity or 0)
+        elif sr.status in ("COUNTER_PROPOSED", "PARTIAL"):
+            offered_by_req[sr.manpower_request_id] = offered_by_req.get(sr.manpower_request_id, 0) + (sr.confirmed_quantity or 0)
+
     responses_by_req = {}
     for sr in responses:
         if sr.manpower_request_id not in responses_by_req:
@@ -289,6 +299,8 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
         s = sites_map.get(r.site_id)
         supplier_names_list = responses_by_req.get(r.id, [])
         supplier_names_str = ", ".join(supplier_names_list) if supplier_names_list else "Kanan"
+        required = r.total_required_workers or 0
+        confirmed = min(confirmed_by_req.get(r.id, 0), required)
         result.append({
             "id": r.id,
             "ops_manager_id": r.ops_manager_id,
@@ -299,6 +311,9 @@ def get_requests(db: Session = Depends(get_db), current_user: User = Depends(get
             "start_time": r.start_time,
             "end_time": r.end_time,
             "total_required_workers": r.total_required_workers,
+            "confirmed_workers": confirmed,
+            "remaining_workers": required - confirmed,
+            "offered_workers": offered_by_req.get(r.id, 0),
             "skill_category": r.skill_category,
             "supplier_names": supplier_names_str,
             "notes": r.notes,
