@@ -8,6 +8,7 @@
 #   PostgreSQL 17 (local only) · Python 3.12 backend (FastAPI, 127.0.0.1:8000)
 #   Node 22 web app (Next.js, 127.0.0.1:3000) · Nginx + Let's Encrypt HTTPS in front
 #   systemd services with auto-restart · UFW firewall · daily database backups
+#   key-only SSH (once a key is in /root/.ssh/authorized_keys) · fail2ban · automatic security updates
 #   helper commands: mrvalet-update, mrvalet-import-render, mrvalet-backup, mrvalet-logs
 #
 # Safe to run again: it keeps existing secrets, the database and its data.
@@ -42,7 +43,7 @@ log "Installing system packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y ca-certificates curl gnupg git nginx ufw python3.12 python3.12-venv python3-pip \
-    build-essential libpq-dev certbot python3-certbot-nginx
+    build-essential libpq-dev certbot python3-certbot-nginx fail2ban unattended-upgrades
 
 if ! command -v psql >/dev/null || ! psql --version | grep -q " 17"; then
     log "Installing PostgreSQL 17 (official repository)"
@@ -234,6 +235,39 @@ log "Enabling the firewall (SSH, HTTP, HTTPS only)"
 ufw allow OpenSSH >/dev/null
 ufw allow 'Nginx Full' >/dev/null
 ufw --force enable >/dev/null
+
+# ---------------------------------------------------------------- ssh hardening
+# The first server was taken over through a root password, so logins are key-only from here on.
+log "Securing SSH (key-only logins, fail2ban, automatic security updates)"
+if [ -s /root/.ssh/authorized_keys ] && grep -qE '^(ssh-|ecdsa-)' /root/.ssh/authorized_keys; then
+    # "00-" sorts before cloud-init's 50-cloud-init.conf, and sshd keeps the first value it reads
+    cat > /etc/ssh/sshd_config.d/00-mrvalet-hardening.conf <<'EOF'
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+MaxAuthTries 3
+LoginGraceTime 30
+EOF
+    sshd -t
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd
+    echo "SSH: password logins are now OFF (keys only)."
+else
+    echo "WARNING: no SSH key in /root/.ssh/authorized_keys, so password logins stay ON."
+    echo "         Add your key (see deploy/README.md) and run this script again."
+fi
+
+cat > /etc/fail2ban/jail.d/mrvalet.local <<'EOF'
+[sshd]
+enabled  = true
+backend  = systemd
+maxretry = 5
+findtime = 10m
+bantime  = 1h
+EOF
+systemctl enable fail2ban >/dev/null 2>&1
+systemctl restart fail2ban
+echo 'APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";' > /etc/apt/apt.conf.d/20auto-upgrades
 
 # ---------------------------------------------------------------- helper commands
 log "Installing helper commands"
